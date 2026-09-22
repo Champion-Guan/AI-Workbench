@@ -32,16 +32,10 @@ const workbenchLogoStyle = `<style id="local-workbench-logo">
     content: "";
     position: absolute;
     inset: 0;
-    background: url("/_pixpix-assets/local-brand/workbench-logo.png") center / contain no-repeat;
+    background: url("/_pixpix-assets/local-brand/workbench-logo.png?g-brand-v4") center / contain no-repeat;
     filter: none;
     pointer-events: none;
   }
-  html.dark [role="dialog"] aside a[href="/"]::after,
-  html.dark [role="dialog"] aside a[href="/zh-CN/workbench"]::after,
-  html[data-theme="dark"] [role="dialog"] aside a[href="/"]::after,
-  html[data-theme="dark"] [role="dialog"] aside a[href="/zh-CN/workbench"]::after,
-  body.dark [role="dialog"] aside a[href="/"]::after,
-  body.dark [role="dialog"] aside a[href="/zh-CN/workbench"]::after { filter: invert(1) brightness(1.3); }
 </style>`;
 
 const localRootNavigationScript = `<script id="local-root-navigation">
@@ -889,9 +883,9 @@ async function send(response, path, method) {
       // The archived detail page itself is Chinese, so the redirect is neither
       // needed nor desirable in this single-page local MVP.
       .replace(/<script id="root-locale-redirect">[\s\S]*?<\/script>/, "")
-      .replace(/href="\/_pixpix-assets\/www\.pixpix\.com\/favicon\.ico[^"]*"/g, 'href="/_pixpix-assets/local-brand/workbench-logo.png"')
-      .replace(/href="\/favicon\.ico[^"]*"/g, 'href="/favicon.ico?g-brand-v3"')
-      .replace(/\\\"href\\\":\\\"\/favicon\.ico[^\\\"]*/g, '\\\"href\\\":\\\"/favicon.ico?g-brand-v3')
+      .replace(/href="\/_pixpix-assets\/www\.pixpix\.com\/favicon\.ico[^"]*"/g, 'href="/favicon.ico?g-brand-v4"')
+      .replace(/href="\/favicon\.ico[^"]*"/g, 'href="/favicon.ico?g-brand-v4"')
+      .replace(/\\\"href\\\":\\\"\/favicon\.ico[^\\\"]*/g, '\\\"href\\\":\\\"/favicon.ico?g-brand-v4')
       .replace(/href="\/zh-CN\/workbench"/g, 'href="/"');
     response.end(refreshedFavicon.replace("</head>", `${workbenchLogoStyle}${mvpNavigationStyle}${localRootNavigationScript}${localSettingsPanelScript}${localFixedFieldsScript}${localResolutionButtonsScript}${localAspectRatioButtonsScript}${localOfflineGuardsScript}${localResponsivePreviewScript}</head>`));
     return;
@@ -920,7 +914,7 @@ const server = createServer(async (request, response) => {
 
   const pathname = new URL(request.url || "/", "http://127.0.0.1").pathname.replace(/\/$/, "") || "/";
   if (pathname === "/favicon.ico") {
-    const favicon = safeFile(assetRoot, "local-brand/workbench-logo.png");
+    const favicon = safeFile(assetRoot, "local-brand/favicon.png");
     if (favicon && await existingFile(favicon)) return send(response, favicon, method);
     return notFound(response);
   }
