@@ -699,7 +699,14 @@ const mvpNavigationStyle = `<style id="mvp-navigation">
     position: relative !important;
     z-index: 5 !important;
     overflow: visible !important;
-    transition: flex-basis .22s ease, width .22s ease, min-width .22s ease, max-width .22s ease !important;
+    will-change: flex-basis, width, min-width, max-width;
+    transition: flex-basis .24s cubic-bezier(.22, 1, .36, 1), width .24s cubic-bezier(.22, 1, .36, 1), min-width .24s cubic-bezier(.22, 1, .36, 1), max-width .24s cubic-bezier(.22, 1, .36, 1), gap .2s ease, padding .2s ease !important;
+  }
+  #local-settings-panel > form {
+    opacity: 1 !important;
+    visibility: visible !important;
+    transform: translateX(0) !important;
+    transition: opacity .16s ease, transform .24s cubic-bezier(.22, 1, .36, 1), visibility 0s linear 0s !important;
   }
   #local-settings-panel[data-local-settings-collapsed="true"] {
     flex: 0 0 44px !important;
@@ -713,6 +720,8 @@ const mvpNavigationStyle = `<style id="mvp-navigation">
     opacity: 0 !important;
     visibility: hidden !important;
     pointer-events: none !important;
+    transform: translateX(12px) !important;
+    transition: opacity .16s ease, transform .24s cubic-bezier(.22, 1, .36, 1), visibility 0s linear .24s !important;
   }
   html[data-local-settings-collapsed="true"] [role="dialog"] > .flex.size-full > div:not([hidden]) {
     overflow: visible !important;
