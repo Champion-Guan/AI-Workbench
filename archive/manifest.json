@@ -1,0 +1,518 @@
+{
+  "generatedAt": "2026-09-22T02:20:31.646Z",
+  "upstream": "https://www.pixpix.com",
+  "pages": [
+    {
+      "route": "/zh-CN/tools/product-set",
+      "source": "https://www.pixpix.com/zh-CN/tools/product-set",
+      "title": "AI 商品套图生成工具｜一键生成电商主图、场景图、细节图",
+      "htmlBytes": 426552,
+      "sha256": "4407f0b1dc970770ee5a150423ff4337f2bcbac4d71dba59c0e2fe2e90b0364d"
+    },
+    {
+      "route": "/zh-CN/tools/detail-page",
+      "source": "https://www.pixpix.com/zh-CN/tools/detail-page",
+      "title": "AI A+详情页生成工具｜快速制作电商商品详情图",
+      "htmlBytes": 426606,
+      "sha256": "1126c016ed6c5a18d24b46fa03d87f391e23871b1f36ea941c73297eeb87ce5b"
+    },
+    {
+      "route": "/zh-CN/tools/hot-seller-replicate",
+      "source": "https://www.pixpix.com/zh-CN/tools/hot-seller-replicate",
+      "title": "AI 爆款图片参考生成工具｜生成原创电商商品图",
+      "htmlBytes": 426633,
+      "sha256": "db23fb5c4dfee4b11593765851ae65e3883a5bac95217e101fa8573b4e0c63b4"
+    },
+    {
+      "route": "/zh-CN/tools/product-retouch",
+      "source": "https://www.pixpix.com/zh-CN/tools/product-retouch",
+      "title": "AI 产品精修工具｜商品图片美化、修瑕、提高清晰度",
+      "htmlBytes": 426560,
+      "sha256": "1bf1474e2df95a48bddc5375e9bbb0a4b8d2001117766442f4f9a1947963f887"
+    },
+    {
+      "route": "/zh-CN/tools/product-recolor",
+      "source": "https://www.pixpix.com/zh-CN/tools/product-recolor",
+      "title": "AI 产品换色工具｜一键更换商品颜色，保留原有细节质感",
+      "htmlBytes": 429382,
+      "sha256": "ffd13025cdb4c02bb7c4cfd036d38b4d6a315eb92b725010e038c2a25fb595ef"
+    },
+    {
+      "route": "/zh-CN/tools/video-replicate",
+      "source": "https://www.pixpix.com/zh-CN/tools/video-replicate",
+      "title": "AI 视频复刻工具｜参考热门视频生成原创营销短片",
+      "htmlBytes": 426404,
+      "sha256": "9b648a3d08682c080480dcc7e325842c69dee5bc9179fe5ce86ccf94c874fedf"
+    },
+    {
+      "route": "/zh-CN/tools/seller-video",
+      "source": "https://www.pixpix.com/zh-CN/tools/seller-video",
+      "title": "AI 爆款视频生成工具｜快速制作电商种草、口播与广告短视频",
+      "htmlBytes": 426447,
+      "sha256": "7160240f9ddaaf42a8a718dc83adb954b4b31b84e68da302c882ad8cc9cf5a0c"
+    },
+    {
+      "route": "/zh-CN/tools/video-background-removal",
+      "source": "https://www.pixpix.com/zh-CN/tools/video-background-removal",
+      "title": "视频背景移除",
+      "htmlBytes": 427632,
+      "sha256": "c2141c30c412372b144ed6c9f562c1dd8f92a30ba3124ff3a2481fbf3ead5818"
+    },
+    {
+      "route": "/zh-CN/tools/flux-video-upscale",
+      "source": "https://www.pixpix.com/zh-CN/tools/flux-video-upscale",
+      "title": "FLUX 视频4K超分工具｜AI 4K提升视频清晰度与4K分辨率",
+      "htmlBytes": 428443,
+      "sha256": "86cb15309d2c20e1d73c1667f2ff6791d5e1626116fcc6d21e681a9acc2b1dea"
+    },
+    {
+      "route": "/zh-CN/tools/video-upscale",
+      "source": "https://www.pixpix.com/zh-CN/tools/video-upscale",
+      "title": "AI 视频变清晰工具｜4K 视频修复与画质增强 - PixPix",
+      "htmlBytes": 428728,
+      "sha256": "eef7b13855c0cf36621b0c1bd1a6b88fe6727c6d36939fb754d8e80e6ddcfcca"
+    },
+    {
+      "route": "/zh-CN/tools/video-watermark-removal",
+      "source": "https://www.pixpix.com/zh-CN/tools/video-watermark-removal",
+      "title": "视频去水印",
+      "htmlBytes": 427713,
+      "sha256": "99f276b75d191f411fc246c067c7ea280a1f3e89c704b47c210a1dc9a22c114e"
+    },
+    {
+      "route": "/zh-CN/tools/video-compression",
+      "source": "https://www.pixpix.com/zh-CN/tools/video-compression",
+      "title": "视频压缩",
+      "htmlBytes": 427695,
+      "sha256": "604c9141d95ee4bd241a8514111730a0e216cb20eb25bcb626395f88fa4db3f3"
+    },
+    {
+      "route": "/zh-CN/tools/apparel-set",
+      "source": "https://www.pixpix.com/zh-CN/tools/apparel-set",
+      "title": "AI 服装套图生成工具｜一键生成服装主图、细节图、场景图",
+      "htmlBytes": 426522,
+      "sha256": "4e477f6b0cef40732a53af9c6b94d0b2b3bcea7b8314b43ece5e6abb90672890"
+    },
+    {
+      "route": "/zh-CN/tools/model-try-on",
+      "source": "https://www.pixpix.com/zh-CN/tools/model-try-on",
+      "title": "AI 模特穿戴生成工具｜快速生成真人试穿与服装展示图",
+      "htmlBytes": 426365,
+      "sha256": "0c315a1d0f728fd46b66a514f0559b27c643b20078f31c679527c88b365e76d6"
+    },
+    {
+      "route": "/zh-CN/tools/underwear-change",
+      "source": "https://www.pixpix.com/zh-CN/tools/underwear-change",
+      "title": "AI 内衣泳装试穿工具｜生成真实模特上身效果图",
+      "htmlBytes": 428941,
+      "sha256": "b9d7bc5d6be15c2925c7d488388ab08614e86ed2b12a1ea563385932220d4455"
+    },
+    {
+      "route": "/zh-CN/tools/shoe-try-on",
+      "source": "https://www.pixpix.com/zh-CN/tools/shoe-try-on",
+      "title": "AI 试鞋工具｜上传鞋子生成真人上脚效果图",
+      "htmlBytes": 428572,
+      "sha256": "79dc6abce74a893b4105740365cfbc17735b643857c52862e5697732fc7f7445"
+    },
+    {
+      "route": "/zh-CN/tools/accessory-try-on",
+      "source": "https://www.pixpix.com/zh-CN/tools/accessory-try-on",
+      "title": "AI 万戴工具｜配饰虚拟试戴与穿搭效果图生成",
+      "htmlBytes": 428563,
+      "sha256": "1a5efd978be80e7dc03b43a34faaa3770dabbe5cbd7c9f830f85b88346f3abd2"
+    }
+  ],
+  "assets": [
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/css/e2ac7af5b54e57db.css",
+      "file": "assets/storage.pixpix.media/releases/_next/static/css/e2ac7af5b54e57db.css",
+      "bytes": 53552,
+      "contentType": "text/css; charset=utf-8"
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/css/b0860b06158ed47f.css",
+      "file": "assets/storage.pixpix.media/releases/_next/static/css/b0860b06158ed47f.css",
+      "bytes": 6710,
+      "contentType": "text/css; charset=utf-8"
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/chunks/webpack-7cc8afb9b860bb0c.js",
+      "file": "assets/storage.pixpix.media/releases/_next/static/chunks/webpack-7cc8afb9b860bb0c.js",
+      "bytes": 5759,
+      "contentType": "application/javascript"
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/css/fe0f516029bf05a1.css",
+      "file": "assets/storage.pixpix.media/releases/_next/static/css/fe0f516029bf05a1.css",
+      "bytes": 5175,
+      "contentType": "text/css; charset=utf-8"
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/chunks/55fda346-8ac80227664b22cb.js",
+      "file": "assets/storage.pixpix.media/releases/_next/static/chunks/55fda346-8ac80227664b22cb.js",
+      "bytes": 199870,
+      "contentType": "application/javascript"
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/css/8dd2ae7a76b01092.css",
+      "file": "assets/storage.pixpix.media/releases/_next/static/css/8dd2ae7a76b01092.css",
+      "bytes": 466399,
+      "contentType": "text/css; charset=utf-8"
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/chunks/main-app-62b3e2f3c595b536.js",
+      "file": "assets/storage.pixpix.media/releases/_next/static/chunks/main-app-62b3e2f3c595b536.js",
+      "bytes": 484,
+      "contentType": "application/javascript"
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/chunks/app/global-error-3ee85c1571295fd3.js",
+      "file": "assets/storage.pixpix.media/releases/_next/static/chunks/app/global-error-3ee85c1571295fd3.js",
+      "bytes": 11799,
+      "contentType": "application/javascript"
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/chunks/3968-415346e0ad9d30cc.js",
+      "file": "assets/storage.pixpix.media/releases/_next/static/chunks/3968-415346e0ad9d30cc.js",
+      "bytes": 39749,
+      "contentType": "application/javascript"
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/chunks/88df6af5-89ccb2b6639cf522.js",
+      "file": "assets/storage.pixpix.media/releases/_next/static/chunks/88df6af5-89ccb2b6639cf522.js",
+      "bytes": 682706,
+      "contentType": "application/javascript"
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/chunks/eef9e134-a7f9014749b21546.js",
+      "file": "assets/storage.pixpix.media/releases/_next/static/chunks/eef9e134-a7f9014749b21546.js",
+      "bytes": 305767,
+      "contentType": "application/javascript"
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/chunks/3278-d5cec21120ddc258.js",
+      "file": "assets/storage.pixpix.media/releases/_next/static/chunks/3278-d5cec21120ddc258.js",
+      "bytes": 223077,
+      "contentType": "application/javascript"
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/chunks/3124-a716aae5c7774720.js",
+      "file": "assets/storage.pixpix.media/releases/_next/static/chunks/3124-a716aae5c7774720.js",
+      "bytes": 7506,
+      "contentType": "application/javascript"
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/chunks/1526-4c926552deaca302.js",
+      "file": "assets/storage.pixpix.media/releases/_next/static/chunks/1526-4c926552deaca302.js",
+      "bytes": 32266,
+      "contentType": "application/javascript"
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/chunks/5019-3f2cf3e1269f49f5.js",
+      "file": "assets/storage.pixpix.media/releases/_next/static/chunks/5019-3f2cf3e1269f49f5.js",
+      "bytes": 14745,
+      "contentType": "application/javascript"
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/chunks/942-d7d61a9ef75b2fc0.js",
+      "file": "assets/storage.pixpix.media/releases/_next/static/chunks/942-d7d61a9ef75b2fc0.js",
+      "bytes": 11351,
+      "contentType": "application/javascript"
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/chunks/6493-2cd47e7504ae39d4.js",
+      "file": "assets/storage.pixpix.media/releases/_next/static/chunks/6493-2cd47e7504ae39d4.js",
+      "bytes": 36027,
+      "contentType": "application/javascript"
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/chunks/5862-a7b47b24b114c758.js",
+      "file": "assets/storage.pixpix.media/releases/_next/static/chunks/5862-a7b47b24b114c758.js",
+      "bytes": 9508,
+      "contentType": "application/javascript"
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/chunks/4030-e5eff10453890b42.js",
+      "file": "assets/storage.pixpix.media/releases/_next/static/chunks/4030-e5eff10453890b42.js",
+      "bytes": 34987,
+      "contentType": "application/javascript"
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/chunks/179-46939edfc77c0d14.js",
+      "file": "assets/storage.pixpix.media/releases/_next/static/chunks/179-46939edfc77c0d14.js",
+      "bytes": 17890,
+      "contentType": "application/javascript"
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/chunks/2585-c568bfe8d0785d4d.js",
+      "file": "assets/storage.pixpix.media/releases/_next/static/chunks/2585-c568bfe8d0785d4d.js",
+      "bytes": 135778,
+      "contentType": "application/javascript"
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/chunks/5653-00aa8d00331b4ea6.js",
+      "file": "assets/storage.pixpix.media/releases/_next/static/chunks/5653-00aa8d00331b4ea6.js",
+      "bytes": 107974,
+      "contentType": "application/javascript"
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/chunks/894-f24c050fe772c263.js",
+      "file": "assets/storage.pixpix.media/releases/_next/static/chunks/894-f24c050fe772c263.js",
+      "bytes": 49995,
+      "contentType": "application/javascript"
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/chunks/2623-743d419c91ce1151.js",
+      "file": "assets/storage.pixpix.media/releases/_next/static/chunks/2623-743d419c91ce1151.js",
+      "bytes": 7983,
+      "contentType": "application/javascript"
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/chunks/8351-e25a56c80c4dad02.js",
+      "file": "assets/storage.pixpix.media/releases/_next/static/chunks/8351-e25a56c80c4dad02.js",
+      "bytes": 6716,
+      "contentType": "application/javascript"
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/chunks/1104-90f0c5ecc5871c02.js",
+      "file": "assets/storage.pixpix.media/releases/_next/static/chunks/1104-90f0c5ecc5871c02.js",
+      "bytes": 197540,
+      "contentType": "application/javascript"
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/chunks/7774-f7406f155c639d20.js",
+      "file": "assets/storage.pixpix.media/releases/_next/static/chunks/7774-f7406f155c639d20.js",
+      "bytes": 8684,
+      "contentType": "application/javascript"
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/chunks/3155-1881b119d02c718f.js",
+      "file": "assets/storage.pixpix.media/releases/_next/static/chunks/3155-1881b119d02c718f.js",
+      "bytes": 7601,
+      "contentType": "application/javascript"
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/chunks/5612-80fcecee189f4f28.js",
+      "file": "assets/storage.pixpix.media/releases/_next/static/chunks/5612-80fcecee189f4f28.js",
+      "bytes": 17878,
+      "contentType": "application/javascript"
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/chunks/2430-f0a75184799d9f32.js",
+      "file": "assets/storage.pixpix.media/releases/_next/static/chunks/2430-f0a75184799d9f32.js",
+      "bytes": 41749,
+      "contentType": "application/javascript"
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/chunks/20-0c53d88b97d0e79d.js",
+      "file": "assets/storage.pixpix.media/releases/_next/static/chunks/20-0c53d88b97d0e79d.js",
+      "bytes": 18113,
+      "contentType": "application/javascript"
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/chunks/2677-bfbd2b34114376cb.js",
+      "file": "assets/storage.pixpix.media/releases/_next/static/chunks/2677-bfbd2b34114376cb.js",
+      "bytes": 22293,
+      "contentType": "application/javascript"
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/chunks/5989-79b366be7f045dad.js",
+      "file": "assets/storage.pixpix.media/releases/_next/static/chunks/5989-79b366be7f045dad.js",
+      "bytes": 24009,
+      "contentType": "application/javascript"
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/chunks/8381-c69ee7d4c6a42150.js",
+      "file": "assets/storage.pixpix.media/releases/_next/static/chunks/8381-c69ee7d4c6a42150.js",
+      "bytes": 37414,
+      "contentType": "application/javascript"
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/chunks/2578-4e1ee4410f74352a.js",
+      "file": "assets/storage.pixpix.media/releases/_next/static/chunks/2578-4e1ee4410f74352a.js",
+      "bytes": 29765,
+      "contentType": "application/javascript"
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/chunks/6641-cb97162c0f89fc6c.js",
+      "file": "assets/storage.pixpix.media/releases/_next/static/chunks/6641-cb97162c0f89fc6c.js",
+      "bytes": 200318,
+      "contentType": "application/javascript"
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/chunks/9016-4df99cdf8bc9f5fe.js",
+      "file": "assets/storage.pixpix.media/releases/_next/static/chunks/9016-4df99cdf8bc9f5fe.js",
+      "bytes": 33698,
+      "contentType": "application/javascript"
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/chunks/1255-a7f329e47d496480.js",
+      "file": "assets/storage.pixpix.media/releases/_next/static/chunks/1255-a7f329e47d496480.js",
+      "bytes": 22303,
+      "contentType": "application/javascript"
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/chunks/9609-a4bcc2e8f98f5d4b.js",
+      "file": "assets/storage.pixpix.media/releases/_next/static/chunks/9609-a4bcc2e8f98f5d4b.js",
+      "bytes": 56769,
+      "contentType": "application/javascript"
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/chunks/4062-7f60c8435733f54d.js",
+      "file": "assets/storage.pixpix.media/releases/_next/static/chunks/4062-7f60c8435733f54d.js",
+      "bytes": 30552,
+      "contentType": "application/javascript"
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/chunks/6517-f7cdd8691dde599f.js",
+      "file": "assets/storage.pixpix.media/releases/_next/static/chunks/6517-f7cdd8691dde599f.js",
+      "bytes": 34483,
+      "contentType": "application/javascript"
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/chunks/9803-a4e9a8b4bffa1b4d.js",
+      "file": "assets/storage.pixpix.media/releases/_next/static/chunks/9803-a4e9a8b4bffa1b4d.js",
+      "bytes": 350808,
+      "contentType": "application/javascript"
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/css/641cf76c1665440d.css",
+      "file": "assets/storage.pixpix.media/releases/_next/static/css/641cf76c1665440d.css",
+      "bytes": 6010,
+      "contentType": "text/css; charset=utf-8"
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/chunks/9722-1bbb7cdb8c688bb5.js",
+      "file": "assets/storage.pixpix.media/releases/_next/static/chunks/9722-1bbb7cdb8c688bb5.js",
+      "bytes": 9166,
+      "contentType": "application/javascript"
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/chunks/1764-0da4766921dba293.js",
+      "file": "assets/storage.pixpix.media/releases/_next/static/chunks/1764-0da4766921dba293.js",
+      "bytes": 12804,
+      "contentType": "application/javascript"
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/chunks/app/%5Blocale%5D/layout-947fbac9d73eeec2.js",
+      "file": "assets/storage.pixpix.media/releases/_next/static/chunks/app/%5Blocale%5D/layout-947fbac9d73eeec2.js",
+      "bytes": 134974,
+      "contentType": "application/javascript"
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/chunks/app/%5Blocale%5D/tools/%5BtoolName%5D/page-f1cfbf5e796897f4.js",
+      "file": "assets/storage.pixpix.media/releases/_next/static/chunks/app/%5Blocale%5D/tools/%5BtoolName%5D/page-f1cfbf5e796897f4.js",
+      "bytes": 168353,
+      "contentType": "application/javascript"
+    },
+    {
+      "source": "https://www.pixpix.com/favicon.ico?5fabf67550002322",
+      "file": "assets/www.pixpix.com/favicon.ico",
+      "bytes": 2142,
+      "contentType": "image/x-icon"
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/22a5144ee8d83bca-s.p.woff2",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/22a5144ee8d83bca-s.p.woff2",
+      "bytes": 29288,
+      "contentType": "application/octet-stream"
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/aa016aab0e6d1295-s.woff2",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/aa016aab0e6d1295-s.woff2",
+      "bytes": 16540,
+      "contentType": "application/octet-stream"
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/f639721981034f88-s.woff2",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/f639721981034f88-s.woff2",
+      "bytes": 7252,
+      "contentType": "application/octet-stream"
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/b66cf8e69499582a-s.woff2",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/b66cf8e69499582a-s.woff2",
+      "bytes": 7968,
+      "contentType": "application/octet-stream"
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/9766a7e9e2e0ad5a-s.woff2",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/9766a7e9e2e0ad5a-s.woff2",
+      "bytes": 14900,
+      "contentType": "application/octet-stream"
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/chunks/polyfills-42372ed130431b0a.js",
+      "file": "assets/storage.pixpix.media/releases/_next/static/chunks/polyfills-42372ed130431b0a.js",
+      "bytes": 112594,
+      "contentType": "application/javascript"
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/013b72fa676f92e0-s.woff2",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/013b72fa676f92e0-s.woff2",
+      "bytes": 6204,
+      "contentType": "application/octet-stream"
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/e038a29029a234f2-s.woff2",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/e038a29029a234f2-s.woff2",
+      "bytes": 7728,
+      "contentType": "application/octet-stream"
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/65f03d54ccadf4a8-s.woff2",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/65f03d54ccadf4a8-s.woff2",
+      "bytes": 5892,
+      "contentType": "application/octet-stream"
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/b9408752a0c24fb9-s.woff2",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/b9408752a0c24fb9-s.woff2",
+      "bytes": 12872,
+      "contentType": "application/octet-stream"
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/7d4881bb7e1bf84d-s.p.woff2",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/7d4881bb7e1bf84d-s.p.woff2",
+      "bytes": 23108,
+      "contentType": "application/octet-stream"
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/2b5b02fc7e511755-s.woff2",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/2b5b02fc7e511755-s.woff2",
+      "bytes": 14712,
+      "contentType": "application/octet-stream"
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/93a6e477e1480c92-s.woff2",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/93a6e477e1480c92-s.woff2",
+      "bytes": 8652,
+      "contentType": "application/octet-stream"
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/da368c6fbc2a1ea6-s.p.ttf",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/da368c6fbc2a1ea6-s.p.ttf",
+      "bytes": 36796,
+      "contentType": "application/octet-stream"
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/c7e0cf6c760983e7-s.p.woff2",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/c7e0cf6c760983e7-s.p.woff2",
+      "bytes": 18740,
+      "contentType": "application/octet-stream"
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/9134fdab572c637d-s.p.otf",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/9134fdab572c637d-s.p.otf",
+      "bytes": 63284,
+      "contentType": "application/octet-stream"
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/9d5a263311222317-s.p.woff2",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/9d5a263311222317-s.p.woff2",
+      "bytes": 41236,
+      "contentType": "application/octet-stream"
+    }
+  ],
+  "errors": []
+}

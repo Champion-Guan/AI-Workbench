@@ -1,0 +1,13 @@
+{
+  "name": "pixpix-tools-static-archive",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Static-only local archive of 17 PixPix tool pages.",
+  "scripts": {
+    "start": "node server.mjs",
+    "dev": "node server.mjs"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
