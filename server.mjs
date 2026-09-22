@@ -889,6 +889,7 @@ async function send(response, path, method) {
       // The archived detail page itself is Chinese, so the redirect is neither
       // needed nor desirable in this single-page local MVP.
       .replace(/<script id="root-locale-redirect">[\s\S]*?<\/script>/, "")
+      .replace(/href="\/_pixpix-assets\/www\.pixpix\.com\/favicon\.ico[^"]*"/g, 'href="/_pixpix-assets/local-brand/workbench-logo.png"')
       .replace(/href="\/favicon\.ico[^"]*"/g, 'href="/favicon.ico?g-brand-v3"')
       .replace(/\\\"href\\\":\\\"\/favicon\.ico[^\\\"]*/g, '\\\"href\\\":\\\"/favicon.ico?g-brand-v3')
       .replace(/href="\/zh-CN\/workbench"/g, 'href="/"');
@@ -919,7 +920,7 @@ const server = createServer(async (request, response) => {
 
   const pathname = new URL(request.url || "/", "http://127.0.0.1").pathname.replace(/\/$/, "") || "/";
   if (pathname === "/favicon.ico") {
-    const favicon = safeFile(assetRoot, "www.pixpix.com/favicon.ico");
+    const favicon = safeFile(assetRoot, "local-brand/workbench-logo.png");
     if (favicon && await existingFile(favicon)) return send(response, favicon, method);
     return notFound(response);
   }
