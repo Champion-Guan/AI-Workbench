@@ -36,6 +36,12 @@ const workbenchLogoStyle = `<style id="local-workbench-logo">
     filter: none;
     pointer-events: none;
   }
+  html.dark [role="dialog"] aside a[href="/"]::after,
+  html.dark [role="dialog"] aside a[href="/zh-CN/workbench"]::after,
+  html[data-theme="dark"] [role="dialog"] aside a[href="/"]::after,
+  html[data-theme="dark"] [role="dialog"] aside a[href="/zh-CN/workbench"]::after,
+  body.dark [role="dialog"] aside a[href="/"]::after,
+  body.dark [role="dialog"] aside a[href="/zh-CN/workbench"]::after { filter: invert(1) brightness(1.3); }
 </style>`;
 
 const localRootNavigationScript = `<script id="local-root-navigation">
