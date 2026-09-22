@@ -1,0 +1,583 @@
+{
+  "generatedAt": "2026-09-22T16:18:53.795Z",
+  "assets": 115,
+  "downloaded": [
+    {
+      "asset": "images/tools/apparel-group-1-2.webp",
+      "state": "downloaded",
+      "bytes": 22002
+    },
+    {
+      "asset": "images/tools/accessory-try-on-result-1.webp",
+      "state": "downloaded",
+      "bytes": 8164
+    },
+    {
+      "asset": "images/tools/accessory-try-on-result-2.webp",
+      "state": "downloaded",
+      "bytes": 11366
+    },
+    {
+      "asset": "images/tools/apparel-group-1-1.webp",
+      "state": "downloaded",
+      "bytes": 17838
+    },
+    {
+      "asset": "images/tools/accessory-try-on-source.webp",
+      "state": "downloaded",
+      "bytes": 22784
+    },
+    {
+      "asset": "images/tools/apparel-group-1-3.webp",
+      "state": "downloaded",
+      "bytes": 20864
+    },
+    {
+      "asset": "images/tools/apparel-group-1-4.webp",
+      "state": "downloaded",
+      "bytes": 26448
+    },
+    {
+      "asset": "images/tools/apparel-group-2-1.webp",
+      "state": "downloaded",
+      "bytes": 40190
+    },
+    {
+      "asset": "images/tools/apparel-group-2-2.webp",
+      "state": "downloaded",
+      "bytes": 86040
+    },
+    {
+      "asset": "images/tools/apparel-group-2-3.webp",
+      "state": "downloaded",
+      "bytes": 76282
+    },
+    {
+      "asset": "images/tools/apparel-group-3-1.webp",
+      "state": "downloaded",
+      "bytes": 29136
+    },
+    {
+      "asset": "images/tools/apparel-group-3-3.webp",
+      "state": "downloaded",
+      "bytes": 96478
+    },
+    {
+      "asset": "images/tools/apparel-group-3-4.webp",
+      "state": "downloaded",
+      "bytes": 101704
+    },
+    {
+      "asset": "images/tools/apparel-group-2-4.webp",
+      "state": "downloaded",
+      "bytes": 75630
+    },
+    {
+      "asset": "images/tools/apparel-group-3-2.webp",
+      "state": "downloaded",
+      "bytes": 61366
+    },
+    {
+      "asset": "images/tools/apparel-set-1-2.webp",
+      "state": "downloaded",
+      "bytes": 13424
+    },
+    {
+      "asset": "images/tools/apparel-set-1-4.webp",
+      "state": "downloaded",
+      "bytes": 40066
+    },
+    {
+      "asset": "images/tools/apparel-set-1-1.webp",
+      "state": "downloaded",
+      "bytes": 25622
+    },
+    {
+      "asset": "images/tools/apparel-set-1-3.webp",
+      "state": "downloaded",
+      "bytes": 45744
+    },
+    {
+      "asset": "images/tools/apparel-set-2-1.webp",
+      "state": "downloaded",
+      "bytes": 16334
+    },
+    {
+      "asset": "images/tools/apparel-set-2-2.webp",
+      "state": "downloaded",
+      "bytes": 10756
+    },
+    {
+      "asset": "images/tools/apparel-set-3-1.webp",
+      "state": "downloaded",
+      "bytes": 61662
+    },
+    {
+      "asset": "images/tools/apparel-set-3-2.webp",
+      "state": "downloaded",
+      "bytes": 25544
+    },
+    {
+      "asset": "images/tools/apparel-set-2-4.webp",
+      "state": "downloaded",
+      "bytes": 31390
+    },
+    {
+      "asset": "images/tools/apparel-set-2-3.webp",
+      "state": "downloaded",
+      "bytes": 44596
+    },
+    {
+      "asset": "images/tools/apparel-set-3-3.webp",
+      "state": "downloaded",
+      "bytes": 141296
+    },
+    {
+      "asset": "images/tools/detail-page-1-1-1.webp",
+      "state": "downloaded",
+      "bytes": 13210
+    },
+    {
+      "asset": "images/tools/detail-page-1-1-2.webp",
+      "state": "downloaded",
+      "bytes": 11248
+    },
+    {
+      "asset": "images/tools/detail-page-1-2-1.webp",
+      "state": "downloaded",
+      "bytes": 54116
+    },
+    {
+      "asset": "images/tools/apparel-set-3-4.webp",
+      "state": "downloaded",
+      "bytes": 60756
+    },
+    {
+      "asset": "images/tools/detail-page-1-1-3.webp",
+      "state": "downloaded",
+      "bytes": 13746
+    },
+    {
+      "asset": "images/tools/detail-page-1-3-2.webp",
+      "state": "downloaded",
+      "bytes": 24050
+    },
+    {
+      "asset": "images/tools/detail-page-1-3-3.webp",
+      "state": "downloaded",
+      "bytes": 24640
+    },
+    {
+      "asset": "images/tools/detail-page-1-3-4.webp",
+      "state": "downloaded",
+      "bytes": 18630
+    },
+    {
+      "asset": "images/tools/detail-page-1-3-1.webp",
+      "state": "downloaded",
+      "bytes": 16742
+    },
+    {
+      "asset": "images/tools/detail-page-2-1-1.webp",
+      "state": "downloaded",
+      "bytes": 13700
+    },
+    {
+      "asset": "images/tools/detail-page-1-3-6.webp",
+      "state": "downloaded",
+      "bytes": 22630
+    },
+    {
+      "asset": "images/tools/detail-page-2-1-2.webp",
+      "state": "downloaded",
+      "bytes": 10668
+    },
+    {
+      "asset": "images/tools/detail-page-1-3-5.webp",
+      "state": "downloaded",
+      "bytes": 17556
+    },
+    {
+      "asset": "images/tools/detail-page-2-1-3.webp",
+      "state": "downloaded",
+      "bytes": 11420
+    },
+    {
+      "asset": "images/tools/detail-page-2-2-1.webp",
+      "state": "downloaded",
+      "bytes": 64576
+    },
+    {
+      "asset": "images/tools/detail-page-2-3-2.webp",
+      "state": "downloaded",
+      "bytes": 24326
+    },
+    {
+      "asset": "images/tools/detail-page-2-3-4.webp",
+      "state": "downloaded",
+      "bytes": 26194
+    },
+    {
+      "asset": "images/tools/detail-page-2-3-3.webp",
+      "state": "downloaded",
+      "bytes": 35672
+    },
+    {
+      "asset": "images/tools/detail-page-2-3-5.webp",
+      "state": "downloaded",
+      "bytes": 23170
+    },
+    {
+      "asset": "images/tools/detail-page-2-3-1.webp",
+      "state": "downloaded",
+      "bytes": 18884
+    },
+    {
+      "asset": "images/tools/detail-page-3-1-2.webp",
+      "state": "downloaded",
+      "bytes": 12382
+    },
+    {
+      "asset": "images/tools/detail-page-2-3-6.webp",
+      "state": "downloaded",
+      "bytes": 21716
+    },
+    {
+      "asset": "images/tools/detail-page-3-1-3.webp",
+      "state": "downloaded",
+      "bytes": 11240
+    },
+    {
+      "asset": "images/tools/detail-page-3-2-1.webp",
+      "state": "downloaded",
+      "bytes": 42872
+    },
+    {
+      "asset": "images/tools/detail-page-3-3-1.webp",
+      "state": "downloaded",
+      "bytes": 13520
+    },
+    {
+      "asset": "images/tools/detail-page-3-1-1.webp",
+      "state": "downloaded",
+      "bytes": 9462
+    },
+    {
+      "asset": "images/tools/detail-page-3-3-2.webp",
+      "state": "downloaded",
+      "bytes": 10122
+    },
+    {
+      "asset": "images/tools/detail-page-3-3-3.webp",
+      "state": "downloaded",
+      "bytes": 12024
+    },
+    {
+      "asset": "images/tools/detail-page-3-3-6.webp",
+      "state": "downloaded",
+      "bytes": 14758
+    },
+    {
+      "asset": "images/tools/detail-page-3-3-4.webp",
+      "state": "downloaded",
+      "bytes": 32280
+    },
+    {
+      "asset": "images/tools/detail-page-3-3-5.webp",
+      "state": "downloaded",
+      "bytes": 20538
+    },
+    {
+      "asset": "images/tools/hot-seller-replicate-1-1.webp",
+      "state": "downloaded",
+      "bytes": 13598
+    },
+    {
+      "asset": "images/tools/hot-seller-replicate-1-2.webp",
+      "state": "downloaded",
+      "bytes": 11670
+    },
+    {
+      "asset": "images/tools/hot-seller-replicate-1-3.webp",
+      "state": "downloaded",
+      "bytes": 12264
+    },
+    {
+      "asset": "images/tools/hot-seller-replicate-2-1.webp",
+      "state": "downloaded",
+      "bytes": 96154
+    },
+    {
+      "asset": "images/tools/hot-seller-replicate-2-2.webp",
+      "state": "downloaded",
+      "bytes": 82978
+    },
+    {
+      "asset": "images/tools/flux-video-upscale-preview.mp4",
+      "state": "downloaded",
+      "bytes": 217804
+    },
+    {
+      "asset": "images/tools/hot-seller-replicate-3-2.webp",
+      "state": "downloaded",
+      "bytes": 140960
+    },
+    {
+      "asset": "images/tools/hot-seller-replicate-2-3.webp",
+      "state": "downloaded",
+      "bytes": 66760
+    },
+    {
+      "asset": "images/tools/product-recolor-1-1.webp",
+      "state": "downloaded",
+      "bytes": 13708
+    },
+    {
+      "asset": "images/tools/product-recolor-1-2.webp",
+      "state": "downloaded",
+      "bytes": 12974
+    },
+    {
+      "asset": "images/tools/hot-seller-replicate-3-3.webp",
+      "state": "downloaded",
+      "bytes": 166330
+    },
+    {
+      "asset": "images/tools/product-retouch-2-1.webp",
+      "state": "downloaded",
+      "bytes": 26144
+    },
+    {
+      "asset": "images/tools/product-retouch-1-2.webp",
+      "state": "downloaded",
+      "bytes": 74774
+    },
+    {
+      "asset": "images/tools/product-retouch-2-2.webp",
+      "state": "downloaded",
+      "bytes": 47326
+    },
+    {
+      "asset": "images/tools/product-retouch-1-1.webp",
+      "state": "downloaded",
+      "bytes": 98238
+    },
+    {
+      "asset": "images/tools/product-retouch-3-2.webp",
+      "state": "downloaded",
+      "bytes": 43264
+    },
+    {
+      "asset": "images/tools/product-set-1-1.webp",
+      "state": "downloaded",
+      "bytes": 19966
+    },
+    {
+      "asset": "images/tools/product-retouch-3-1.webp",
+      "state": "downloaded",
+      "bytes": 45902
+    },
+    {
+      "asset": "images/tools/hot-seller-replicate-3-1.webp",
+      "state": "downloaded",
+      "bytes": 150832
+    },
+    {
+      "asset": "images/tools/product-set-1-3.webp",
+      "state": "downloaded",
+      "bytes": 12544
+    },
+    {
+      "asset": "images/tools/product-set-1-2.webp",
+      "state": "downloaded",
+      "bytes": 11570
+    },
+    {
+      "asset": "images/tools/product-set-1-4.webp",
+      "state": "downloaded",
+      "bytes": 21272
+    },
+    {
+      "asset": "images/tools/product-set-1-5.webp",
+      "state": "downloaded",
+      "bytes": 12728
+    },
+    {
+      "asset": "images/tools/product-set-2-2.webp",
+      "state": "downloaded",
+      "bytes": 14238
+    },
+    {
+      "asset": "images/tools/product-set-2-1.webp",
+      "state": "downloaded",
+      "bytes": 42760
+    },
+    {
+      "asset": "images/tools/product-set-2-4.webp",
+      "state": "downloaded",
+      "bytes": 21122
+    },
+    {
+      "asset": "images/tools/product-set-2-3.webp",
+      "state": "downloaded",
+      "bytes": 18294
+    },
+    {
+      "asset": "images/tools/product-set-2-5.webp",
+      "state": "downloaded",
+      "bytes": 17784
+    },
+    {
+      "asset": "images/tools/product-set-3-2.webp",
+      "state": "downloaded",
+      "bytes": 27036
+    },
+    {
+      "asset": "images/tools/product-set-3-1.webp",
+      "state": "downloaded",
+      "bytes": 37504
+    },
+    {
+      "asset": "images/tools/product-set-3-3.webp",
+      "state": "downloaded",
+      "bytes": 28052
+    },
+    {
+      "asset": "images/tools/product-set-3-5.webp",
+      "state": "downloaded",
+      "bytes": 20578
+    },
+    {
+      "asset": "images/tools/product-set-3-4.webp",
+      "state": "downloaded",
+      "bytes": 37152
+    },
+    {
+      "asset": "images/tools/seller-video-pain-point.mp4",
+      "state": "downloaded",
+      "bytes": 1241306
+    },
+    {
+      "asset": "images/tools/seller-video-product-presentation.mp4",
+      "state": "downloaded",
+      "bytes": 1035561
+    },
+    {
+      "asset": "images/tools/seller-video-product-demo.mp4",
+      "state": "downloaded",
+      "bytes": 688415
+    },
+    {
+      "asset": "images/tools/seller-video-short-drama.mp4",
+      "state": "downloaded",
+      "bytes": 756097
+    },
+    {
+      "asset": "images/tools/seller-video-reaction.mp4",
+      "state": "downloaded",
+      "bytes": 905916
+    },
+    {
+      "asset": "images/tools/shoe-try-on-result-1.webp",
+      "state": "downloaded",
+      "bytes": 12908
+    },
+    {
+      "asset": "images/tools/shoe-try-on-result-2.webp",
+      "state": "downloaded",
+      "bytes": 18132
+    },
+    {
+      "asset": "images/tools/seller-video-tvc.mp4",
+      "state": "downloaded",
+      "bytes": 609793
+    },
+    {
+      "asset": "images/tools/underwear-change-result-1.webp",
+      "state": "downloaded",
+      "bytes": 7256
+    },
+    {
+      "asset": "images/tools/shoe-try-on-source.webp",
+      "state": "downloaded",
+      "bytes": 12872
+    },
+    {
+      "asset": "images/tools/seller-video-unboxing.mp4",
+      "state": "downloaded",
+      "bytes": 769583
+    },
+    {
+      "asset": "images/tools/seller-video-ugc.mp4",
+      "state": "downloaded",
+      "bytes": 1337712
+    },
+    {
+      "asset": "images/tools/underwear-change-source.webp",
+      "state": "downloaded",
+      "bytes": 9090
+    },
+    {
+      "asset": "images/tools/video-background-removal-preview.mp4",
+      "state": "downloaded",
+      "bytes": 127290
+    },
+    {
+      "asset": "images/tools/underwear-change-result-2.webp",
+      "state": "downloaded",
+      "bytes": 5962
+    },
+    {
+      "asset": "images/tools/video-compression-preview.mp4",
+      "state": "downloaded",
+      "bytes": 480821
+    },
+    {
+      "asset": "images/tools/video-replicate-similar-1-2-1.mp4",
+      "state": "downloaded",
+      "bytes": 1035561
+    },
+    {
+      "asset": "images/tools/video-replicate-exact-1-1-product.webp",
+      "state": "downloaded",
+      "bytes": 2408
+    },
+    {
+      "asset": "images/tools/video-replicate-similar-1-2-product.webp",
+      "state": "downloaded",
+      "bytes": 2348
+    },
+    {
+      "asset": "images/tools/video-replicate-exact-1-1-2.mp4",
+      "state": "downloaded",
+      "bytes": 1337712
+    },
+    {
+      "asset": "images/tools/video-upscale-preview.mp4",
+      "state": "downloaded",
+      "bytes": 115504
+    },
+    {
+      "asset": "images/tools/video-replicate-similar-1-2-2.mp4",
+      "state": "downloaded",
+      "bytes": 953321
+    },
+    {
+      "asset": "images/tools/video-watermark-removal-preview.mp4",
+      "state": "downloaded",
+      "bytes": 142665
+    },
+    {
+      "asset": "images/tools/video-replicate-exact-1-1-1.mp4",
+      "state": "downloaded",
+      "bytes": 1716294
+    },
+    {
+      "asset": "images/tools/ai-writing-loading.json",
+      "state": "downloaded",
+      "bytes": 117440
+    }
+  ],
+  "existing": [],
+  "failed": []
+}

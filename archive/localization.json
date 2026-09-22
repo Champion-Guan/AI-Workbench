@@ -1,0 +1,1650 @@
+{
+  "generatedAt": "2026-09-22T16:18:06.675Z",
+  "downloaded": [
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/video-edit-help-before-poster.7e68bab1.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/video-edit-help-before-poster.7e68bab1.webp",
+      "bytes": 7038
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/video-edit-help-reference.d8bb3395.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/video-edit-help-reference.d8bb3395.webp",
+      "bytes": 2370
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/outpaint.ea6c7963.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/outpaint.ea6c7963.webp",
+      "bytes": 90162
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/upscale.88a85e18.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/upscale.88a85e18.webp",
+      "bytes": 93658
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/video-edit-help-after-poster.870e00db.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/video-edit-help-after-poster.870e00db.webp",
+      "bytes": 6850
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/video-edit-help-after-animated.5bc2ca0a.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/video-edit-help-after-animated.5bc2ca0a.webp",
+      "bytes": 178474
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/remove-bg.11c2eb1e.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/remove-bg.11c2eb1e.webp",
+      "bytes": 88498
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/camera-angle.807b40d8.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/camera-angle.807b40d8.webp",
+      "bytes": 38520
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/erase.acf0a223.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/erase.acf0a223.webp",
+      "bytes": 113602
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/product-suite.00460e5e.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/product-suite.00460e5e.webp",
+      "bytes": 14634
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/best-seller.7c8cf7be.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/best-seller.7c8cf7be.webp",
+      "bytes": 14108
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/detail-page.d5782c54.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/detail-page.d5782c54.webp",
+      "bytes": 12064
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/crop.cd1947ce.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/crop.cd1947ce.webp",
+      "bytes": 112238
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/video-edit-help-before-animated.655ac7db.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/video-edit-help-before-animated.655ac7db.webp",
+      "bytes": 177556
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/video-replica.9768563d.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/video-replica.9768563d.webp",
+      "bytes": 14154
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/product-retouch.0eed7b23.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/product-retouch.0eed7b23.webp",
+      "bytes": 8558
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/texture-light.7d7690bc.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/texture-light.7d7690bc.webp",
+      "bytes": 96
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/model-styling.88f05b51.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/model-styling.88f05b51.webp",
+      "bytes": 11642
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/inpaint.6d792495.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/inpaint.6d792495.webp",
+      "bytes": 98684
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/apparel-group.45c541e9.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/apparel-group.45c541e9.webp",
+      "bytes": 14828
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/commerce-video.e35d1a60.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/commerce-video.e35d1a60.webp",
+      "bytes": 8154
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/infinite-canvas-v2.eca304bb.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/infinite-canvas-v2.eca304bb.webp",
+      "bytes": 5320
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/kling.2f8ec348.png",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/kling.2f8ec348.png",
+      "bytes": 4725
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/jimeng.da2741f0.png",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/jimeng.da2741f0.png",
+      "bytes": 3427
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/product-set-hero-result.f41429f8.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/product-set-hero-result.f41429f8.webp",
+      "bytes": 107968
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/texture-dark.aa459af0.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/texture-dark.aa459af0.webp",
+      "bytes": 102
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/product-set-hero-source.0f863a7c.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/product-set-hero-source.0f863a7c.webp",
+      "bytes": 11756
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/product-set-hero-thumbnail-cover.e28ab18e.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/product-set-hero-thumbnail-cover.e28ab18e.webp",
+      "bytes": 2368
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/product-set-hero-thumbnail-selling-point.6d9320a8.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/product-set-hero-thumbnail-selling-point.6d9320a8.webp",
+      "bytes": 5442
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/product-set-hero-product-cutout.72de740a.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/product-set-hero-product-cutout.72de740a.webp",
+      "bytes": 28146
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/product-set-hero-thumbnail-detail.60ebfd77.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/product-set-hero-thumbnail-detail.60ebfd77.webp",
+      "bytes": 6942
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/workflow-gallery-cover.6e358787.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/workflow-gallery-cover.6e358787.webp",
+      "bytes": 67870
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/capability-openai-logo.d58cb364.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/capability-openai-logo.d58cb364.webp",
+      "bytes": 8338
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/workflow-gallery-specs.0bbeea93.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/workflow-gallery-specs.0bbeea93.webp",
+      "bytes": 49018
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/workflow-gallery-detail.7f8ac8ac.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/workflow-gallery-detail.7f8ac8ac.webp",
+      "bytes": 95040
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/advantage-selling-points.82591437.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/advantage-selling-points.82591437.webp",
+      "bytes": 3508
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/product-set-hero-thumbnail-specs.bff73a66.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/product-set-hero-thumbnail-specs.bff73a66.webp",
+      "bytes": 4372
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/advantage-consistency.8cb81aa8.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/advantage-consistency.8cb81aa8.webp",
+      "bytes": 3798
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/advantage-channels.ff509157.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/advantage-channels.ff509157.webp",
+      "bytes": 3528
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/hero-background.35ab4e05.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/hero-background.35ab4e05.webp",
+      "bytes": 14980
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/advantage-planning.86c3afcd.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/advantage-planning.86c3afcd.webp",
+      "bytes": 3954
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/hero-source-product.eb0aaea4.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/hero-source-product.eb0aaea4.webp",
+      "bytes": 42370
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/hero-result-cover.03734d33.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/hero-result-cover.03734d33.webp",
+      "bytes": 5600
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/hero-result-lifestyle.365e1bc2.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/hero-result-lifestyle.365e1bc2.webp",
+      "bytes": 6976
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/hero-result-material.c83a0554.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/hero-result-material.c83a0554.webp",
+      "bytes": 7752
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/hero-result-specifications.1cfe8934.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/hero-result-specifications.1cfe8934.webp",
+      "bytes": 6332
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/hero-result-usage-scene.ab4dd4df.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/hero-result-usage-scene.ab4dd4df.webp",
+      "bytes": 6948
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/hot-seller-replicate.228da76d.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/hot-seller-replicate.228da76d.webp",
+      "bytes": 32396
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/showcase-a-plus-01.de15d43d.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/showcase-a-plus-01.de15d43d.webp",
+      "bytes": 22954
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/showcase-a-plus-02.a0849a38.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/showcase-a-plus-02.a0849a38.webp",
+      "bytes": 28310
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/showcase-a-plus-04.223d9792.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/showcase-a-plus-04.223d9792.webp",
+      "bytes": 21672
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/showcase-a-plus-03.a7e27302.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/showcase-a-plus-03.a7e27302.webp",
+      "bytes": 36528
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/showcase-a-plus-05.e5163131.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/showcase-a-plus-05.e5163131.webp",
+      "bytes": 35746
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/showcase-a-plus-07.591c0f7f.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/showcase-a-plus-07.591c0f7f.webp",
+      "bytes": 34724
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/showcase-a-plus-06.4d7985ea.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/showcase-a-plus-06.4d7985ea.webp",
+      "bytes": 30144
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/showcase-a-plus-09.b8b139b9.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/showcase-a-plus-09.b8b139b9.webp",
+      "bytes": 19544
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/showcase-a-plus-11.e7729c95.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/showcase-a-plus-11.e7729c95.webp",
+      "bytes": 22730
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/showcase-a-plus-10.06c036ef.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/showcase-a-plus-10.06c036ef.webp",
+      "bytes": 44734
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/showcase-a-plus-12.cfb21323.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/showcase-a-plus-12.cfb21323.webp",
+      "bytes": 59250
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/showcase-a-plus-13.aee1fdd4.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/showcase-a-plus-13.aee1fdd4.webp",
+      "bytes": 29586
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/showcase-a-plus-08.bbe301c2.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/showcase-a-plus-08.bbe301c2.webp",
+      "bytes": 52914
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/pixpix-footer-wordmark.140fbb38.png",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/pixpix-footer-wordmark.140fbb38.png",
+      "bytes": 251686
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/showcase-a-plus-19.d554611c.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/showcase-a-plus-19.d554611c.webp",
+      "bytes": 115126
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/showcase-a-plus-20.4cb1338a.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/showcase-a-plus-20.4cb1338a.webp",
+      "bytes": 117474
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/showcase-a-plus-18.df169f6b.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/showcase-a-plus-18.df169f6b.webp",
+      "bytes": 96564
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/showcase-a-plus-23.d7c7f156.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/showcase-a-plus-23.d7c7f156.webp",
+      "bytes": 75906
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/showcase-a-plus-22.b8f3a563.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/showcase-a-plus-22.b8f3a563.webp",
+      "bytes": 96036
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/hero-result-selling-points.0765bfd6.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/hero-result-selling-points.0765bfd6.webp",
+      "bytes": 6956
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/showcase-a-plus-26.bdf5ffc4.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/showcase-a-plus-26.bdf5ffc4.webp",
+      "bytes": 53342
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/showcase-a-plus-27.f59eac9d.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/showcase-a-plus-27.f59eac9d.webp",
+      "bytes": 71190
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/capability-product-layout.dd2a6cc5.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/capability-product-layout.dd2a6cc5.webp",
+      "bytes": 125338
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/capability-selling-points.8f87a989.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/capability-selling-points.8f87a989.webp",
+      "bytes": 85318
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/capability-module-sizing.fc537383.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/capability-module-sizing.fc537383.webp",
+      "bytes": 129740
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/capability-brand-consistency.70d29c05.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/capability-brand-consistency.70d29c05.webp",
+      "bytes": 93716
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/use-case-new-listing.66d5ac80.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/use-case-new-listing.66d5ac80.webp",
+      "bytes": 104352
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/use-case-existing-page.121f24be.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/use-case-existing-page.121f24be.webp",
+      "bytes": 99844
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/use-case-multi-platform.e03b849c.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/use-case-multi-platform.e03b849c.webp",
+      "bytes": 79172
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/use-case-structure-testing.fdda2be6.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/use-case-structure-testing.fdda2be6.webp",
+      "bytes": 80936
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/workflow-upload-product.4b3191c2.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/workflow-upload-product.4b3191c2.webp",
+      "bytes": 74072
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/workflow-configure-page.86470975.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/workflow-configure-page.86470975.webp",
+      "bytes": 48196
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/workflow-download-modules.59b8846a.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/workflow-download-modules.59b8846a.webp",
+      "bytes": 62988
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/hero-speaker-before.bcb84faa.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/hero-speaker-before.bcb84faa.webp",
+      "bytes": 102886
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/hero-speaker-after.ff90f9cc.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/hero-speaker-after.ff90f9cc.webp",
+      "bytes": 124232
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/showcase-a-plus-15.925c4246.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/showcase-a-plus-15.925c4246.webp",
+      "bytes": 37246
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/showcase-a-plus-16.56ec160f.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/showcase-a-plus-16.56ec160f.webp",
+      "bytes": 22160
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/showcase-a-plus-17.5750924d.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/showcase-a-plus-17.5750924d.webp",
+      "bytes": 39492
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/showcase-reference-01.c3ada116.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/showcase-reference-01.c3ada116.webp",
+      "bytes": 4630
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/showcase-reference-02.b1051279.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/showcase-reference-02.b1051279.webp",
+      "bytes": 5164
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/showcase-reference-03.9e25c3b0.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/showcase-reference-03.9e25c3b0.webp",
+      "bytes": 6584
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/showcase-a-plus-25.6b13d7a5.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/showcase-a-plus-25.6b13d7a5.webp",
+      "bytes": 77230
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/showcase-reference-04.9af1ef6d.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/showcase-reference-04.9af1ef6d.webp",
+      "bytes": 4484
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/showcase-a-plus-24.deeaf44c.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/showcase-a-plus-24.deeaf44c.webp",
+      "bytes": 91488
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/hero-product-image.45a029cf.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/hero-product-image.45a029cf.webp",
+      "bytes": 3628
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/showcase-a-plus-21.5b253e78.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/showcase-a-plus-21.5b253e78.webp",
+      "bytes": 134196
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/showcase-reference-09.30d0bd8f.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/showcase-reference-09.30d0bd8f.webp",
+      "bytes": 3302
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/showcase-reference-10.0faa8ccc.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/showcase-reference-10.0faa8ccc.webp",
+      "bytes": 2756
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/showcase-reference-11.82ad2ec6.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/showcase-reference-11.82ad2ec6.webp",
+      "bytes": 3858
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/showcase-reference-12.a865fb44.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/showcase-reference-12.a865fb44.webp",
+      "bytes": 3450
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/showcase-reference-06.55a169e8.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/showcase-reference-06.55a169e8.webp",
+      "bytes": 2626
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/showcase-reference-05.d1a43f7e.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/showcase-reference-05.d1a43f7e.webp",
+      "bytes": 6702
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/showcase-reference-15.6d3462f7.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/showcase-reference-15.6d3462f7.webp",
+      "bytes": 4108
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/showcase-result-01.7f8ca391.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/showcase-result-01.7f8ca391.webp",
+      "bytes": 40142
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/showcase-result-02.bd4fc376.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/showcase-result-02.bd4fc376.webp",
+      "bytes": 53940
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/hero-reference-image.c548a5bb.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/hero-reference-image.c548a5bb.webp",
+      "bytes": 4464
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/showcase-result-03.9275d327.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/showcase-result-03.9275d327.webp",
+      "bytes": 81326
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/showcase-result-04.ed6ec2b2.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/showcase-result-04.ed6ec2b2.webp",
+      "bytes": 63804
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/showcase-result-05.d21dae05.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/showcase-result-05.d21dae05.webp",
+      "bytes": 101514
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/showcase-reference-08.9f8570bb.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/showcase-reference-08.9f8570bb.webp",
+      "bytes": 3326
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/showcase-reference-07.281dedaf.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/showcase-reference-07.281dedaf.webp",
+      "bytes": 3252
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/showcase-result-09.849340ff.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/showcase-result-09.849340ff.webp",
+      "bytes": 36896
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/showcase-result-10.ef0341be.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/showcase-result-10.ef0341be.webp",
+      "bytes": 19892
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/showcase-result-11.e0c31938.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/showcase-result-11.e0c31938.webp",
+      "bytes": 46966
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/showcase-result-12.9ec81396.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/showcase-result-12.9ec81396.webp",
+      "bytes": 35260
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/hero-replicated-scene.567fb5be.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/hero-replicated-scene.567fb5be.webp",
+      "bytes": 107548
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/showcase-result-14.dc790b63.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/showcase-result-14.dc790b63.webp",
+      "bytes": 109826
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/showcase-result-15.a0eef8b9.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/showcase-result-15.a0eef8b9.webp",
+      "bytes": 56804
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/capability-reference-understanding.254f51bb.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/capability-reference-understanding.254f51bb.webp",
+      "bytes": 92410
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/capability-product-replacement.46f303d3.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/capability-product-replacement.46f303d3.webp",
+      "bytes": 195002
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/capability-clone-control.91e12b25.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/capability-clone-control.91e12b25.webp",
+      "bytes": 82090
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/capability-result-adjustment.565118f5.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/capability-result-adjustment.565118f5.webp",
+      "bytes": 117868
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/use-case-competitor-layout.d44fc571.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/use-case-competitor-layout.d44fc571.webp",
+      "bytes": 50570
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/showcase-reference-14.710babdd.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/showcase-reference-14.710babdd.webp",
+      "bytes": 5770
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/showcase-reference-13.f46b51fc.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/showcase-reference-13.f46b51fc.webp",
+      "bytes": 2646
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/showcase-a-plus-14.caebe7bb.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/showcase-a-plus-14.caebe7bb.webp",
+      "bytes": 47320
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/showcase-result-08.2978e34b.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/showcase-result-08.2978e34b.webp",
+      "bytes": 48772
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/showcase-result-13.7cdacb7e.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/showcase-result-13.7cdacb7e.webp",
+      "bytes": 39776
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/showcase-result-06.d7b92720.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/showcase-result-06.d7b92720.webp",
+      "bytes": 43246
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/capability-multimodal-reference.377ac8e9.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/capability-multimodal-reference.377ac8e9.webp",
+      "bytes": 106154
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/capability-product-consistency.874483d0.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/capability-product-consistency.874483d0.webp",
+      "bytes": 70834
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/capability-audiovisual-sync.0372c35b.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/capability-audiovisual-sync.0372c35b.webp",
+      "bytes": 52444
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/capability-motion-control.a2192d28.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/capability-motion-control.a2192d28.webp",
+      "bytes": 44722
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/capability-seedance-logo.05a3777d.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/capability-seedance-logo.05a3777d.webp",
+      "bytes": 3252
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/workflow-upload-product.9a920fcd.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/workflow-upload-product.9a920fcd.webp",
+      "bytes": 68376
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/workflow-configure-reference.1e503e75.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/workflow-configure-reference.1e503e75.webp",
+      "bytes": 70934
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/workflow-generate-result.3debdb89.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/workflow-generate-result.3debdb89.webp",
+      "bytes": 62772
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/apparel-hero-result-01.faf6c0a2.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/apparel-hero-result-01.faf6c0a2.webp",
+      "bytes": 91360
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/apparel-hero-result-02.64bb02a8.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/apparel-hero-result-02.64bb02a8.webp",
+      "bytes": 108062
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/apparel-hero-result-03.57c63e88.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/apparel-hero-result-03.57c63e88.webp",
+      "bytes": 109740
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/apparel-hero-result-04.f7a76489.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/apparel-hero-result-04.f7a76489.webp",
+      "bytes": 141502
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/apparel-hero-result-05.cf61d931.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/apparel-hero-result-05.cf61d931.webp",
+      "bytes": 117652
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/apparel-hero-source.88802ad1.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/apparel-hero-source.88802ad1.webp",
+      "bytes": 33606
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/apparel-cobalt-blazer-mannequin.36ee9871.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/apparel-cobalt-blazer-mannequin.36ee9871.webp",
+      "bytes": 46872
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/capability-apparel-01.3b8be60e.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/capability-apparel-01.3b8be60e.webp",
+      "bytes": 50306
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/capability-apparel-04.96ab9481.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/capability-apparel-04.96ab9481.webp",
+      "bytes": 104160
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/workflow-upload-reference-product.61011c98.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/workflow-upload-reference-product.61011c98.webp",
+      "bytes": 67808
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/capability-apparel-03.bac28a32.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/capability-apparel-03.bac28a32.webp",
+      "bytes": 100488
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/capability-apparel-02.ca8addd4.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/capability-apparel-02.ca8addd4.webp",
+      "bytes": 31994
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/use-case-apparel-01.92647f7c.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/use-case-apparel-01.92647f7c.webp",
+      "bytes": 133462
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/use-case-apparel-02.c5eac09a.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/use-case-apparel-02.c5eac09a.webp",
+      "bytes": 106906
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/use-case-series-assets.7e1a6955.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/use-case-series-assets.7e1a6955.webp",
+      "bytes": 71266
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/use-case-concept-testing.74d1ddca.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/use-case-concept-testing.74d1ddca.webp",
+      "bytes": 101580
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/workflow-download-result.8049f0cb.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/workflow-download-result.8049f0cb.webp",
+      "bytes": 52324
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/workflow-ai-replicate.ba66cd12.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/workflow-ai-replicate.ba66cd12.webp",
+      "bytes": 76436
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/hero-try-on-result-01.b9271f89.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/hero-try-on-result-01.b9271f89.webp",
+      "bytes": 39778
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/use-case-apparel-04.4ce5800a.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/use-case-apparel-04.4ce5800a.webp",
+      "bytes": 108930
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/how-it-works-apparel-02.e27d380b.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/how-it-works-apparel-02.e27d380b.webp",
+      "bytes": 63052
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/showcase-01.cb722570.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/showcase-01.cb722570.webp",
+      "bytes": 22266
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/use-case-popular-style.b53e2efd.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/use-case-popular-style.b53e2efd.webp",
+      "bytes": 228930
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/hero-garment-source.f893ac04.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/hero-garment-source.f893ac04.webp",
+      "bytes": 15628
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/hero-try-on-thumbnail-01.e29284cf.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/hero-try-on-thumbnail-01.e29284cf.webp",
+      "bytes": 3442
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/hero-try-on-thumbnail-02.6c205842.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/hero-try-on-thumbnail-02.6c205842.webp",
+      "bytes": 4786
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/hero-try-on-result-02.d0602c1e.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/hero-try-on-result-02.d0602c1e.webp",
+      "bytes": 54184
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/hero-try-on-thumbnail-03.9f3b52de.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/hero-try-on-thumbnail-03.9f3b52de.webp",
+      "bytes": 3964
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/hero-try-on-result-03.c55b96b8.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/hero-try-on-result-03.c55b96b8.webp",
+      "bytes": 47640
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/hero-try-on-thumbnail-04.3b3b2e36.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/hero-try-on-thumbnail-04.3b3b2e36.webp",
+      "bytes": 3926
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/hero-try-on-result-04.ebb945a2.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/hero-try-on-result-04.ebb945a2.webp",
+      "bytes": 44458
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/hero-try-on-thumbnail-05.c467dff0.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/hero-try-on-thumbnail-05.c467dff0.webp",
+      "bytes": 5428
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/hero-try-on-result-05.144d3370.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/hero-try-on-result-05.144d3370.webp",
+      "bytes": 69474
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/capability-01.78587317.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/capability-01.78587317.webp",
+      "bytes": 35784
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/how-it-works-apparel-03.b0be7565.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/how-it-works-apparel-03.b0be7565.webp",
+      "bytes": 91484
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/capability-02.ccb86272.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/capability-02.ccb86272.webp",
+      "bytes": 72578
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/capability-03.08168fdc.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/capability-03.08168fdc.webp",
+      "bytes": 54892
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/capability-04.7147a6a9.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/capability-04.7147a6a9.webp",
+      "bytes": 90248
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/use-case-01.676da5b6.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/use-case-01.676da5b6.webp",
+      "bytes": 30692
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/showcase-04.a990e4ff.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/showcase-04.a990e4ff.webp",
+      "bytes": 39224
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/showcase-03.6f9a1ac8.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/showcase-03.6f9a1ac8.webp",
+      "bytes": 26970
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/showcase-02.525b24bf.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/showcase-02.525b24bf.webp",
+      "bytes": 27950
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/use-case-03.f3f3d46b.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/use-case-03.f3f3d46b.webp",
+      "bytes": 61374
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/use-case-apparel-03.8c8016de.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/use-case-apparel-03.8c8016de.webp",
+      "bytes": 45408
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/use-case-04.0ab7037e.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/use-case-04.0ab7037e.webp",
+      "bytes": 27024
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/how-it-works-apparel-01.ea3466a5.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/how-it-works-apparel-01.ea3466a5.webp",
+      "bytes": 72758
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/seller-video-product-reference.9d6190f6.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/seller-video-product-reference.9d6190f6.webp",
+      "bytes": 4270
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/seller-video-shot-sequence.553fc3a0.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/seller-video-shot-sequence.553fc3a0.webp",
+      "bytes": 3530
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/workflow-02.f8afd1d8.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/workflow-02.f8afd1d8.webp",
+      "bytes": 52222
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/workflow-01.73a0f69a.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/workflow-01.73a0f69a.webp",
+      "bytes": 71314
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/seller-video-vertical-format.3f6b19ae.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/seller-video-vertical-format.3f6b19ae.webp",
+      "bytes": 3524
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/community-perfume-botanical.26803bd3.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/community-perfume-botanical.26803bd3.webp",
+      "bytes": 51334
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/community-perfume-source.53b0fb72.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/community-perfume-source.53b0fb72.webp",
+      "bytes": 1248
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/workflow-03.3ace0073.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/workflow-03.3ace0073.webp",
+      "bytes": 70636
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/community-lamp-source.5e83c68e.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/community-lamp-source.5e83c68e.webp",
+      "bytes": 666
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/community-lamp-night.662475b9.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/community-lamp-night.662475b9.webp",
+      "bytes": 29446
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/community-bedside-lamp-source.b5d39c50.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/community-bedside-lamp-source.b5d39c50.webp",
+      "bytes": 1520
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/seller-video-step-upload.86362bcc.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/seller-video-step-upload.86362bcc.webp",
+      "bytes": 70792
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/community-lounge-chair-source.e910357e.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/community-lounge-chair-source.e910357e.webp",
+      "bytes": 1846
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/community-red-perfume.1462e599.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/community-red-perfume.1462e599.webp",
+      "bytes": 32612
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/community-red-perfume-source.eba7e410.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/community-red-perfume-source.eba7e410.webp",
+      "bytes": 1756
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/community-bedside-lamp.3af8d1f8.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/community-bedside-lamp.3af8d1f8.webp",
+      "bytes": 40244
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/community-beige-perfume-source.81aa3c4b.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/community-beige-perfume-source.81aa3c4b.webp",
+      "bytes": 1586
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/community-beige-perfume.aa56eb01.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/community-beige-perfume.aa56eb01.webp",
+      "bytes": 65638
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/seller-video-natural-motion.eb740580.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/seller-video-natural-motion.eb740580.webp",
+      "bytes": 3698
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/showcase-result-07.de1d3d20.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/showcase-result-07.de1d3d20.webp",
+      "bytes": 27104
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/community-skincare-source.5b2826bf.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/community-skincare-source.5b2826bf.webp",
+      "bytes": 538
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/community-earbuds-source.3d10b3b6.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/community-earbuds-source.3d10b3b6.webp",
+      "bytes": 1486
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/community-watch-source.d12cd6e0.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/community-watch-source.d12cd6e0.webp",
+      "bytes": 2134
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/community-earbuds.c4c084cb.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/community-earbuds.c4c084cb.webp",
+      "bytes": 15174
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/community-dog-toy-source.645d2b9d.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/community-dog-toy-source.645d2b9d.webp",
+      "bytes": 752
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/community-skincare-model.09536230.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/community-skincare-model.09536230.webp",
+      "bytes": 57138
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/community-dog-toy.63d76fe1.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/community-dog-toy.63d76fe1.webp",
+      "bytes": 34990
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/community-running-shoe-source.f1707554.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/community-running-shoe-source.f1707554.webp",
+      "bytes": 1654
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/community-running-shoe.df406d58.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/community-running-shoe.df406d58.webp",
+      "bytes": 32976
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/community-coffee-machine-source.f6b53ca8.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/community-coffee-machine-source.f6b53ca8.webp",
+      "bytes": 1406
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/community-diamond-ring-source.c5fa2d17.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/community-diamond-ring-source.c5fa2d17.webp",
+      "bytes": 1390
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/community-diamond-ring.bf8be907.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/community-diamond-ring.bf8be907.webp",
+      "bytes": 21276
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/community-portable-speaker-source.68ecc89b.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/community-portable-speaker-source.68ecc89b.webp",
+      "bytes": 1662
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/community-coffee-machine.bc869d5a.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/community-coffee-machine.bc869d5a.webp",
+      "bytes": 30548
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/community-smart-speakers.bf1e9ca8.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/community-smart-speakers.bf1e9ca8.webp",
+      "bytes": 27424
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/community-serum-botanical.97c96b52.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/community-serum-botanical.97c96b52.webp",
+      "bytes": 38130
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/community-serum-source.04b4c72b.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/community-serum-source.04b4c72b.webp",
+      "bytes": 638
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/community-portable-speaker.0fadf7fb.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/community-portable-speaker.0fadf7fb.webp",
+      "bytes": 52156
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/sales-story-attention.03531bb4.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/sales-story-attention.03531bb4.webp",
+      "bytes": 33594
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/community-smart-speakers-source.4c7b00d4.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/community-smart-speakers-source.4c7b00d4.webp",
+      "bytes": 1922
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/sales-story-value.f44e91d3.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/sales-story-value.f44e91d3.webp",
+      "bytes": 44150
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/community-lounge-chair.b9edb340.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/community-lounge-chair.b9edb340.webp",
+      "bytes": 70162
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/seller-video-step-configure.31dcc7a6.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/seller-video-step-configure.31dcc7a6.webp",
+      "bytes": 48984
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/sales-story-scene.e0eb2ca3.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/sales-story-scene.e0eb2ca3.webp",
+      "bytes": 42824
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/sales-story-details.73565b5a.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/sales-story-details.73565b5a.webp",
+      "bytes": 28972
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/sales-story-decision.93fa2d37.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/sales-story-decision.93fa2d37.webp",
+      "bytes": 23972
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/capability-reference-fidelity.6faa32e4.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/capability-reference-fidelity.6faa32e4.webp",
+      "bytes": 52902
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/capability-format-flexibility.20587ca9.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/capability-format-flexibility.20587ca9.webp",
+      "bytes": 94780
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/community-watch-ice.a63b3776.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/community-watch-ice.a63b3776.webp",
+      "bytes": 62066
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/capability-generation-editing.39833f5d.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/capability-generation-editing.39833f5d.webp",
+      "bytes": 127278
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/use-case-new-launch.66040418.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/use-case-new-launch.66040418.webp",
+      "bytes": 103550
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/capability-prompt-accuracy.d69086e5.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/capability-prompt-accuracy.d69086e5.webp",
+      "bytes": 205790
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/use-case-enrich-listing.9ebc3bd3.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/use-case-enrich-listing.9ebc3bd3.webp",
+      "bytes": 102340
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/showcase-lamp-after-square-01.6c70376c.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/showcase-lamp-after-square-01.6c70376c.webp",
+      "bytes": 10810
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/showcase-lamp-before-square-01.d88fc585.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/showcase-lamp-before-square-01.d88fc585.webp",
+      "bytes": 1298
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/showcase-lamp-after-wide.3891e6fe.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/showcase-lamp-after-wide.3891e6fe.webp",
+      "bytes": 20086
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/showcase-lamp-before-wide.45ab4c44.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/showcase-lamp-before-wide.45ab4c44.webp",
+      "bytes": 1782
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/showcase-keyboard-after-square-01.e9f595e5.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/showcase-keyboard-after-square-01.e9f595e5.webp",
+      "bytes": 23574
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/showcase-keyboard-before-square-01.0c0b15d2.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/showcase-keyboard-before-square-01.0c0b15d2.webp",
+      "bytes": 1904
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/showcase-keyboard-after-wide.e74a5b75.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/showcase-keyboard-after-wide.e74a5b75.webp",
+      "bytes": 35774
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/showcase-keyboard-before-wide.433da18d.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/showcase-keyboard-before-wide.433da18d.webp",
+      "bytes": 2302
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/seller-video-step-generate.b121800c.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/seller-video-step-generate.b121800c.webp",
+      "bytes": 66756
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/workflow-step-configure.479b2d9f.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/workflow-step-configure.479b2d9f.webp",
+      "bytes": 47948
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/use-case-visual-testing.4d98afc8.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/use-case-visual-testing.4d98afc8.webp",
+      "bytes": 57430
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/showcase-handbag-after-square-01.ee8d0867.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/showcase-handbag-after-square-01.ee8d0867.webp",
+      "bytes": 16906
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/showcase-handbag-before-wide.52d2f725.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/showcase-handbag-before-wide.52d2f725.webp",
+      "bytes": 2256
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/use-case-multi-channel.4f82a37c.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/use-case-multi-channel.4f82a37c.webp",
+      "bytes": 93334
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/workflow-step-download.c4bdbac8.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/workflow-step-download.c4bdbac8.webp",
+      "bytes": 69684
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/showcase-handbag-before-square-01.e4e12494.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/showcase-handbag-before-square-01.e4e12494.webp",
+      "bytes": 1462
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/workflow-step-upload.dda39f6b.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/workflow-step-upload.dda39f6b.webp",
+      "bytes": 71708
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/showcase-watch-before-square-01.942c98ed.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/showcase-watch-before-square-01.942c98ed.webp",
+      "bytes": 1822
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/showcase-watch-after-wide.8f98c163.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/showcase-watch-after-wide.8f98c163.webp",
+      "bytes": 17920
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/showcase-watch-after-square-01.59cc8df2.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/showcase-watch-after-square-01.59cc8df2.webp",
+      "bytes": 43476
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/showcase-handbag-after-square-02.ab04c00d.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/showcase-handbag-after-square-02.ab04c00d.webp",
+      "bytes": 25902
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/showcase-handbag-before-square-02.3aabfe9f.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/showcase-handbag-before-square-02.3aabfe9f.webp",
+      "bytes": 1484
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/showcase-watch-before-wide.dd810c24.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/showcase-watch-before-wide.dd810c24.webp",
+      "bytes": 1572
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/showcase-handbag-before-landscape.83472528.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/showcase-handbag-before-landscape.83472528.webp",
+      "bytes": 2450
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/showcase-handbag-after-wide.948ddd37.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/showcase-handbag-after-wide.948ddd37.webp",
+      "bytes": 29256
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/showcase-pitcher-before-square-02.0c9df0ec.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/showcase-pitcher-before-square-02.0c9df0ec.webp",
+      "bytes": 1146
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/showcase-pitcher-after-square-02.52667110.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/showcase-pitcher-after-square-02.52667110.webp",
+      "bytes": 23756
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/showcase-handbag-after-landscape.35269d4f.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/showcase-handbag-after-landscape.35269d4f.webp",
+      "bytes": 53558
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/showcase-pitcher-before-landscape.41f096c5.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/showcase-pitcher-before-landscape.41f096c5.webp",
+      "bytes": 3914
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/showcase-pitcher-after-square-01.e24826b0.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/showcase-pitcher-after-square-01.e24826b0.webp",
+      "bytes": 15940
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/showcase-pitcher-after-landscape.1ce82856.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/showcase-pitcher-after-landscape.1ce82856.webp",
+      "bytes": 62148
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/showcase-pitcher-before-wide.fbd26c5e.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/showcase-pitcher-before-wide.fbd26c5e.webp",
+      "bytes": 1830
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/showcase-pitcher-before-square-01.83b64f36.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/showcase-pitcher-before-square-01.83b64f36.webp",
+      "bytes": 1344
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/showcase-lamp-after-square-02.59305c2f.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/showcase-lamp-after-square-02.59305c2f.webp",
+      "bytes": 14180
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/showcase-lamp-before-square-02.3fb94681.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/showcase-lamp-before-square-02.3fb94681.webp",
+      "bytes": 1042
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/showcase-pitcher-after-wide.12e91021.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/showcase-pitcher-after-wide.12e91021.webp",
+      "bytes": 28964
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/showcase-watch-before-square-02.c05b96e8.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/showcase-watch-before-square-02.c05b96e8.webp",
+      "bytes": 1188
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/showcase-watch-before-landscape.543be943.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/showcase-watch-before-landscape.543be943.webp",
+      "bytes": 3328
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/showcase-lamp-after-landscape.0a1deee8.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/showcase-lamp-after-landscape.0a1deee8.webp",
+      "bytes": 53390
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/showcase-keyboard-before-square-02.4ee6c593.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/showcase-keyboard-before-square-02.4ee6c593.webp",
+      "bytes": 1004
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/showcase-keyboard-after-landscape.bb0bd0ae.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/showcase-keyboard-after-landscape.bb0bd0ae.webp",
+      "bytes": 28026
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/capability-detail-repair.8ed8e7af.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/capability-detail-repair.8ed8e7af.webp",
+      "bytes": 95596
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/capability-product-reference.3e9d3ef3.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/capability-product-reference.3e9d3ef3.webp",
+      "bytes": 129038
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/showcase-lamp-before-landscape.80ffc751.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/showcase-lamp-before-landscape.80ffc751.webp",
+      "bytes": 1304
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/showcase-keyboard-before-landscape.5d1c602f.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/showcase-keyboard-before-landscape.5d1c602f.webp",
+      "bytes": 1912
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/capability-commercial-finish.76ed2f24.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/capability-commercial-finish.76ed2f24.webp",
+      "bytes": 87344
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/showcase-keyboard-after-square-02.a50cf419.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/showcase-keyboard-after-square-02.a50cf419.webp",
+      "bytes": 37638
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/use-case-texture-cleanup.a3b945c4.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/use-case-texture-cleanup.a3b945c4.webp",
+      "bytes": 167880
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/capability-source-fidelity.ebefa15d.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/capability-source-fidelity.ebefa15d.webp",
+      "bytes": 119930
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/showcase-watch-after-square-02.d76eebc2.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/showcase-watch-after-square-02.d76eebc2.webp",
+      "bytes": 15998
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/use-case-scratch-repair.072275ad.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/use-case-scratch-repair.072275ad.webp",
+      "bytes": 101636
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/showcase-watch-after-landscape.33473e75.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/showcase-watch-after-landscape.33473e75.webp",
+      "bytes": 51460
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/seller-video-unboxing-poster.78c74233.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/seller-video-unboxing-poster.78c74233.webp",
+      "bytes": 17618
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/product-reference.bdf5d933.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/product-reference.bdf5d933.webp",
+      "bytes": 2348
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/workflow-download-result.ffb50db4.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/workflow-download-result.ffb50db4.webp",
+      "bytes": 39102
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/seller-video-product-demo-poster.de52f26a.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/seller-video-product-demo-poster.de52f26a.webp",
+      "bytes": 11518
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/use-case-product-consistency.a9084943.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/use-case-product-consistency.a9084943.webp",
+      "bytes": 64450
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/workflow-select-retouch-options.730840f1.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/workflow-select-retouch-options.730840f1.webp",
+      "bytes": 57000
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/seller-video-reaction-poster.c5b2becf.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/seller-video-reaction-poster.c5b2becf.webp",
+      "bytes": 21186
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/workflow-upload-product.c015a938.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/workflow-upload-product.c015a938.webp",
+      "bytes": 70664
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/reference-video-poster.fce0b471.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/reference-video-poster.fce0b471.webp",
+      "bytes": 18586
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/result-video-poster.c3ef2849.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/result-video-poster.c3ef2849.webp",
+      "bytes": 18684
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/product-image-set.a7b9e91c.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/product-image-set.a7b9e91c.webp",
+      "bytes": 35314
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/apparel-set.4a0cddcb.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/apparel-set.4a0cddcb.webp",
+      "bytes": 40334
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/detail-page.191708dc.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/detail-page.191708dc.webp",
+      "bytes": 24694
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/product-retouch.cc1991d8.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/product-retouch.cc1991d8.webp",
+      "bytes": 18672
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/use-case-color-correction.a3ee864d.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/use-case-color-correction.a3ee864d.webp",
+      "bytes": 47930
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/seller-video-short-drama-poster.c5726867.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/seller-video-short-drama-poster.c5726867.webp",
+      "bytes": 21948
+    },
+    {
+      "source": "https://static.pixpix.media/pixpix/2026/08/20/2090377903698219008/_1787219904251_aRSoaOHQ_9.svg",
+      "file": "assets/static.pixpix.media/pixpix/2026/08/20/2090377903698219008/_1787219904251_aRSoaOHQ_9.svg",
+      "bytes": 1469
+    },
+    {
+      "source": "https://static.pixpix.media/pixpix/2026/08/20/2090377903698219008/_1787219904251_aRSoaOHQ_6.svg",
+      "file": "assets/static.pixpix.media/pixpix/2026/08/20/2090377903698219008/_1787219904251_aRSoaOHQ_6.svg",
+      "bytes": 1020
+    },
+    {
+      "source": "https://static.pixpix.media/pixpix/2026/08/20/2090377903698219008/_1787219904251_aRSoaOHQ_4.svg",
+      "file": "assets/static.pixpix.media/pixpix/2026/08/20/2090377903698219008/_1787219904251_aRSoaOHQ_4.svg",
+      "bytes": 2914
+    },
+    {
+      "source": "https://static.pixpix.media/pixpix/2026/08/20/2090377903698219008/_1787219904251_aRSoaOHQ_1.svg",
+      "file": "assets/static.pixpix.media/pixpix/2026/08/20/2090377903698219008/_1787219904251_aRSoaOHQ_1.svg",
+      "bytes": 1180
+    },
+    {
+      "source": "https://static.pixpix.media/pixpix/2026/08/20/2090377903698219008/_1787219904251_aRSoaOHQ.svg",
+      "file": "assets/static.pixpix.media/pixpix/2026/08/20/2090377903698219008/_1787219904251_aRSoaOHQ.svg",
+      "bytes": 1183
+    },
+    {
+      "source": "https://static.pixpix.media/pixpix/2026/08/20/2090377903698219008/_1787219904251_aRSoaOHQ_8.svg",
+      "file": "assets/static.pixpix.media/pixpix/2026/08/20/2090377903698219008/_1787219904251_aRSoaOHQ_8.svg",
+      "bytes": 11398
+    },
+    {
+      "source": "https://static.pixpix.media/pixpix/2026/08/20/2090377903698219008/_1787219904251_aRSoaOHQ_7.svg",
+      "file": "assets/static.pixpix.media/pixpix/2026/08/20/2090377903698219008/_1787219904251_aRSoaOHQ_7.svg",
+      "bytes": 1939
+    },
+    {
+      "source": "https://static.pixpix.media/pixpix/2026/08/20/2090377903698219008/_1787219904251_aRSoaOHQ_5.svg",
+      "file": "assets/static.pixpix.media/pixpix/2026/08/20/2090377903698219008/_1787219904251_aRSoaOHQ_5.svg",
+      "bytes": 678
+    },
+    {
+      "source": "https://static.pixpix.media/pixpix/2026/08/20/2090377903698219008/_1787219904251_aRSoaOHQ_2.svg",
+      "file": "assets/static.pixpix.media/pixpix/2026/08/20/2090377903698219008/_1787219904251_aRSoaOHQ_2.svg",
+      "bytes": 1126
+    },
+    {
+      "source": "https://static.pixpix.media/pixpix/2026/08/20/2090377903698219008/_1787219904251_aRSoaOHQ_3.svg",
+      "file": "assets/static.pixpix.media/pixpix/2026/08/20/2090377903698219008/_1787219904251_aRSoaOHQ_3.svg",
+      "bytes": 1314
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/seller-video-ugc-poster.cf2c0e43.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/seller-video-ugc-poster.cf2c0e43.webp",
+      "bytes": 30490
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/seller-video-product-presentation-poster.6742172f.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/seller-video-product-presentation-poster.6742172f.webp",
+      "bytes": 19078
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/use-case-02.64b6f6cf.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/use-case-02.64b6f6cf.webp",
+      "bytes": 176276
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/seller-video-pain-point-poster.621477e0.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/seller-video-pain-point-poster.621477e0.webp",
+      "bytes": 26568
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/static/media/seller-video-tvc-poster.03bd640a.webp",
+      "file": "assets/storage.pixpix.media/releases/_next/static/media/seller-video-tvc-poster.03bd640a.webp",
+      "bytes": 11982
+    }
+  ],
+  "failed": [
+    {
+      "source": "https://storage.pixpix.media/releases/_next/",
+      "error": "HTTP 404"
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/",
+      "error": "HTTP 404"
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/",
+      "error": "HTTP 404"
+    },
+    {
+      "source": "https://storage.pixpix.media/releases/_next/",
+      "error": "HTTP 404"
+    }
+  ],
+  "skipped": [
+    {
+      "file": "assets/storage.pixpix.media/releases/_next/static/chunks/6517-f7cdd8691dde599f.js",
+      "source": "https://storage.pixpix.media/pixpix/frontend/${e.replace(/^",
+      "reason": "Dynamic template"
+    },
+    {
+      "file": "assets/storage.pixpix.media/releases/_next/static/chunks/app/%5Blocale%5D/layout-947fbac9d73eeec2.js",
+      "source": "https://storage.pixpix.media/pixpix/frontend/${e.replace(/^",
+      "reason": "Dynamic template"
+    },
+    {
+      "file": "assets/storage.pixpix.media/releases/_next/static/chunks/6517-f7cdd8691dde599f.js",
+      "source": "https://storage.pixpix.media/pixpix/frontend/${e.replace(/^",
+      "reason": "Dynamic template"
+    },
+    {
+      "file": "assets/storage.pixpix.media/releases/_next/static/chunks/app/%5Blocale%5D/layout-947fbac9d73eeec2.js",
+      "source": "https://storage.pixpix.media/pixpix/frontend/${e.replace(/^",
+      "reason": "Dynamic template"
+    },
+    {
+      "file": "assets/storage.pixpix.media/releases/_next/static/chunks/6517-f7cdd8691dde599f.js",
+      "source": "https://storage.pixpix.media/pixpix/frontend/${e.replace(/^",
+      "reason": "Dynamic template"
+    },
+    {
+      "file": "assets/storage.pixpix.media/releases/_next/static/chunks/app/%5Blocale%5D/layout-947fbac9d73eeec2.js",
+      "source": "https://storage.pixpix.media/pixpix/frontend/${e.replace(/^",
+      "reason": "Dynamic template"
+    },
+    {
+      "file": "assets/storage.pixpix.media/releases/_next/static/chunks/6517-f7cdd8691dde599f.js",
+      "source": "https://storage.pixpix.media/pixpix/frontend/${e.replace(/^",
+      "reason": "Dynamic template"
+    },
+    {
+      "file": "assets/storage.pixpix.media/releases/_next/static/chunks/app/%5Blocale%5D/layout-947fbac9d73eeec2.js",
+      "source": "https://storage.pixpix.media/pixpix/frontend/${e.replace(/^",
+      "reason": "Dynamic template"
+    }
+  ]
+}
