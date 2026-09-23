@@ -1,6 +1,9 @@
 import { createReadStream } from "node:fs";
 import { readFile, stat } from "node:fs/promises";
 import { createServer } from "node:http";
+import { randomUUID } from "node:crypto";
+import { Readable } from "node:stream";
+import { pipeline } from "node:stream/promises";
 import { extname, join, normalize } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -13,10 +16,10 @@ const staticOnlyCsp = [
   "default-src 'self' data: blob:;",
   "script-src 'self' 'unsafe-inline';",
   "style-src 'self' 'unsafe-inline';",
-  "img-src 'self' data: blob:;",
+  "img-src 'self' https: data: blob:;",
   "font-src 'self' data:;",
   "media-src 'self' data: blob:;",
-  "connect-src 'self';",
+    "connect-src 'self' https:;",
   "worker-src 'self' blob:;",
   "frame-src 'self';",
   "object-src 'none';",
@@ -24,11 +27,18 @@ const staticOnlyCsp = [
 ].join(" ");
 const workbenchLogoStyle = `<style id="local-workbench-logo">
   [role="dialog"] aside a[href="/"],
-  [role="dialog"] aside a[href="/zh-CN/workbench"] { position: relative; }
+  [role="dialog"] aside a[href="/zh-CN/workbench"],
+  [role="dialog"] aside a.local-brand-static { position: relative; }
+  [role="dialog"] aside a.local-brand-static {
+    cursor: default !important;
+    text-decoration: none !important;
+  }
   [role="dialog"] aside a[href="/"] > svg,
-  [role="dialog"] aside a[href="/zh-CN/workbench"] > svg { opacity: 0 !important; }
+  [role="dialog"] aside a[href="/zh-CN/workbench"] > svg,
+  [role="dialog"] aside a.local-brand-static > svg { opacity: 0 !important; }
   [role="dialog"] aside a[href="/"]::after,
-  [role="dialog"] aside a[href="/zh-CN/workbench"]::after {
+  [role="dialog"] aside a[href="/zh-CN/workbench"]::after,
+  [role="dialog"] aside a.local-brand-static::after {
     content: "";
     position: absolute;
     inset: 0;
@@ -38,23 +48,27 @@ const workbenchLogoStyle = `<style id="local-workbench-logo">
   }
   html.dark [role="dialog"] aside a[href="/"]::after,
   html.dark [role="dialog"] aside a[href="/zh-CN/workbench"]::after,
+  html.dark [role="dialog"] aside a.local-brand-static::after,
   html[data-theme="dark"] [role="dialog"] aside a[href="/"]::after,
   html[data-theme="dark"] [role="dialog"] aside a[href="/zh-CN/workbench"]::after,
+  html[data-theme="dark"] [role="dialog"] aside a.local-brand-static::after,
   body.dark [role="dialog"] aside a[href="/"]::after,
-  body.dark [role="dialog"] aside a[href="/zh-CN/workbench"]::after { filter: invert(1) brightness(1.3); }
+  body.dark [role="dialog"] aside a[href="/zh-CN/workbench"]::after,
+  body.dark [role="dialog"] aside a.local-brand-static::after { filter: invert(1) brightness(1.3); }
 </style>`;
 
 const localRootNavigationScript = `<script id="local-root-navigation">
   (() => {
-    const legacyWorkbenchPath = "/zh-CN/workbench";
     const normalizeBrandLink = () => {
-      for (const link of document.querySelectorAll('a[href="' + legacyWorkbenchPath + '"]')) {
-        link.setAttribute("href", "/");
+      for (const link of document.querySelectorAll('[role="dialog"] aside a')) {
+        link.classList.add("local-brand-static");
+        link.removeAttribute("href");
+        link.setAttribute("aria-disabled", "true");
+        link.setAttribute("tabindex", "-1");
       }
     };
 
-    // The archived React runtime restores its original workbench href after
-    // hydration. Keep the local MVP's only entry point at the short root URL.
+    // The logo is decorative in this single-page local build.
     new MutationObserver(normalizeBrandLink).observe(document.documentElement, {
       subtree: true,
       childList: true,
@@ -63,16 +77,13 @@ const localRootNavigationScript = `<script id="local-root-navigation">
     });
     document.addEventListener("DOMContentLoaded", normalizeBrandLink, { once: true });
 
-    // Next's hydrated Link retains the original workbench destination in its
-    // event handler even after the href attribute is normalized. Intercept
-    // only the header brand action, before that handler runs.
+    // Cancel any hydrated navigation handler before React handles the logo.
     document.addEventListener("click", (event) => {
       const target = event.target;
       const link = target instanceof Element ? target.closest('[role="dialog"] aside a') : null;
       if (!link) return;
       event.preventDefault();
       event.stopImmediatePropagation();
-      if (location.pathname !== "/" || location.search || location.hash) location.assign("/");
     }, true);
   })();
 </script>`;
@@ -122,6 +133,241 @@ const localSettingsPanelScript = `<script id="local-settings-panel-script">
 
 const localWorkbenchSettingsButtonScript = "<script id=\"M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z\">\n(() => {\n  const setup = () => {\n    const pageDialog = document.querySelector('[role=\"dialog\"]');\n    const header = pageDialog?.querySelector(':scope > .flex.size-full > aside');\n    if (!header || header.dataset.localSettingsButton === \"ready\") return Boolean(header);\n    const button = document.createElement(\"button\");\n    button.type = \"button\"; button.className = \"local-workbench-settings-button\";\n    button.setAttribute(\"aria-label\",\"设置配置\"); button.setAttribute(\"aria-controls\",\"local-workbench-settings-modal\"); button.setAttribute(\"aria-expanded\",\"false\"); button.title=\"设置配置\";\n    button.innerHTML = '<svg fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\" aria-hidden=\"true\" focusable=\"false\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z\"></path><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M15 12a3 3 0 11-6 0 3 3 0 016 0z\"></path></svg>';\n    const modal = document.createElement(\"div\");\n    modal.id=\"M15 12a3 3 0 11-6 0 3 3 0 016 0z\"; modal.className=\"local-settings-modal\"; modal.hidden=true; modal.setAttribute(\"aria-hidden\",\"true\");\n    const gear = '<svg class=\"settings-modal-gear\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\" aria-hidden=\"true\" focusable=\"false\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z\"></path><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M15 12a3 3 0 11-6 0 3 3 0 016 0z\"></path></svg>';\n    modal.innerHTML = \"\\n<div class=\\\"local-settings-backdrop\\\"></div>\\n<div class=\\\"local-settings-dialog\\\" role=\\\"dialog\\\" aria-modal=\\\"true\\\" aria-labelledby=\\\"local-settings-title\\\">\\n  <header class=\\\"local-settings-header\\\"><div class=\\\"local-settings-title\\\" id=\\\"local-settings-title\\\"><svg class=\\\"settings-modal-gear\\\" fill=\\\"none\\\" stroke=\\\"currentColor\\\" viewBox=\\\"0 0 24 24\\\" aria-hidden=\\\"true\\\"><path stroke-linecap=\\\"round\\\" stroke-linejoin=\\\"round\\\" stroke-width=\\\"2\\\" d=\\\"M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z\\\"></path><path stroke-linecap=\\\"round\\\" stroke-linejoin=\\\"round\\\" stroke-width=\\\"2\\\" d=\\\"M15 12a3 3 0 11-6 0 3 3 0 016 0z\\\"></path></svg><span>设置</span></div><span class=\\\"local-settings-version\\\">v0.7.12</span><button type=\\\"button\\\" class=\\\"local-settings-close\\\" aria-label=\\\"关闭设置\\\">×</button></header>\\n  <div class=\\\"local-settings-layout\\\">\\n    <nav class=\\\"local-settings-sidebar\\\">\\n      <button class=\\\"local-settings-tab active\\\" data-tab=\\\"api\\\"><span class=\\\"local-settings-tab-icon\\\">⌕</span><span>API 配置</span></button>\\n      <button class=\\\"local-settings-tab\\\" data-tab=\\\"fallback\\\"><span class=\\\"local-settings-tab-icon\\\">⇄</span><span>Fallback 配置</span></button>\\n      <button class=\\\"local-settings-tab\\\" data-tab=\\\"general\\\"><span class=\\\"local-settings-tab-icon\\\">◷</span><span>习惯配置</span></button>\\n      <button class=\\\"local-settings-tab\\\" data-tab=\\\"agent\\\"><span class=\\\"local-settings-tab-icon\\\">♙</span><span>Agent 配置</span></button>\\n      <button class=\\\"local-settings-tab\\\" data-tab=\\\"data\\\"><span class=\\\"local-settings-tab-icon\\\">▣</span><span>数据管理</span></button>\\n      <button class=\\\"local-settings-tab\\\" data-tab=\\\"about\\\"><span class=\\\"local-settings-tab-icon\\\">ⓘ</span><span>关于</span></button>\\n    </nav>\\n    <main class=\\\"local-settings-content\\\">\\n      <section class=\\\"local-settings-panel active\\\" data-panel=\\\"api\\\">\\n        <div class=\\\"local-settings-panel-head\\\"><h4>当前配置 <span>↗</span></h4><div class=\\\"local-settings-inline-actions\\\"><button type=\\\"button\\\" class=\\\"local-settings-small\\\" data-api-action=\\\"create\\\">＋ 新配置</button><button type=\\\"button\\\" class=\\\"local-settings-small\\\" data-api-action=\\\"duplicate\\\">复制当前</button><button type=\\\"button\\\" class=\\\"local-settings-small danger\\\" data-api-action=\\\"delete\\\">删除</button></div></div>\\n        <select class=\\\"local-settings-select\\\" aria-label=\\\"当前配置\\\"><option>IXYAPI　OpenAI</option><option>hi-code　OpenAI</option><option>zzone　OpenAI</option><option>jojocode　OpenAI</option></select>\\n        <div class=\\\"local-settings-info\\\"><span class=\\\"info-mark\\\">i</span><strong>余额 ¥2.52；仅支持 gpt-image-2，¥0.08/张。优先级 2，余额用完即弃；明确余额不足后自动跳过。可在「Fallback 配置」中调整顺序、停用或重新启用。</strong></div>\\n        <label class=\\\"local-settings-label\\\">配置名称<input class=\\\"local-settings-field\\\" value=\\\"IXYAPI\\\"></label>\\n        <label class=\\\"local-settings-label\\\">服务商类型<select class=\\\"local-settings-select\\\"><option>OpenAI 兼容接口</option><option>fal.ai</option><option>自定义服务商</option></select></label>\\n        <label class=\\\"local-settings-label\\\">API URL<input class=\\\"local-settings-field\\\" value=\\\"https://www.tixyw.com/v1\\\"></label>\\n        <p class=\\\"local-settings-help\\\">末尾带 / 时直接使用该地址拼接接口，不补 /v1 前缀，支持通过查询参数覆盖：?apiUrl=。</p>\\n        <label class=\\\"local-settings-label\\\">API Key<input class=\\\"local-settings-field\\\" type=\\\"password\\\" value=\\\"sk-••••••••••••••••••••\\\"></label>\\n        <label class=\\\"local-settings-label\\\">图像模型<input class=\\\"local-settings-field\\\" value=\\\"gpt-image-2\\\"></label>\\n        <label class=\\\"local-settings-label\\\">API 模式<select class=\\\"local-settings-select\\\"><option>Images API</option><option>Responses API</option></select></label>\\n        <div class=\\\"local-settings-grid\\\"><label class=\\\"local-settings-label\\\">请求超时<input class=\\\"local-settings-field\\\" type=\\\"number\\\" value=\\\"120\\\"></label><label class=\\\"local-settings-label\\\">推理强度<select class=\\\"local-settings-select\\\"><option>默认</option><option>low</option><option>medium</option><option>high</option></select></label></div>\\n        <div class=\\\"local-settings-option-list\\\">\\n          <div class=\\\"local-settings-option\\\"><span>启用 API 代理</span><button type=\\\"button\\\" class=\\\"local-settings-switch\\\" data-toggle=\\\"proxy\\\" aria-pressed=\\\"false\\\"><i></i></button></div>\\n          <div class=\\\"local-settings-option\\\"><span>流式返回图片</span><button type=\\\"button\\\" class=\\\"local-settings-switch on\\\" data-toggle=\\\"stream\\\" aria-pressed=\\\"true\\\"><i></i></button></div>\\n          <div class=\\\"local-settings-option\\\"><span>返回 Base64 图片数据</span><button type=\\\"button\\\" class=\\\"local-settings-switch\\\" data-toggle=\\\"base64\\\" aria-pressed=\\\"false\\\"><i></i></button></div>\\n          <div class=\\\"local-settings-option\\\"><span>允许 Codex CLI 兼容模式</span><button type=\\\"button\\\" class=\\\"local-settings-switch\\\" data-toggle=\\\"codex\\\" aria-pressed=\\\"false\\\"><i></i></button></div>\\n        </div>\\n        <button class=\\\"local-settings-action local-settings-save\\\" type=\\\"button\\\">保存当前配置</button><span class=\\\"local-settings-status\\\" role=\\\"status\\\"></span>\\n      </section>\\n      <section class=\\\"local-settings-panel\\\" data-panel=\\\"fallback\\\">\\n        <h4>失败自动切换</h4><p class=\\\"local-settings-muted\\\">从上到下依次尝试已勾选的中转站。明确失败、余额不足时切换下一站；结果不明时暂停，避免重复扣费。</p>\\n        <div class=\\\"local-settings-card\\\"><div class=\\\"local-settings-option\\\"><strong>启用 Fallback 自动切换</strong><button type=\\\"button\\\" class=\\\"local-settings-switch on\\\" data-toggle=\\\"fallback\\\" aria-pressed=\\\"true\\\"><i></i></button></div><p>关闭后仅请求 API 配置当前选中的站点。</p></div>\\n        <div class=\\\"local-settings-panel-head\\\"><h4 class=\\\"sub\\\">中转站顺序</h4><button type=\\\"button\\\" class=\\\"local-settings-small\\\" data-fallback-reset>恢复默认顺序</button></div>\\n        <div class=\\\"local-settings-fallback-list\\\" role=\\\"list\\\">\\n          <div class=\\\"local-settings-fallback-row\\\" data-provider=\\\"zzone\\\"><button type=\\\"button\\\" class=\\\"local-settings-drag\\\">⠿</button><b>1</b><label><input type=\\\"checkbox\\\" checked> <strong>zzone</strong><small>gpt-image-2.5-sunburst · ¥0.06/张 · https://zzone.cc.cd</small></label><button type=\\\"button\\\" data-move=\\\"up\\\">↑</button><button type=\\\"button\\\" data-move=\\\"down\\\">↓</button></div>\\n          <div class=\\\"local-settings-fallback-row\\\" data-provider=\\\"ixyapi\\\"><button type=\\\"button\\\" class=\\\"local-settings-drag\\\">⠿</button><b>2</b><label><input type=\\\"checkbox\\\" checked> <strong>IXYAPI</strong><small>gpt-image-2 · ¥0.08/张 · https://www.tixyw.com</small></label><button type=\\\"button\\\" data-move=\\\"up\\\">↑</button><button type=\\\"button\\\" data-move=\\\"down\\\">↓</button></div>\\n          <div class=\\\"local-settings-fallback-row\\\" data-provider=\\\"jojocode\\\"><button type=\\\"button\\\" class=\\\"local-settings-drag\\\">⠿</button><b>3</b><label><input type=\\\"checkbox\\\" checked> <strong>jojocode</strong><small>gpt-image-2 / 4k · ¥0.10/张 · https://api2.jojocode.com/v1</small></label><button type=\\\"button\\\" data-move=\\\"up\\\">↑</button><button type=\\\"button\\\" data-move=\\\"down\\\">↓</button></div>\\n          <div class=\\\"local-settings-fallback-row\\\" data-provider=\\\"hi-code\\\"><button type=\\\"button\\\" class=\\\"local-settings-drag\\\">⠿</button><b>4</b><label><input type=\\\"checkbox\\\" checked> <strong>hi-code</strong><small>gpt-image-2.5-sunburst / flare · ¥0.22/张 · https://api-cn.hi-code.cc/v1</small></label><button type=\\\"button\\\" data-move=\\\"up\\\">↑</button><button type=\\\"button\\\" data-move=\\\"down\\\">↓</button></div>\\n        </div>\\n        <div class=\\\"local-settings-card\\\"><strong>实际请求顺序</strong><p class=\\\"local-settings-status\\\">zzone → IXYAPI → jojocode → hi-code</p></div>\\n      </section>\\n      <section class=\\\"local-settings-panel\\\" data-panel=\\\"general\\\">\\n        <h4>习惯配置</h4>\\n        <div class=\\\"local-settings-option-list\\\">\\n          <div class=\\\"local-settings-option\\\"><span>任务提交方式</span><select class=\\\"local-settings-mini-select\\\"><option>发送按钮</option><option>回车/发送按钮</option></select></div>\\n          <div class=\\\"local-settings-option\\\"><span>提交任务后清空输入框</span><button class=\\\"local-settings-switch on\\\" data-toggle=\\\"clear-input\\\" aria-pressed=\\\"true\\\"><i></i></button></div>\\n          <div class=\\\"local-settings-option\\\"><span>重启后加载上次的输入框</span><button class=\\\"local-settings-switch on\\\" data-toggle=\\\"persist-input\\\" aria-pressed=\\\"true\\\"><i></i></button></div>\\n          <div class=\\\"local-settings-option\\\"><span>复用配置时临时复用任务 API 配置</span><button class=\\\"local-settings-switch\\\" data-toggle=\\\"reuse-api\\\" aria-pressed=\\\"false\\\"><i></i></button></div>\\n          <div class=\\\"local-settings-option\\\"><span>成功任务仍然展示重试按钮</span><button class=\\\"local-settings-switch\\\" data-toggle=\\\"retry\\\" aria-pressed=\\\"false\\\"><i></i></button></div>\\n          <div class=\\\"local-settings-option\\\"><span>允许模型改写优化提示词</span><button class=\\\"local-settings-switch\\\" data-toggle=\\\"rewrite\\\" aria-pressed=\\\"false\\\"><i></i></button></div>\\n          <div class=\\\"local-settings-option\\\"><span>任务完成后发送系统通知</span><button class=\\\"local-settings-switch\\\" data-toggle=\\\"notification\\\" aria-pressed=\\\"false\\\"><i></i></button></div>\\n          <div class=\\\"local-settings-option\\\"><span>发送消息后自动滚动到底部</span><button class=\\\"local-settings-switch\\\" data-toggle=\\\"scroll-bottom\\\" aria-pressed=\\\"true\\\"><i></i></button></div>\\n          <div class=\\\"local-settings-option\\\"><span>公式输出提示</span><button class=\\\"local-settings-switch\\\" data-toggle=\\\"math\\\" aria-pressed=\\\"false\\\"><i></i></button></div>\\n        </div>\\n        <div class=\\\"local-settings-card\\\"><strong>固定上架参数</strong><p>上架平台 · Wildberries　　语言 · 俄语</p></div>\\n      </section>\\n      <section class=\\\"local-settings-panel\\\" data-panel=\\\"agent\\\">\\n        <h4>Agent 配置</h4>\\n        <div class=\\\"local-settings-option\\\"><span>使用独立的 API 配置</span><select class=\\\"local-settings-mini-select\\\"><option>关闭</option><option>原生</option><option>混合</option></select></div>\\n        <p class=\\\"local-settings-muted\\\">原生：使用 Responses API 配置，由模型调用 image_generation 工具生成图片。<br>混合：使用文本模型调用自定义工具，请求图像模型生成图像。</p>\\n        <div class=\\\"local-settings-option\\\"><span>文本模型 API 配置</span><select class=\\\"local-settings-mini-select\\\"><option>IXYAPI · gpt-image-2</option><option>选择配置</option></select></div>\\n        <div class=\\\"local-settings-option\\\"><span>图像模型 API 配置</span><select class=\\\"local-settings-mini-select\\\"><option>IXYAPI · OpenAI</option><option>选择配置</option></select></div>\\n        <label class=\\\"local-settings-label\\\">最大工具调用轮数<input class=\\\"local-settings-field\\\" type=\\\"number\\\" min=\\\"1\\\" max=\\\"50\\\" value=\\\"15\\\"></label>\\n        <div class=\\\"local-settings-option\\\"><span>网络搜索</span><button class=\\\"local-settings-switch\\\" data-toggle=\\\"web-search\\\" aria-pressed=\\\"false\\\"><i></i></button></div>\\n      </section>\\n      <section class=\\\"local-settings-panel\\\" data-panel=\\\"data\\\">\\n        <h4>数据管理</h4><p class=\\\"local-settings-muted\\\">所有配置、任务和生成图片均仅保存在浏览器本地。建议定期导出备份。</p>\\n        <div class=\\\"local-settings-grid\\\"><div class=\\\"local-settings-card\\\"><strong>导出数据</strong><p>选择要包含的内容并导出 JSON 备份。</p><label class=\\\"local-settings-check\\\"><input type=\\\"checkbox\\\" checked> 包含配置</label><label class=\\\"local-settings-check\\\"><input type=\\\"checkbox\\\" checked> 包含任务</label><button class=\\\"local-settings-action\\\" data-data-action=\\\"export\\\" type=\\\"button\\\">导出所选数据</button></div><div class=\\\"local-settings-card\\\"><strong>导入数据</strong><p>支持一次导入多个普通备份。</p><label class=\\\"local-settings-check\\\"><input type=\\\"checkbox\\\" checked> 包含配置</label><label class=\\\"local-settings-check\\\"><input type=\\\"checkbox\\\" checked> 包含任务</label><button class=\\\"local-settings-action\\\" data-data-action=\\\"import\\\" type=\\\"button\\\">从文件导入</button><input class=\\\"local-settings-file\\\" type=\\\"file\\\" accept=\\\".json,.zip\\\"></div></div>\\n        <div class=\\\"local-settings-card danger-card\\\"><strong>清除数据</strong><p>清除前请先导出备份，此操作不可恢复。</p><label class=\\\"local-settings-check\\\"><input type=\\\"checkbox\\\"> 清除配置</label><label class=\\\"local-settings-check\\\"><input type=\\\"checkbox\\\"> 清除任务</label><button class=\\\"local-settings-action danger-action\\\" data-data-action=\\\"clear\\\" type=\\\"button\\\">清空所选数据</button></div>\\n      </section>\\n      <section class=\\\"local-settings-panel\\\" data-panel=\\\"about\\\"><h4>关于</h4><div class=\\\"local-settings-card\\\"><strong>GPT Image Playground</strong><p>版本 v0.7.12</p><p>本地图片生成工作台，支持多 API 配置、Fallback、Agent 与数据备份。</p><p class=\\\"local-settings-help\\\">当前 Guan A+ 工作台按其设置结构适配为离线本地版本。</p></div><button type=\\\"button\\\" class=\\\"local-settings-action\\\" data-about-action>检查更新</button></section>\\n    </main>\\n  </div>\\n</div>\";\n    const close=()=>{modal.hidden=true;modal.setAttribute(\"aria-hidden\",\"true\");button.setAttribute(\"aria-expanded\",\"false\");document.body.style.overflow=\"\";};\n    const open=()=>{modal.hidden=false;modal.setAttribute(\"aria-hidden\",\"false\");button.setAttribute(\"aria-expanded\",\"true\");document.body.style.overflow=\"hidden\";};\n    const switchTab=(tab)=>{modal.querySelectorAll(\".local-settings-tab\").forEach((item)=>item.classList.toggle(\"active\",item.dataset.tab===tab));modal.querySelectorAll(\".local-settings-panel\").forEach((item)=>item.classList.toggle(\"active\",item.dataset.panel===tab));};\n    button.addEventListener(\"click\",open); modal.querySelector(\".local-settings-close\").addEventListener(\"click\",close); modal.querySelector(\".local-settings-backdrop\").addEventListener(\"click\",close); modal.querySelector(\".local-settings-dialog\").addEventListener(\"pointerdown\",(event)=>event.stopPropagation()); modal.querySelector(\".local-settings-dialog\").addEventListener(\"click\",(event)=>event.stopPropagation());\n    modal.querySelectorAll(\".local-settings-tab\").forEach((tab)=>tab.addEventListener(\"click\",()=>switchTab(tab.dataset.tab))); modal.querySelectorAll(\".local-settings-switch\").forEach((item)=>item.addEventListener(\"click\",()=>{const on=item.classList.toggle(\"on\");item.setAttribute(\"aria-pressed\",String(on));})); modal.querySelectorAll(\".local-settings-fallback-row [data-move]\").forEach((item)=>item.addEventListener(\"click\",()=>{const row=item.closest(\".local-settings-fallback-row\");const sibling=item.dataset.move===\"up\"?row?.previousElementSibling:row?.nextElementSibling;if(row&&sibling){if(item.dataset.move===\"up\")row.parentNode.insertBefore(row,sibling);else row.parentNode.insertBefore(sibling,row);row.parentNode.querySelectorAll(\".local-settings-fallback-row > b\").forEach((n,i)=>n.textContent=String(i+1));}})); modal.querySelector(\".local-settings-save\")?.addEventListener(\"click\",()=>{const status=modal.querySelector(\".local-settings-save + .local-settings-status\");if(status)status.textContent=\"已保存到当前设备\";}); modal.querySelector(\"[data-data-action=export]\")?.addEventListener(\"click\",()=>{const blob=new Blob([JSON.stringify({version:\"0.7.12\",savedAt:new Date().toISOString(),source:\"guan-workbench\"},null,2)],{type:\"application/json\"});const link=document.createElement(\"a\");link.href=URL.createObjectURL(blob);link.download=\"guan-workbench-settings.json\";link.click();setTimeout(()=>URL.revokeObjectURL(link.href),1000);}); modal.querySelector(\"[data-data-action=import]\")?.addEventListener(\"click\",()=>modal.querySelector(\".local-settings-file\")?.click()); modal.querySelector(\"[data-data-action=clear]\")?.addEventListener(\"click\",()=>{if(window.confirm(\"确定清空所选数据吗？此操作不可恢复。\"))modal.querySelector(\".danger-card .local-settings-status\")?.replaceChildren(\"已清除\");});\n    document.addEventListener(\"keydown\",(event)=>{if(event.key===\"Escape\"&&!modal.hidden)close();});\n    header.append(button); document.body.append(modal); header.dataset.localSettingsButton=\"ready\"; return true;\n  };\n  const observer=new MutationObserver(()=>{if(setup())observer.disconnect();}); observer.observe(document.documentElement,{childList:true,subtree:true}); setup();\n})();\n</script>";
 const localSettingsModalStyle = "<style id=\"local-settings-modal-style\">\n.local-settings-modal[hidden]{display:none!important}\n.local-settings-modal,.local-settings-dialog,.local-settings-sidebar,.local-settings-content{pointer-events:auto!important}\n.local-settings-modal{position:fixed!important;inset:0!important;z-index:240!important;display:flex!important;align-items:center!important;justify-content:center!important;padding:32px!important;color:#f5f5f7!important;font-family:inherit!important}\n.local-settings-backdrop{position:absolute!important;inset:0!important;background:rgba(0,0,0,.76)!important;backdrop-filter:blur(11px)!important;animation:local-settings-fade-in .24s ease both!important}\n.local-settings-dialog{position:relative!important;z-index:1!important;display:flex!important;flex-direction:column!important;width:min(1090px,calc(100vw - 40px))!important;height:min(860px,calc(100vh - 64px))!important;min-height:520px!important;overflow:hidden!important;border:1px solid rgba(255,255,255,.11)!important;border-radius:28px!important;background:#1a1a1d!important;box-shadow:0 28px 90px rgba(0,0,0,.62),0 0 0 1px rgba(255,255,255,.04) inset!important;animation:local-settings-dialog-in .28s cubic-bezier(.2,.8,.2,1) both!important}\n.local-settings-header{display:flex!important;align-items:center!important;justify-content:space-between!important;flex:0 0 98px!important;padding:0 30px 0 34px!important;border-bottom:1px solid rgba(255,255,255,.1)!important}\n.local-settings-title{display:flex!important;align-items:center!important;gap:15px!important;font-size:24px!important;font-weight:700!important}\n.local-settings-title svg{width:25px!important;height:25px!important;color:#4f9cff!important}\n.local-settings-version{margin-left:auto!important;margin-right:26px!important;color:#7c7c87!important;font:600 17px/1 ui-monospace,SFMono-Regular,Menlo,monospace!important}\n.local-settings-close{display:inline-flex!important;align-items:center!important;justify-content:center!important;width:42px!important;height:42px!important;border:0!important;border-radius:12px!important;background:transparent!important;color:#aeb0ba!important;font-size:31px!important;font-weight:300!important;line-height:1!important;cursor:pointer!important;transition:background .16s ease,color .16s ease,transform .16s ease!important}\n.local-settings-close:hover{background:rgba(255,255,255,.08)!important;color:#fff!important}.local-settings-close:active{transform:scale(.92)!important}\n.local-settings-layout{display:flex!important;flex:1 1 auto!important;min-height:0!important}\n.local-settings-sidebar{display:flex!important;flex:0 0 274px!important;flex-direction:column!important;gap:8px!important;padding:22px 18px!important;border-right:1px solid rgba(255,255,255,.1)!important;background:rgba(255,255,255,.025)!important}\n.local-settings-tab{display:flex!important;align-items:center!important;gap:15px!important;min-height:58px!important;padding:0 20px!important;border:0!important;border-radius:17px!important;background:transparent!important;color:#aeb0ba!important;font-size:19px!important;text-align:left!important;cursor:pointer!important;transition:background .18s ease,color .18s ease,transform .18s ease!important}\n.local-settings-tab:hover{background:rgba(255,255,255,.055)!important;color:#e8e8ed!important}.local-settings-tab.active{background:rgba(255,255,255,.11)!important;color:#58a1ff!important;font-weight:600!important}.local-settings-tab:active{transform:scale(.985)!important}\n.local-settings-tab-icon{width:22px!important;color:currentColor!important;font-size:23px!important;line-height:1!important;text-align:center!important}\n.local-settings-content{flex:1 1 auto!important;min-width:0!important;overflow:auto!important;padding:34px 34px 44px!important}\n.local-settings-panel{display:none!important;max-width:780px!important}.local-settings-panel.active{display:block!important;animation:local-settings-panel-in .2s ease both!important}\n.local-settings-panel h4{margin:0 0 18px!important;color:#ececf1!important;font-size:21px!important;font-weight:700!important}.local-settings-panel h4 span{margin-left:9px!important;color:#8b8d97!important;font-size:20px!important}\n.local-settings-label{display:block!important;margin:22px 0 9px!important;color:#e5e5eb!important;font-size:18px!important;font-weight:600!important}\n.local-settings-field,.local-settings-select{box-sizing:border-box!important;width:100%!important;height:58px!important;padding:0 18px!important;border:1px solid rgba(255,255,255,.11)!important;border-radius:18px!important;outline:none!important;background:rgba(255,255,255,.035)!important;color:#eeeef2!important;font:500 18px/1 inherit!important;transition:border-color .18s ease,background .18s ease,box-shadow .18s ease!important}\n.local-settings-field:focus,.local-settings-select:focus{border-color:#468fe8!important;background:rgba(255,255,255,.06)!important;box-shadow:0 0 0 3px rgba(70,143,232,.18)!important}.local-settings-select{appearance:auto!important}\n.local-settings-info{margin-top:16px!important;padding:20px 22px!important;border:1px solid rgba(255,255,255,.12)!important;border-radius:18px!important;color:#d9d9df!important;background:rgba(255,255,255,.035)!important;font-size:17px!important;line-height:1.75!important}.local-settings-info strong{color:#f2f2f5!important}.info-mark{display:inline-flex!important;width:22px!important;height:22px!important;align-items:center!important;justify-content:center!important;margin-right:11px!important;border:2px solid #4f9cff!important;border-radius:50%!important;color:#4f9cff!important;font-weight:700!important}.local-settings-help{margin:8px 0 0!important;color:#8f909a!important;font-size:15px!important;line-height:1.55!important}\n.local-settings-grid{display:grid!important;grid-template-columns:1fr 1fr!important;gap:18px!important}.local-settings-card{padding:20px!important;border:1px solid rgba(255,255,255,.1)!important;border-radius:18px!important;background:rgba(255,255,255,.035)!important}.local-settings-card strong{display:block!important;margin-bottom:8px!important;color:#f0f0f4!important;font-size:18px!important}.local-settings-card p{margin:0!important;color:#9697a1!important;font-size:15px!important;line-height:1.55!important}\n.local-settings-action{margin-top:24px!important;padding:13px 20px!important;border:0!important;border-radius:13px!important;background:#3e8ff5!important;color:#fff!important;font-size:16px!important;cursor:pointer!important}.local-settings-action:hover{background:#579dff!important}.local-settings-muted{color:#9697a1!important;font-size:16px!important;line-height:1.7!important}\n@keyframes local-settings-fade-in{from{opacity:0}to{opacity:1}}@keyframes local-settings-dialog-in{from{opacity:0;transform:translateY(16px) scale(.97)}to{opacity:1;transform:translateY(0) scale(1)}}@keyframes local-settings-panel-in{from{opacity:0;transform:translateX(8px)}to{opacity:1;transform:translateX(0)}}\n@media(max-width:760px){.local-settings-modal{padding:10px!important}.local-settings-dialog{width:calc(100vw - 20px)!important;height:calc(100vh - 20px)!important;min-height:0!important;border-radius:20px!important}.local-settings-header{flex-basis:74px!important;padding:0 16px 0 20px!important}.local-settings-title{font-size:20px!important}.local-settings-version{margin-right:8px!important;font-size:13px!important}.local-settings-layout{flex-direction:column!important}.local-settings-sidebar{flex:0 0 auto!important;flex-direction:row!important;overflow-x:auto!important;padding:10px!important;border-right:0!important;border-bottom:1px solid rgba(255,255,255,.1)!important}.local-settings-tab{min-height:43px!important;padding:0 14px!important;border-radius:12px!important;font-size:14px!important}.local-settings-tab-icon{width:auto!important;font-size:17px!important}.local-settings-content{padding:22px 18px 30px!important}.local-settings-grid{grid-template-columns:1fr!important}.local-settings-field,.local-settings-select{height:50px!important;font-size:16px!important}}\n.local-settings-panel-head{display:flex!important;align-items:center!important;justify-content:space-between!important;gap:12px!important}.local-settings-panel-head h4{margin-bottom:0!important}.local-settings-panel-head h4.sub{font-size:18px!important}.local-settings-inline-actions{display:flex!important;gap:7px!important;flex-wrap:wrap!important}.local-settings-small{padding:7px 10px!important;border:1px solid rgba(255,255,255,.12)!important;border-radius:10px!important;background:rgba(255,255,255,.04)!important;color:#bfc0c9!important;font-size:13px!important;cursor:pointer!important}.local-settings-small:hover{background:rgba(255,255,255,.1)!important;color:#fff!important}.local-settings-small.danger{color:#e88b95!important}.local-settings-option-list{display:flex!important;flex-direction:column!important;gap:2px!important;margin-top:18px!important}.local-settings-option{display:flex!important;align-items:center!important;justify-content:space-between!important;gap:18px!important;min-height:54px!important;padding:10px 0!important;border-bottom:1px solid rgba(255,255,255,.07)!important;color:#d8d8df!important;font-size:16px!important}.local-settings-option:last-child{border-bottom:0!important}.local-settings-switch{position:relative!important;width:42px!important;height:24px!important;flex:0 0 42px!important;padding:0!important;border:0!important;border-radius:99px!important;background:#4a4b52!important;cursor:pointer!important;transition:background .18s ease!important}.local-settings-switch i{position:absolute!important;top:3px!important;left:3px!important;width:18px!important;height:18px!important;border-radius:50%!important;background:#c4c5cc!important;transition:transform .18s ease,background .18s ease!important}.local-settings-switch.on{background:#3f8ff3!important}.local-settings-switch.on i{transform:translateX(18px)!important;background:#fff!important}.local-settings-mini-select{min-width:150px!important;padding:8px 12px!important;border:1px solid rgba(255,255,255,.12)!important;border-radius:11px!important;background:rgba(255,255,255,.05)!important;color:#e6e6ec!important;font-size:14px!important}.local-settings-fallback-list{display:flex!important;flex-direction:column!important;gap:8px!important;margin:14px 0 18px!important}.local-settings-fallback-row{display:grid!important;grid-template-columns:26px 22px minmax(0,1fr) 28px 28px!important;align-items:center!important;gap:8px!important;padding:12px!important;border:1px solid rgba(255,255,255,.1)!important;border-radius:14px!important;background:rgba(255,255,255,.035)!important}.local-settings-fallback-row label{min-width:0!important;color:#e7e7ec!important}.local-settings-fallback-row label strong{display:block!important}.local-settings-fallback-row small{display:block!important;margin-top:4px!important;overflow:hidden!important;color:#92939d!important;font-size:12px!important;text-overflow:ellipsis!important;white-space:nowrap!important}.local-settings-fallback-row>button{border:0!important;background:transparent!important;color:#aeb0ba!important;cursor:pointer!important}.local-settings-fallback-row>button:hover{color:#fff!important}.local-settings-drag{font-size:18px!important}.local-settings-check{display:block!important;margin-top:10px!important;color:#c7c8d0!important;font-size:14px!important}.local-settings-check input,.local-settings-fallback-row input{accent-color:#428ff4!important}.local-settings-file{display:block!important;margin-top:12px!important;color:#b5b6c0!important;font-size:13px!important}.danger-card{margin-top:20px!important;border-color:rgba(221,102,111,.3)!important}.danger-card strong{color:#ef9aa2!important}.danger-action{background:#a94c55!important}.danger-action:hover{background:#c25b66!important}.local-settings-status{margin-left:10px!important;color:#68b0ff!important;font-size:13px!important}</style>";
+
+const originalPlaygroundSettingsButtonScript = `<script id="original-playground-settings-button">
+(() => {
+  const setup = () => {
+    const dialog = document.querySelector('[role="dialog"]');
+    const header = dialog?.querySelector(':scope > .flex.size-full > aside');
+    if (!header || header.querySelector('.local-workbench-settings-button')) return Boolean(header);
+
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'local-workbench-settings-button';
+    button.setAttribute('aria-label', '设置配置');
+    button.setAttribute('aria-controls', 'playground-settings-root');
+    button.setAttribute('aria-expanded', 'false');
+    button.title = '设置配置';
+    button.innerHTML = '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>';
+    header.append(button);
+    return true;
+  };
+
+  const observer = new MutationObserver(() => {
+    if (setup()) observer.disconnect();
+  });
+  observer.observe(document.documentElement, { childList: true, subtree: true });
+  setup();
+})();
+</script>`;
+
+const localThemeToggleScript = `<script id="local-theme-toggle">
+(() => {
+  const storageKey = "guan-workbench-theme";
+  const icons = {
+    light: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42"></path></svg>',
+    dark: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.9 13.2A8.5 8.5 0 0 1 10.8 3.1 8.5 8.5 0 1 0 20.9 13.2Z"></path></svg>',
+  };
+  const getTheme = () => {
+    try {
+      const saved = localStorage.getItem(storageKey);
+      if (saved === "dark" || saved === "light") return saved;
+    } catch {}
+    return document.documentElement.dataset.workbenchTheme === "dark" ? "dark" : "light";
+  };
+  const applyTheme = (theme) => {
+    document.documentElement.dataset.workbenchTheme = theme;
+    document.documentElement.classList.toggle("dark", theme === "dark");
+    document.body?.classList.toggle("dark", theme === "dark");
+    try { localStorage.setItem(storageKey, theme); } catch {}
+    const button = document.querySelector(".local-workbench-theme-button");
+    if (!button) return;
+    button.innerHTML = theme === "dark" ? icons.light : icons.dark;
+    button.setAttribute("aria-pressed", String(theme === "dark"));
+    button.setAttribute("aria-label", theme === "dark" ? "切换浅色主题" : "切换深色主题");
+    button.title = theme === "dark" ? "切换浅色主题" : "切换深色主题";
+  };
+  applyTheme(getTheme());
+
+  const setup = () => {
+    const dialog = document.querySelector('[role="dialog"]');
+    const header = dialog?.querySelector(':scope > .flex.size-full > aside');
+    if (!header) return false;
+    let button = header.querySelector(".local-workbench-theme-button");
+    if (!button) {
+      button = document.createElement("button");
+      button.type = "button";
+      button.className = "local-workbench-theme-button";
+      button.addEventListener("click", () => applyTheme(getTheme() === "dark" ? "light" : "dark"));
+      const settingsButton = header.querySelector(".local-workbench-settings-button");
+      if (settingsButton) header.insertBefore(button, settingsButton);
+      else header.append(button);
+    }
+    applyTheme(getTheme());
+    return true;
+  };
+  const observer = new MutationObserver(setup);
+  observer.observe(document.documentElement, { childList: true, subtree: true });
+  setup();
+})();
+</script>`;
+
+const localThemeAndUiStyle = `<style id="local-theme-and-ui-style">
+  /* The A+ selector is a visual status pill in this single-tool MVP. */
+  [role="dialog"] [role="radiogroup"][aria-label="工具类型"] [role="radio"] {
+    pointer-events: none !important;
+    cursor: default !important;
+  }
+  [role="dialog"] [role="radiogroup"][aria-label="工具类型"] [role="radio"][data-state="on"] {
+    border: 0 !important;
+    border-radius: 9999px !important;
+    background: #0d0d0e !important;
+    color: #fff !important;
+    box-shadow: none !important;
+  }
+  [role="dialog"] [role="radiogroup"][aria-label="工具类型"] [role="radio"][data-state="on"] svg {
+    color: #fff !important;
+  }
+  [role="dialog"] [data-slot="field-group"] > [data-slot="item"] {
+    border-color: #dfdfdf !important;
+    background: #fff !important;
+  }
+  [role="dialog"] textarea {
+    border-color: #dfdfdf !important;
+    background: #fff !important;
+  }
+  [role="dialog"] button[type="submit"][disabled] {
+    border-color: transparent !important;
+    background: #999 !important;
+    color: #fff !important;
+    opacity: 1 !important;
+    box-shadow: none !important;
+  }
+  [role="dialog"] button[type="submit"][disabled] svg {
+    color: #fff !important;
+  }
+  [role="dialog"] button[type="submit"]:not([disabled]) {
+    border-color: #0d0d0e !important;
+    background: #0d0d0e !important;
+    color: #fff !important;
+  }
+  .local-workbench-theme-button,
+  .local-workbench-settings-button {
+    display: inline-flex !important;
+    width: 42px !important;
+    height: 42px !important;
+    flex: 0 0 42px !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 0 !important;
+    border: 0 !important;
+    border-radius: 12px !important;
+    background: transparent !important;
+    color: #5b5c65 !important;
+    cursor: pointer !important;
+    transition: background-color .16s ease, color .16s ease, transform .16s ease !important;
+  }
+  .local-workbench-theme-button {
+    margin-left: auto !important;
+  }
+  .local-workbench-settings-button {
+    margin-left: 8px !important;
+  }
+  .local-workbench-theme-button:hover,
+  .local-workbench-settings-button:hover {
+    background: var(--muted) !important;
+  }
+  .local-workbench-theme-button:active,
+  .local-workbench-settings-button:active {
+    transform: scale(.94) !important;
+  }
+  .local-workbench-theme-button svg,
+  .local-workbench-settings-button svg {
+    width: 22px !important;
+    height: 22px !important;
+    pointer-events: none !important;
+  }
+  html[data-workbench-theme="dark"],
+  html[data-workbench-theme="dark"] body {
+    background: #111214 !important;
+    color-scheme: dark !important;
+  }
+  html[data-workbench-theme="dark"] [role="dialog"] [role="radiogroup"][aria-label="工具类型"] [role="radio"][data-state="on"] {
+    background: #f4f4f5 !important;
+    color: #161719 !important;
+  }
+  html[data-workbench-theme="dark"] [role="dialog"] [role="radiogroup"][aria-label="工具类型"] [role="radio"][data-state="on"] svg {
+    color: #161719 !important;
+  }
+  html[data-workbench-theme="dark"] [role="dialog"] [data-slot="field-group"] > [data-slot="item"] {
+    border-color: rgba(255,255,255,.14) !important;
+    background: #1b1c1f !important;
+  }
+  html[data-workbench-theme="dark"] [role="dialog"] textarea {
+    border-color: rgba(255,255,255,.14) !important;
+    background: #1b1c1f !important;
+    color: #f4f4f5 !important;
+  }
+  html[data-workbench-theme="dark"] [role="dialog"] button[type="submit"][disabled] {
+    background: #5f6064 !important;
+    color: #fff !important;
+  }
+  html[data-workbench-theme="dark"] [role="dialog"] button[type="submit"]:not([disabled]) {
+    border-color: #f4f4f5 !important;
+    background: #f4f4f5 !important;
+    color: #161719 !important;
+  }
+  html[data-workbench-theme="dark"] .local-workbench-theme-button,
+  html[data-workbench-theme="dark"] .local-workbench-settings-button {
+    color: #e6e7eb !important;
+  }
+  html[data-workbench-theme="dark"] [role="dialog"] .text-foreground,
+  html[data-workbench-theme="dark"] [role="dialog"] .text-gray-900 {
+    color: #f4f4f5 !important;
+  }
+</style>`;
+
+const localSettingsRefinementStyle = `<style id="local-settings-refinement-style">
+.local-settings-dialog{width:min(768px,calc(100vw - 32px))!important;height:min(600px,calc(100vh - 32px))!important;min-height:420px!important;border-radius:24px!important}
+.local-settings-header{flex-basis:68px!important;padding:0 20px!important}
+.local-settings-title{gap:9px!important;font-size:18px!important}
+.local-settings-title svg{width:20px!important;height:20px!important}
+.local-settings-version{margin-right:14px!important;font-size:13px!important}
+.local-settings-close{width:32px!important;height:32px!important;font-size:24px!important}
+.local-settings-sidebar{flex-basis:192px!important;gap:4px!important;padding:12px!important}
+.local-settings-tab{gap:10px!important;min-height:42px!important;padding:0 12px!important;border-radius:12px!important;font-size:14px!important}
+.local-settings-tab-icon{width:18px!important;font-size:16px!important}
+.local-settings-content{padding:24px 24px 32px!important}
+.local-settings-panel h4{margin-bottom:14px!important;font-size:16px!important}
+.local-settings-panel h4 span{font-size:15px!important}
+.local-settings-label{margin:16px 0 7px!important;font-size:14px!important}
+.local-settings-field,.local-settings-select{height:42px!important;padding:0 12px!important;border-radius:12px!important;font-size:14px!important}
+.local-settings-info{margin-top:12px!important;padding:13px 15px!important;border-radius:13px!important;font-size:13px!important;line-height:1.65!important}
+.local-settings-help{font-size:12px!important}
+.local-settings-panel-head h4.sub{font-size:15px!important}
+.local-settings-small{padding:6px 8px!important;font-size:11px!important}
+.local-settings-option{min-height:42px!important;font-size:14px!important}
+.local-settings-card{padding:14px!important;border-radius:14px!important}
+.local-settings-card strong{font-size:15px!important}
+.local-settings-card p,.local-settings-muted{font-size:13px!important}
+.local-settings-action{padding:10px 14px!important;font-size:13px!important}
+.local-settings-fallback-row{padding:9px!important}
+@media(max-width:760px){.local-settings-dialog{width:calc(100vw - 20px)!important;height:calc(100vh - 20px)!important;min-height:0!important}.local-settings-sidebar{flex-basis:auto!important}.local-settings-content{padding:18px 16px 24px!important}}
+</style>
+<script id="local-settings-modal-id-fix">
+(() => {
+  const fix = () => {
+    const modal = document.querySelector(".local-settings-modal");
+    if (!modal) return false;
+    modal.id = "local-workbench-settings-modal";
+    document.querySelector(".local-workbench-settings-button")?.setAttribute("aria-controls", modal.id);
+    return true;
+  };
+  const observer = new MutationObserver(() => { if (fix()) observer.disconnect(); });
+  observer.observe(document.documentElement, { childList: true, subtree: true });
+  fix();
+})();
+</script>`;
 
 const localFixedFieldsScript = `<script id="local-fixed-fields-script">
   (() => {
@@ -669,6 +915,20 @@ const mvpNavigationStyle = `<style id="mvp-navigation">
     left: 88px !important;
     z-index: 20 !important;
   }
+  [role="dialog"] [role="radiogroup"][aria-label="工具类型"] [role="radio"][data-state="on"] {
+    border: 1px solid #dedee2 !important;
+    border-radius: 9999px !important;
+    background: #fff !important;
+    color: #202127 !important;
+    box-shadow: 0 1px 2px rgb(0 0 0 / 8%) !important;
+  }
+  [role="dialog"] button:disabled[class*="w-full"][class*="min-h-12"] {
+    border: 1px solid #dedee2 !important;
+    background: #f1f1f2 !important;
+    color: #28292e !important;
+    opacity: 1 !important;
+    box-shadow: none !important;
+  }
   [role="dialog"] .no-scrollbar:has(> [role="radiogroup"][aria-label="工具类型"]) {
     display: flex !important;
     overflow: visible !important;
@@ -984,6 +1244,15 @@ const contentTypes = {
   ".avif": "image/avif", ".css": "text/css; charset=utf-8", ".gif": "image/gif", ".html": "text/html; charset=utf-8", ".ico": "image/x-icon", ".jpeg": "image/jpeg", ".jpg": "image/jpeg", ".js": "text/javascript; charset=utf-8", ".json": "application/json; charset=utf-8", ".mjs": "text/javascript; charset=utf-8", ".mp4": "video/mp4", ".png": "image/png", ".svg": "image/svg+xml", ".ttf": "font/ttf", ".webm": "video/webm", ".webp": "image/webp", ".woff": "font/woff", ".woff2": "font/woff2",
 };
 
+const imageRelayUpstreams = {
+  ixyapi: "www.tixyw.com",
+  zzone: "zzone.cc.cd",
+  "hi-code": "api-cn.hi-code.cc",
+  jojocode: "api2.jojocode.com",
+};
+const imageRelayEndpoints = new Set(["models", "images/generations", "images/edits", "responses"]);
+const localHosts = new Set(["127.0.0.1:5174", "localhost:5174"]);
+
 function safeFile(root, relative) {
   const target = join(root, normalize(relative.replace(/^\/+/, "")));
   return target.startsWith(root) ? target : null;
@@ -998,14 +1267,15 @@ async function existingFile(path) {
 }
 
 async function send(response, path, method) {
+  const isHtml = extname(path).toLowerCase() === ".html";
   response.writeHead(200, {
     "content-type": contentTypes[extname(path).toLowerCase()] || "application/octet-stream",
-    "cache-control": "public, max-age=31536000, immutable",
+    "cache-control": isHtml ? "no-store" : "public, max-age=31536000, immutable",
     "content-security-policy": staticOnlyCsp,
     "x-static-archive": "guan-detail-page-static",
   });
   if (method === "HEAD") return response.end();
-  if (extname(path).toLowerCase() === ".html") {
+  if (isHtml) {
     const document = await readFile(path, "utf8");
     const refreshedFavicon = document
       // The archived page includes PixPix's locale-selection redirect, which
@@ -1017,10 +1287,94 @@ async function send(response, path, method) {
       .replace(/href="\/favicon\.ico[^"]*"/g, 'href="/favicon.ico?g-brand-v4"')
       .replace(/\\\"href\\\":\\\"\/favicon\.ico[^\\\"]*/g, '\\\"href\\\":\\\"/favicon.ico?g-brand-v4')
       .replace(/href="\/zh-CN\/workbench"/g, 'href="/"');
-    response.end(refreshedFavicon.replace("</head>", `${workbenchLogoStyle}${mvpNavigationStyle}${localRootNavigationScript}${localSettingsPanelScript}${localWorkbenchSettingsButtonScript}${localSettingsModalStyle}${localFixedFieldsScript}${localResolutionButtonsScript}${localAspectRatioButtonsScript}${localOfflineGuardsScript}${localResponsivePreviewScript}</head>`));
+    response.end(refreshedFavicon.replace("</head>", `${workbenchLogoStyle}${mvpNavigationStyle}${localThemeAndUiStyle}${localRootNavigationScript}${originalPlaygroundSettingsButtonScript}${localThemeToggleScript}${localFixedFieldsScript}${localResolutionButtonsScript}${localAspectRatioButtonsScript}${localOfflineGuardsScript}${localResponsivePreviewScript}<link rel="stylesheet" href="/playground-settings/assets/index.css?v=ui-theme-1"><script type="module" src="/playground-settings/assets/index.js?v=ui-theme-1"></script></head>`));
     return;
   }
   createReadStream(path).pipe(response);
+}
+
+async function relayImageApi(request, response, pathname) {
+  const origin = request.headers.origin;
+  const host = request.headers.host;
+  const route = pathname.match(/^\/local-image-api\/(ixyapi|zzone|hi-code|jojocode)\/(models|images\/generations|images\/edits|responses)$/);
+  const provider = route?.[1];
+  const endpoint = route?.[2];
+  const originIsLocal = origin === `http://${host}` || (!origin && request.method === "GET");
+  if (!localHosts.has(host) || !originIsLocal) {
+    response.writeHead(403, { "cache-control": "no-store" });
+    response.end();
+    return;
+  }
+  if (!route || !imageRelayUpstreams[provider] || !imageRelayEndpoints.has(endpoint)) {
+    response.writeHead(404, { "cache-control": "no-store" });
+    response.end();
+    return;
+  }
+  if ((endpoint === "models" && request.method !== "GET") || (endpoint !== "models" && request.method !== "POST")) {
+    response.writeHead(405, { allow: endpoint === "models" ? "GET" : "POST", "cache-control": "no-store" });
+    response.end();
+    return;
+  }
+  const contentLength = Number(request.headers["content-length"] || 0);
+  if (contentLength > 100 * 1024 * 1024) {
+    response.writeHead(413, { "cache-control": "no-store" });
+    response.end();
+    return;
+  }
+
+  const headers = {
+    accept: request.headers.accept || "application/json",
+    "accept-encoding": "identity",
+  };
+  if (request.headers.authorization) headers.authorization = request.headers.authorization;
+  if (request.headers["content-type"]) headers["content-type"] = request.headers["content-type"];
+  if (request.headers["content-length"]) headers["content-length"] = request.headers["content-length"];
+
+  const upstreamUrl = `https://${imageRelayUpstreams[provider]}/v1/${endpoint}`;
+  try {
+    const abortController = new AbortController();
+    response.once("close", () => {
+      if (!response.writableEnded) abortController.abort();
+    });
+    const upstream = await fetch(upstreamUrl, {
+      method: request.method,
+      headers,
+      body: request.method === "GET" ? undefined : request,
+      ...(request.method === "GET" ? {} : { duplex: "half" }),
+      redirect: "manual",
+      signal: AbortSignal.any([abortController.signal, AbortSignal.timeout(30 * 60 * 1000)]),
+    });
+    response.writeHead(upstream.status, {
+      "content-type": upstream.headers.get("content-type") || "application/json",
+      "cache-control": "no-store",
+      "connection": "close",
+      "x-image-relay-request-id": randomUUID().replaceAll("-", ""),
+      ...(upstream.headers.get("content-length") ? { "content-length": upstream.headers.get("content-length") } : {}),
+    });
+    if (!upstream.body) return response.end();
+    await pipeline(Readable.fromWeb(upstream.body), response);
+  } catch {
+    if (response.headersSent) {
+      response.destroy();
+      return;
+    }
+    const requestId = randomUUID().replaceAll("-", "");
+    const body = JSON.stringify({
+      error: {
+        code: "local_relay_result_unknown",
+        message: "与中转站连接中断，未收到完整结果；上游可能已生成并扣费。将按失败处理并自动切换下一站。",
+        request_id: requestId,
+      },
+    });
+    response.writeHead(502, {
+      "content-type": "application/json; charset=utf-8",
+      "content-length": Buffer.byteLength(body),
+      "cache-control": "no-store",
+      "x-image-result-state": "unknown",
+      "x-image-relay-request-id": requestId,
+    });
+    response.end(body);
+  }
 }
 
 function notFound(response) {
@@ -1042,13 +1396,27 @@ async function localMedia(response, pathname, method) {
 
 const server = createServer(async (request, response) => {
   const method = request.method || "GET";
+  const pathname = new URL(request.url || "/", "http://127.0.0.1").pathname.replace(/\/$/, "") || "/";
+  if (pathname.startsWith("/local-image-api/")) {
+    if (!["GET", "POST"].includes(method)) {
+      response.writeHead(405, { allow: "GET, POST", "cache-control": "no-store" });
+      response.end();
+      return;
+    }
+    return relayImageApi(request, response, pathname);
+  }
   if (!["GET", "HEAD"].includes(method)) {
     response.writeHead(405, { allow: "GET, HEAD" });
     response.end();
     return;
   }
 
-  const pathname = new URL(request.url || "/", "http://127.0.0.1").pathname.replace(/\/$/, "") || "/";
+  if (pathname.startsWith("/playground-settings/")) {
+    const file = safeFile(join(projectRoot, "playground-settings", "dist"), pathname.slice("/playground-settings/".length));
+    if (file && await existingFile(file)) return send(response, file, method);
+    return notFound(response);
+  }
+
   if (pathname === "/favicon.ico") {
     const favicon = safeFile(assetRoot, "local-brand/favicon.png");
     if (favicon && await existingFile(favicon)) return send(response, favicon, method);
