@@ -131,27 +131,42 @@ const localWorkbenchSettingsButtonScript = `<script id="local-workbench-settings
       button.type = "button";
       button.className = "local-workbench-settings-button";
       button.setAttribute("aria-label", "设置配置");
-      button.setAttribute("aria-controls", "local-settings-panel");
-      button.setAttribute("aria-expanded", "true");
+      button.setAttribute("aria-controls", "local-workbench-config");
+      button.setAttribute("aria-expanded", "false");
       button.title = "设置配置";
       button.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z"></path><path d="m19.4 15 .1.1a2 2 0 1 1-2.8 2.8l-.1-.1a2 2 0 0 0-3.4 1.4V19a2 2 0 1 1-4 0v-.2a2 2 0 0 0-3.4-1.4l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A2 2 0 0 0 3.6 11H3a2 2 0 1 1 0-4h.2a2 2 0 0 0 1.4-3.4l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1A2 2 0 0 0 11 2.2V2a2 2 0 1 1 4 0v.2a2 2 0 0 0 3.4 1.4l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1A2 2 0 0 0 20.4 7h.2a2 2 0 1 1 0 4h-.2a2 2 0 0 0-1 4Z"></path></svg>';
 
-      const sync = () => {
-        const panel = dialog.querySelector('#local-settings-panel');
-        const collapsed = panel?.dataset.localSettingsCollapsed === "true";
-        button.setAttribute("aria-expanded", String(!collapsed));
-        button.setAttribute("aria-pressed", String(!collapsed));
+      const popover = document.createElement("div");
+      popover.id = "local-workbench-config";
+      popover.className = "local-workbench-config";
+      popover.setAttribute("role", "dialog");
+      popover.setAttribute("aria-label", "设置配置");
+      popover.hidden = true;
+      popover.innerHTML = '<div class="local-workbench-config-header"><strong>设置配置</strong><button type="button" class="local-workbench-config-close" aria-label="关闭设置">×</button></div><div class="local-workbench-config-body"><div class="local-workbench-config-row"><span>上架平台</span><b>Wildberries</b></div><div class="local-workbench-config-row"><span>语言</span><b>俄语</b></div><div class="local-workbench-config-row"><span>数据保存</span><b>本地保存</b></div><p>配置保存在当前设备，不会跳转登录页面。</p></div>';
+
+      const close = () => {
+        popover.hidden = true;
+        button.setAttribute("aria-expanded", "false");
+      };
+      const open = () => {
+        popover.hidden = false;
+        button.setAttribute("aria-expanded", "true");
       };
 
       button.addEventListener("click", () => {
-        const toggle = dialog.querySelector('#local-settings-panel .local-settings-toggle');
-        toggle?.click();
-        sync();
+        if (popover.hidden) open();
+        else close();
+      });
+      popover.querySelector(".local-workbench-config-close")?.addEventListener("click", close);
+      document.addEventListener("pointerdown", (event) => {
+        if (!popover.hidden && event.target !== button && !popover.contains(event.target)) close();
+      }, true);
+      document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape" && !popover.hidden) close();
       });
       header.append(button);
+      document.body.append(popover);
       header.dataset.localSettingsButton = "ready";
-      new MutationObserver(sync).observe(dialog, { attributes: true, subtree: true, attributeFilter: ["data-local-settings-collapsed"] });
-      sync();
       return true;
     };
 
@@ -872,32 +887,29 @@ const mvpNavigationStyle = `<style id="mvp-navigation">
   }
   .local-workbench-settings-button {
     display: inline-flex !important;
-    width: 40px !important;
-    height: 40px !important;
-    flex: 0 0 40px !important;
+    width: 48px !important;
+    height: 48px !important;
+    flex: 0 0 48px !important;
     align-items: center !important;
     justify-content: center !important;
     margin-left: auto !important;
     padding: 0 !important;
-    border: 1px solid transparent !important;
-    border-radius: 10px !important;
+    border: 0 !important;
+    border-radius: 12px !important;
     background: transparent !important;
-    color: var(--muted-foreground) !important;
-    cursor: pointer !important;
-    transition: background-color .16s ease, color .16s ease, border-color .16s ease, transform .16s ease !important;
-  }
-  .local-workbench-settings-button:hover,
-  .local-workbench-settings-button[aria-pressed="true"] {
-    border-color: var(--border) !important;
-    background: var(--muted) !important;
     color: var(--foreground) !important;
+    cursor: pointer !important;
+    transition: background-color .16s ease, color .16s ease, transform .16s ease !important;
+  }
+  .local-workbench-settings-button:hover {
+    background: var(--muted) !important;
   }
   .local-workbench-settings-button:active {
     transform: scale(.94) !important;
   }
   .local-workbench-settings-button svg {
-    width: 22px !important;
-    height: 22px !important;
+    width: 24px !important;
+    height: 24px !important;
     fill: none !important;
     stroke: currentColor !important;
     stroke-width: 1.8 !important;
@@ -906,10 +918,81 @@ const mvpNavigationStyle = `<style id="mvp-navigation">
   }
   @media (max-width: 799px) {
     .local-workbench-settings-button {
-      width: 36px !important;
-      height: 36px !important;
-      flex-basis: 36px !important;
+      width: 44px !important;
+      height: 44px !important;
+      flex-basis: 44px !important;
     }
+  }
+
+  .local-workbench-config {
+    position: fixed !important;
+    top: 96px !important;
+    right: 24px !important;
+    z-index: 120 !important;
+    width: min(336px, calc(100vw - 32px)) !important;
+    overflow: hidden !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 14px !important;
+    background: var(--card) !important;
+    color: var(--foreground) !important;
+    box-shadow: 0 16px 40px rgb(0 0 0 / 16%) !important;
+    transform-origin: top right !important;
+    animation: local-workbench-config-in .16s ease-out !important;
+  }
+  .local-workbench-config[hidden] {
+    display: none !important;
+  }
+  @keyframes local-workbench-config-in {
+    from { opacity: 0; transform: translateY(-6px) scale(.98); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  .local-workbench-config-header {
+    display: flex !important;
+    min-height: 52px !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    padding: 0 14px 0 18px !important;
+    border-bottom: 1px solid var(--border) !important;
+    font-size: 15px !important;
+  }
+  .local-workbench-config-close {
+    width: 30px !important;
+    height: 30px !important;
+    border: 0 !important;
+    border-radius: 8px !important;
+    background: transparent !important;
+    color: var(--muted-foreground) !important;
+    font-size: 22px !important;
+    line-height: 1 !important;
+    cursor: pointer !important;
+  }
+  .local-workbench-config-close:hover {
+    background: var(--muted) !important;
+    color: var(--foreground) !important;
+  }
+  .local-workbench-config-body {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 10px !important;
+    padding: 14px 18px 17px !important;
+    font-size: 13px !important;
+  }
+  .local-workbench-config-row {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 16px !important;
+  }
+  .local-workbench-config-row span {
+    color: var(--muted-foreground) !important;
+  }
+  .local-workbench-config-row b {
+    font-weight: 500 !important;
+  }
+  .local-workbench-config-body p {
+    margin: 5px 0 0 !important;
+    color: var(--muted-foreground) !important;
+    line-height: 1.5 !important;
   }
 
   .local-settings-toggle {
