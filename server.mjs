@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 
 const projectRoot = fileURLToPath(new URL("./", import.meta.url));
 const archiveRoot = join(projectRoot, "archive");
-const pageRoot = join(archiveRoot, "pages");
+const pageFile = join(archiveRoot, "index.html");
 const assetRoot = join(archiveRoot, "assets");
 const port = Number(process.env.PORT || 5174);
 const staticOnlyCsp = [
@@ -863,8 +863,6 @@ const mvpNavigationStyle = `<style id="mvp-navigation">
   }
 </style>`;
 
-const primaryRoute = "/zh-CN/tools/detail-page";
-
 const contentTypes = {
   ".avif": "image/avif", ".css": "text/css; charset=utf-8", ".gif": "image/gif", ".html": "text/html; charset=utf-8", ".ico": "image/x-icon", ".jpeg": "image/jpeg", ".jpg": "image/jpeg", ".js": "text/javascript; charset=utf-8", ".json": "application/json; charset=utf-8", ".mjs": "text/javascript; charset=utf-8", ".mp4": "video/mp4", ".png": "image/png", ".svg": "image/svg+xml", ".ttf": "font/ttf", ".webm": "video/webm", ".webp": "image/webp", ".woff": "font/woff", ".woff2": "font/woff2",
 };
@@ -940,11 +938,8 @@ const server = createServer(async (request, response) => {
     return notFound(response);
   }
 
-  const route = pathname === "/" ? primaryRoute : pathname;
-  if (route !== primaryRoute) return notFound(response);
-  const page = safeFile(pageRoot, route + "/index.html");
-  if (!page || !await existingFile(page)) return notFound(response);
-  return send(response, page, method);
+  if (pathname !== "/" || !await existingFile(pageFile)) return notFound(response);
+  return send(response, pageFile, method);
 });
 
 server.listen(port, "127.0.0.1", () => {
