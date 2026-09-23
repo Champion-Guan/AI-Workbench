@@ -182,7 +182,8 @@ const localThemeToggleScript = `<script id="local-theme-toggle">
     try { localStorage.setItem(storageKey, theme); } catch {}
     const button = document.querySelector(".local-workbench-theme-button");
     if (!button) return;
-    button.innerHTML = theme === "dark" ? icons.light : icons.dark;
+    const icon = theme === "dark" ? icons.light : icons.dark;
+    if (button.innerHTML !== icon) button.innerHTML = icon;
     button.setAttribute("aria-pressed", String(theme === "dark"));
     button.setAttribute("aria-label", theme === "dark" ? "切换浅色主题" : "切换深色主题");
     button.title = theme === "dark" ? "切换浅色主题" : "切换深色主题";
@@ -1287,7 +1288,7 @@ async function send(response, path, method) {
       .replace(/href="\/favicon\.ico[^"]*"/g, 'href="/favicon.ico?g-brand-v4"')
       .replace(/\\\"href\\\":\\\"\/favicon\.ico[^\\\"]*/g, '\\\"href\\\":\\\"/favicon.ico?g-brand-v4')
       .replace(/href="\/zh-CN\/workbench"/g, 'href="/"');
-    response.end(refreshedFavicon.replace("</head>", `${workbenchLogoStyle}${mvpNavigationStyle}${localThemeAndUiStyle}${localRootNavigationScript}${originalPlaygroundSettingsButtonScript}${localThemeToggleScript}${localFixedFieldsScript}${localResolutionButtonsScript}${localAspectRatioButtonsScript}${localOfflineGuardsScript}${localResponsivePreviewScript}<link rel="stylesheet" href="/playground-settings/assets/index.css?v=ui-theme-1"><script type="module" src="/playground-settings/assets/index.js?v=ui-theme-1"></script></head>`));
+    response.end(refreshedFavicon.replace("</head>", `${workbenchLogoStyle}${mvpNavigationStyle}${localThemeAndUiStyle}${localRootNavigationScript}${originalPlaygroundSettingsButtonScript}${localThemeToggleScript}${localFixedFieldsScript}${localResolutionButtonsScript}${localAspectRatioButtonsScript}${localOfflineGuardsScript}${localResponsivePreviewScript}<link rel="stylesheet" href="/playground-settings/assets/index.css?v=ui-theme-2"><script type="module" src="/playground-settings/assets/index.js?v=ui-theme-2"></script></head>`));
     return;
   }
   createReadStream(path).pipe(response);
