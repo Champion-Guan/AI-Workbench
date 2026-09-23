@@ -1127,7 +1127,8 @@ export default function SettingsModal() {
       />
       <div
         ref={settingsScrollBoundaryRef}
-        className="relative z-10 w-full max-w-3xl rounded-3xl border border-white/50 bg-white shadow-2xl ring-1 ring-black/5 animate-modal-in dark:border-white/[0.08] dark:bg-gray-900 dark:ring-white/10 flex h-[85vh] sm:h-[600px] flex-col overflow-hidden"
+        className="relative z-10 w-full max-w-3xl rounded-3xl border border-white/50 bg-white shadow-2xl ring-1 ring-black/5 animate-modal-in dark:border-white/[0.08] dark:bg-gray-900 dark:ring-white/10 flex h-[85vh] sm:h-[600px] flex-col overflow-hidden pointer-events-auto"
+        onPointerDown={(event) => event.stopPropagation()}
       >
         {/* Header */}
         <div className="flex items-center justify-between shrink-0 p-5 border-b border-gray-100 dark:border-white/[0.08]">

@@ -18,6 +18,15 @@
   pointer-events: auto !important;
 }
 
+/* Nested settings dialogs render as siblings of the main modal. Keep every
+ * full-screen layer in the settings tree hit-testable and above the workbench
+ * so pointerdown/click events cannot fall through to the preview canvas. */
+#playground-settings-root > [class*="fixed"][class*="inset-0"],
+#playground-settings-root > [data-no-drag-select] {
+  pointer-events: auto !important;
+  isolation: isolate;
+}
+
 body.playground-settings-open {
   pointer-events: auto !important;
 }

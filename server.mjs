@@ -924,11 +924,23 @@ const mvpNavigationStyle = `<style id="mvp-navigation">
     box-shadow: 0 1px 2px rgb(0 0 0 / 8%) !important;
   }
   [role="dialog"] button:disabled[class*="w-full"][class*="min-h-12"] {
-    border: 1px solid #dedee2 !important;
-    background: #f1f1f2 !important;
-    color: #28292e !important;
-    opacity: 1 !important;
+    /* Match the archived GPT Image Playground button exactly.  This
+       selector is intentionally more specific than the utility classes on
+       the button, so the disabled state cannot fall back to the old gray
+       treatment. */
+    border: 1px solid transparent !important;
+    background: #0d0d0e !important;
+    color: #fff !important;
+    opacity: .5 !important;
     box-shadow: none !important;
+  }
+  html[data-workbench-theme="dark"] [role="dialog"] button:disabled[class*="w-full"][class*="min-h-12"] {
+    border-color: transparent !important;
+    background: #f4f4f5 !important;
+    color: #161719 !important;
+  }
+  html[data-workbench-theme="dark"] [role="dialog"] button:disabled[class*="w-full"][class*="min-h-12"] svg {
+    color: #161719 !important;
   }
   [role="dialog"] .no-scrollbar:has(> [role="radiogroup"][aria-label="工具类型"]) {
     display: flex !important;
