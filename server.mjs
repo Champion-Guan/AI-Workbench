@@ -863,9 +863,6 @@ const mvpNavigationStyle = `<style id="mvp-navigation">
   }
 </style>`;
 
-const allowedRoutes = new Set([
-  "/zh-CN/tools/detail-page",
-]);
 const primaryRoute = "/zh-CN/tools/detail-page";
 
 const contentTypes = {
@@ -890,7 +887,7 @@ async function send(response, path, method) {
     "content-type": contentTypes[extname(path).toLowerCase()] || "application/octet-stream",
     "cache-control": "public, max-age=31536000, immutable",
     "content-security-policy": staticOnlyCsp,
-    "x-static-archive": "pixpix-tools-17-pages",
+    "x-static-archive": "guan-detail-page-static",
   });
   if (method === "HEAD") return response.end();
   if (extname(path).toLowerCase() === ".html") {
@@ -913,7 +910,7 @@ async function send(response, path, method) {
 
 function notFound(response) {
   response.writeHead(404, { "content-type": "text/plain; charset=utf-8", "cache-control": "no-store" });
-  response.end("Not found. This static project serves only the archived 17 tool pages and their local assets.");
+  response.end("Not found. This local project serves only the A+ detail page and its local assets.");
 }
 
 async function localMedia(response, pathname, method) {
@@ -944,12 +941,12 @@ const server = createServer(async (request, response) => {
   }
 
   const route = pathname === "/" ? primaryRoute : pathname;
-  if (!allowedRoutes.has(route)) return notFound(response);
+  if (route !== primaryRoute) return notFound(response);
   const page = safeFile(pageRoot, route + "/index.html");
   if (!page || !await existingFile(page)) return notFound(response);
   return send(response, page, method);
 });
 
 server.listen(port, "127.0.0.1", () => {
-  console.log("PixPix 静态工具归档运行在 http://127.0.0.1:" + port);
+  console.log("Guan A+ 详情页工作台运行在 http://127.0.0.1:" + port);
 });

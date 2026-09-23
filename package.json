@@ -1,16 +1,11 @@
 {
-  "name": "pixpix-tools-static-archive",
+  "name": "guan-detail-page-static",
   "private": true,
   "version": "1.0.0",
-  "description": "Static-only local archive of 17 PixPix tool pages.",
+  "description": "Single-page local A+ detail-page workspace.",
   "scripts": {
     "start": "node server.mjs",
-    "dev": "node server.mjs",
-    "localize-assets": "node scripts/localize-assets.mjs",
-    "rewrite-media-helper": "node scripts/rewrite-media-helper.mjs",
-    "download-tool-media": "node scripts/download-tool-media.mjs",
-    "rewrite-static-runtime": "node scripts/rewrite-static-runtime.mjs",
-    "download-runtime-media": "node scripts/download-runtime-media.mjs"
+    "dev": "node server.mjs"
   },
   "engines": {
     "node": ">=18"
