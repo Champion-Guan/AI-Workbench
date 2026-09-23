@@ -912,7 +912,13 @@ function notFound(response) {
 }
 
 async function localMedia(response, pathname, method) {
-  const local = safeFile(assetRoot, "storage.pixpix.media/pixpix/frontend/" + pathname.slice("/_pixpix-media/".length));
+  const relative = pathname.slice("/_pixpix-media/".length);
+  // Keep the archived runtime's legacy URL shape working without restoring
+  // the old nested storage directory on disk.
+  const mediaRelative = relative.startsWith("images/tools/")
+    ? "tools/" + relative.slice("images/tools/".length)
+    : relative;
+  const local = safeFile(assetRoot, "media/" + mediaRelative);
   if (local && await existingFile(local)) return send(response, local, method);
   return notFound(response);
 }
