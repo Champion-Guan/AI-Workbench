@@ -11,6 +11,13 @@
   pointer-events: none !important;
 }
 
+#playground-settings-root > * {
+  /* The root itself is transparent to hit-testing so it never blocks the
+   * archived workbench. Every mounted settings layer must opt back in,
+   * including nested dialogs rendered through a portal. */
+  pointer-events: auto !important;
+}
+
 body.playground-settings-open {
   pointer-events: auto !important;
 }

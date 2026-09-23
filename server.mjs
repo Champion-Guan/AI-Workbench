@@ -239,9 +239,9 @@ const localThemeAndUiStyle = `<style id="local-theme-and-ui-style">
   }
   [role="dialog"] button[type="submit"][disabled] {
     border-color: transparent !important;
-    background: #999 !important;
+    background: #0d0d0e !important;
     color: #fff !important;
-    opacity: 1 !important;
+    opacity: .5 !important;
     box-shadow: none !important;
   }
   [role="dialog"] button[type="submit"][disabled] svg {
@@ -310,8 +310,8 @@ const localThemeAndUiStyle = `<style id="local-theme-and-ui-style">
     color: #f4f4f5 !important;
   }
   html[data-workbench-theme="dark"] [role="dialog"] button[type="submit"][disabled] {
-    background: #5f6064 !important;
-    color: #fff !important;
+    background: #f4f4f5 !important;
+    color: #161719 !important;
   }
   html[data-workbench-theme="dark"] [role="dialog"] button[type="submit"]:not([disabled]) {
     border-color: #f4f4f5 !important;
@@ -1288,7 +1288,7 @@ async function send(response, path, method) {
       .replace(/href="\/favicon\.ico[^"]*"/g, 'href="/favicon.ico?g-brand-v4"')
       .replace(/\\\"href\\\":\\\"\/favicon\.ico[^\\\"]*/g, '\\\"href\\\":\\\"/favicon.ico?g-brand-v4')
       .replace(/href="\/zh-CN\/workbench"/g, 'href="/"');
-    response.end(refreshedFavicon.replace("</head>", `${workbenchLogoStyle}${mvpNavigationStyle}${localThemeAndUiStyle}${localRootNavigationScript}${originalPlaygroundSettingsButtonScript}${localThemeToggleScript}${localFixedFieldsScript}${localResolutionButtonsScript}${localAspectRatioButtonsScript}${localOfflineGuardsScript}${localResponsivePreviewScript}<link rel="stylesheet" href="/playground-settings/assets/index.css?v=ui-theme-2"><script type="module" src="/playground-settings/assets/index.js?v=ui-theme-2"></script></head>`));
+    response.end(refreshedFavicon.replace("</head>", `${workbenchLogoStyle}${mvpNavigationStyle}${localThemeAndUiStyle}${localRootNavigationScript}${localSettingsPanelScript}${localWorkbenchSettingsButtonScript}${localSettingsModalStyle}${localSettingsRefinementStyle}${localThemeToggleScript}${localFixedFieldsScript}${localResolutionButtonsScript}${localAspectRatioButtonsScript}${localOfflineGuardsScript}${localResponsivePreviewScript}<link rel="stylesheet" href="/playground-settings/assets/index.css?v=ui-theme-3"><script type="module" src="/playground-settings/assets/index.js?v=ui-theme-3"></script></head>`));
     return;
   }
   createReadStream(path).pipe(response);
