@@ -120,6 +120,49 @@ const localSettingsPanelScript = `<script id="local-settings-panel-script">
   })();
 </script>`;
 
+const localWorkbenchSettingsButtonScript = `<script id="local-workbench-settings-button-script">
+  (() => {
+    const setup = () => {
+      const dialog = document.querySelector('[role="dialog"]');
+      const header = dialog?.querySelector(':scope > .flex.size-full > aside');
+      if (!header || header.dataset.localSettingsButton === "ready") return Boolean(header);
+
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "local-workbench-settings-button";
+      button.setAttribute("aria-label", "设置配置");
+      button.setAttribute("aria-controls", "local-settings-panel");
+      button.setAttribute("aria-expanded", "true");
+      button.title = "设置配置";
+      button.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z"></path><path d="m19.4 15 .1.1a2 2 0 1 1-2.8 2.8l-.1-.1a2 2 0 0 0-3.4 1.4V19a2 2 0 1 1-4 0v-.2a2 2 0 0 0-3.4-1.4l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A2 2 0 0 0 3.6 11H3a2 2 0 1 1 0-4h.2a2 2 0 0 0 1.4-3.4l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1A2 2 0 0 0 11 2.2V2a2 2 0 1 1 4 0v.2a2 2 0 0 0 3.4 1.4l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1A2 2 0 0 0 20.4 7h.2a2 2 0 1 1 0 4h-.2a2 2 0 0 0-1 4Z"></path></svg>';
+
+      const sync = () => {
+        const panel = dialog.querySelector('#local-settings-panel');
+        const collapsed = panel?.dataset.localSettingsCollapsed === "true";
+        button.setAttribute("aria-expanded", String(!collapsed));
+        button.setAttribute("aria-pressed", String(!collapsed));
+      };
+
+      button.addEventListener("click", () => {
+        const toggle = dialog.querySelector('#local-settings-panel .local-settings-toggle');
+        toggle?.click();
+        sync();
+      });
+      header.append(button);
+      header.dataset.localSettingsButton = "ready";
+      new MutationObserver(sync).observe(dialog, { attributes: true, subtree: true, attributeFilter: ["data-local-settings-collapsed"] });
+      sync();
+      return true;
+    };
+
+    const observer = new MutationObserver(() => {
+      if (setup()) observer.disconnect();
+    });
+    observer.observe(document.documentElement, { childList: true, subtree: true });
+    setup();
+  })();
+</script>`;
+
 const localFixedFieldsScript = `<script id="local-fixed-fields-script">
   (() => {
     const fixedFields = [
@@ -827,6 +870,48 @@ const mvpNavigationStyle = `<style id="mvp-navigation">
       max-width: none !important;
     }
   }
+  .local-workbench-settings-button {
+    display: inline-flex !important;
+    width: 40px !important;
+    height: 40px !important;
+    flex: 0 0 40px !important;
+    align-items: center !important;
+    justify-content: center !important;
+    margin-left: auto !important;
+    padding: 0 !important;
+    border: 1px solid transparent !important;
+    border-radius: 10px !important;
+    background: transparent !important;
+    color: var(--muted-foreground) !important;
+    cursor: pointer !important;
+    transition: background-color .16s ease, color .16s ease, border-color .16s ease, transform .16s ease !important;
+  }
+  .local-workbench-settings-button:hover,
+  .local-workbench-settings-button[aria-pressed="true"] {
+    border-color: var(--border) !important;
+    background: var(--muted) !important;
+    color: var(--foreground) !important;
+  }
+  .local-workbench-settings-button:active {
+    transform: scale(.94) !important;
+  }
+  .local-workbench-settings-button svg {
+    width: 22px !important;
+    height: 22px !important;
+    fill: none !important;
+    stroke: currentColor !important;
+    stroke-width: 1.8 !important;
+    stroke-linecap: round !important;
+    stroke-linejoin: round !important;
+  }
+  @media (max-width: 799px) {
+    .local-workbench-settings-button {
+      width: 36px !important;
+      height: 36px !important;
+      flex-basis: 36px !important;
+    }
+  }
+
   .local-settings-toggle {
     position: absolute !important;
     top: 50% !important;
@@ -900,7 +985,7 @@ async function send(response, path, method) {
       .replace(/href="\/favicon\.ico[^"]*"/g, 'href="/favicon.ico?g-brand-v4"')
       .replace(/\\\"href\\\":\\\"\/favicon\.ico[^\\\"]*/g, '\\\"href\\\":\\\"/favicon.ico?g-brand-v4')
       .replace(/href="\/zh-CN\/workbench"/g, 'href="/"');
-    response.end(refreshedFavicon.replace("</head>", `${workbenchLogoStyle}${mvpNavigationStyle}${localRootNavigationScript}${localSettingsPanelScript}${localFixedFieldsScript}${localResolutionButtonsScript}${localAspectRatioButtonsScript}${localOfflineGuardsScript}${localResponsivePreviewScript}</head>`));
+    response.end(refreshedFavicon.replace("</head>", `${workbenchLogoStyle}${mvpNavigationStyle}${localRootNavigationScript}${localSettingsPanelScript}${localWorkbenchSettingsButtonScript}${localFixedFieldsScript}${localResolutionButtonsScript}${localAspectRatioButtonsScript}${localOfflineGuardsScript}${localResponsivePreviewScript}</head>`));
     return;
   }
   createReadStream(path).pipe(response);
