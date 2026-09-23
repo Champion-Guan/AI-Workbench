@@ -134,7 +134,7 @@ const localWorkbenchSettingsButtonScript = `<script id="local-workbench-settings
       button.setAttribute("aria-controls", "local-workbench-config");
       button.setAttribute("aria-expanded", "false");
       button.title = "设置配置";
-      button.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z"></path><path d="m19.4 15 .1.1a2 2 0 1 1-2.8 2.8l-.1-.1a2 2 0 0 0-3.4 1.4V19a2 2 0 1 1-4 0v-.2a2 2 0 0 0-3.4-1.4l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A2 2 0 0 0 3.6 11H3a2 2 0 1 1 0-4h.2a2 2 0 0 0 1.4-3.4l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1A2 2 0 0 0 11 2.2V2a2 2 0 1 1 4 0v.2a2 2 0 0 0 3.4 1.4l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1A2 2 0 0 0 20.4 7h.2a2 2 0 1 1 0 4h-.2a2 2 0 0 0-1 4Z"></path></svg>';
+      button.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 1 0-2 3.46l.15.08a2 2 0 0 1 1 1.73v.5a2 2 0 0 1-1 1.74l-.15.08a2 2 0 1 0 2 3.46l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 1 0 4 0v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 1 0 2-3.46l-.15-.08a2 2 0 0 1-1-1.73v-.5a2 2 0 0 1 1-1.74l.15-.08a2 2 0 1 0-2-3.46l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-1.78-2Z"></path><circle cx="12" cy="12" r="3"></circle></svg>';
 
       const popover = document.createElement("div");
       popover.id = "local-workbench-config";
@@ -623,7 +623,7 @@ const mvpNavigationStyle = `<style id="mvp-navigation">
     display: none !important;
   }
   [data-local-fixed-summary="true"] {
-    color: var(--foreground) !important;
+    color: var(--muted-foreground) !important;
     white-space: nowrap !important;
   }
   [data-local-aspect-ratio="true"] > [role="combobox"],
@@ -897,7 +897,7 @@ const mvpNavigationStyle = `<style id="mvp-navigation">
     border: 0 !important;
     border-radius: 12px !important;
     background: transparent !important;
-    color: var(--foreground) !important;
+    color: var(--muted-foreground) !important;
     cursor: pointer !important;
     transition: background-color .16s ease, color .16s ease, transform .16s ease !important;
   }
@@ -908,11 +908,11 @@ const mvpNavigationStyle = `<style id="mvp-navigation">
     transform: scale(.94) !important;
   }
   .local-workbench-settings-button svg {
-    width: 24px !important;
-    height: 24px !important;
+    width: 32px !important;
+    height: 32px !important;
     fill: none !important;
     stroke: currentColor !important;
-    stroke-width: 1.8 !important;
+    stroke-width: 2.15 !important;
     stroke-linecap: round !important;
     stroke-linejoin: round !important;
   }
