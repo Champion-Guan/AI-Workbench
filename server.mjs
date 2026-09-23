@@ -623,7 +623,7 @@ const mvpNavigationStyle = `<style id="mvp-navigation">
     display: none !important;
   }
   [data-local-fixed-summary="true"] {
-    color: var(--muted-foreground) !important;
+    color: #5b5c65 !important;
     white-space: nowrap !important;
   }
   [data-local-aspect-ratio="true"] > [role="combobox"],
@@ -897,7 +897,7 @@ const mvpNavigationStyle = `<style id="mvp-navigation">
     border: 0 !important;
     border-radius: 12px !important;
     background: transparent !important;
-    color: var(--muted-foreground) !important;
+    color: #5b5c65 !important;
     cursor: pointer !important;
     transition: background-color .16s ease, color .16s ease, transform .16s ease !important;
   }
@@ -908,8 +908,8 @@ const mvpNavigationStyle = `<style id="mvp-navigation">
     transform: scale(.94) !important;
   }
   .local-workbench-settings-button svg {
-    width: 32px !important;
-    height: 32px !important;
+    width: 24px !important;
+    height: 24px !important;
     fill: none !important;
     stroke: currentColor !important;
     stroke-width: 2.15 !important;
@@ -922,6 +922,10 @@ const mvpNavigationStyle = `<style id="mvp-navigation">
       height: 44px !important;
       flex-basis: 44px !important;
     }
+  }
+  html.dark .local-workbench-settings-button,
+  body.dark .local-workbench-settings-button {
+    color: #d8d9e0 !important;
   }
 
   .local-workbench-config {
