@@ -52,7 +52,7 @@ const workbenchLogoStyle = `<style id="local-workbench-logo">
     content: "";
     position: absolute;
     inset: 0;
-    background: url("/_pixpix-assets/local-brand/workbench-logo.png?g-brand-v5") center / contain no-repeat;
+    background: url("/_pixpix-assets/local-brand/workbench-logo.png?g-brand-v6-20260924") center / contain no-repeat;
     filter: none;
     pointer-events: none;
   }
