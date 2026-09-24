@@ -53,18 +53,14 @@ const workbenchLogoStyle = `<style id="local-workbench-logo">
     position: absolute;
     inset: 0;
     background: url("/_pixpix-assets/local-brand/workbench-logo.png?g-brand-v6-20260924") center / contain no-repeat;
-    filter: none;
+    filter: none !important;
     pointer-events: none;
   }
-  html.dark [role="dialog"] aside a[href="/"]::after,
-  html.dark [role="dialog"] aside a[href="/zh-CN/workbench"]::after,
-  html.dark [role="dialog"] aside a.local-brand-static::after,
-  html[data-theme="dark"] [role="dialog"] aside a[href="/"]::after,
-  html[data-theme="dark"] [role="dialog"] aside a[href="/zh-CN/workbench"]::after,
-  html[data-theme="dark"] [role="dialog"] aside a.local-brand-static::after,
-  body.dark [role="dialog"] aside a[href="/"]::after,
-  body.dark [role="dialog"] aside a[href="/zh-CN/workbench"]::after,
-  body.dark [role="dialog"] aside a.local-brand-static::after { filter: invert(1) brightness(1.3); }
+  html[data-workbench-theme="dark"] [role="dialog"] aside a[href="/"]::after,
+  html[data-workbench-theme="dark"] [role="dialog"] aside a[href="/zh-CN/workbench"]::after,
+  html[data-workbench-theme="dark"] [role="dialog"] aside a.local-brand-static::after {
+    filter: invert(1) brightness(1.3) !important;
+  }
 </style>`;
 
 const localRootNavigationScript = `<script id="local-root-navigation">
