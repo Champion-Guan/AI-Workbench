@@ -18,3 +18,11 @@ npm run dev
 - `archive/assets/_next/static`：页面运行所需的脚本、样式和字体
 - `archive/assets/media`：详情页预览图片
 - `archive/assets/local-brand`：本地 logo 与 favicon
+
+## UI 保护
+
+当前已确认的样式、动画和布局基准为：
+`restore/ui-baseline-style-animation-20260924`。
+
+后续改动前请先创建 `restore/pre-*` 回退标签，并遵守
+[UI-PROTECTION.md](UI-PROTECTION.md) 中的命名空间和隔离约定。

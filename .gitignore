@@ -1,5 +1,6 @@
 # Local runtime and browser-inspection artifacts
 node_modules/
+/playground-settings/node_modules
 .playwright-cli/
 output/
 *.log
