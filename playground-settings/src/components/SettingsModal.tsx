@@ -69,6 +69,7 @@ function newId(prefix: string) {
 
 const ADD_CUSTOM_PROVIDER_VALUE = '__add_custom_provider__'
 const COPY_IMPORT_URL_OPTIONS_STORAGE_KEY = 'gpt-image-playground.copy-import-url-options'
+const SETTINGS_EXIT_ANIMATION_MS = 220
 
 const DEFAULT_COPY_IMPORT_URL_OPTIONS = {
   useNewApiAddress: false,
@@ -168,6 +169,9 @@ export default function SettingsModal() {
   const setConfirmDialog = useStore((s) => s.setConfirmDialog)
   const showToast = useStore((s) => s.showToast)
   const hasRunningOperations = useStore((s) => hasActiveDataOperations(s.tasks, s.agentConversations))
+  const [renderSettings, setRenderSettings] = useState(showSettings)
+  const [settingsClosing, setSettingsClosing] = useState(false)
+  const closeAnimationTimerRef = useRef<number | null>(null)
   const importInputRef = useRef<HTMLInputElement>(null)
   const profileMenuRef = useRef<HTMLDivElement>(null)
   const profileMenuTriggerRef = useRef<HTMLButtonElement>(null)
@@ -567,8 +571,39 @@ export default function SettingsModal() {
     }
     setAgentMaxToolRoundsInput(String(normalizedAgentMaxToolRounds))
     commitSettings(nextDraft)
+    setRenderSettings(true)
+    setSettingsClosing(true)
     setShowSettings(false)
   }
+
+  useEffect(() => {
+    if (closeAnimationTimerRef.current !== null) {
+      window.clearTimeout(closeAnimationTimerRef.current)
+      closeAnimationTimerRef.current = null
+    }
+
+    if (showSettings) {
+      setRenderSettings(true)
+      setSettingsClosing(false)
+      return
+    }
+
+    if (!renderSettings) return
+
+    setSettingsClosing(true)
+    closeAnimationTimerRef.current = window.setTimeout(() => {
+      setRenderSettings(false)
+      setSettingsClosing(false)
+      closeAnimationTimerRef.current = null
+    }, SETTINGS_EXIT_ANIMATION_MS)
+
+    return () => {
+      if (closeAnimationTimerRef.current !== null) {
+        window.clearTimeout(closeAnimationTimerRef.current)
+        closeAnimationTimerRef.current = null
+      }
+    }
+  }, [renderSettings, showSettings])
 
   const commitTimeout = useCallback(() => {
     if (activeProfileLocked || !isOpenAICompatibleProvider(draft, activeProfile.provider)) return
@@ -1143,7 +1178,10 @@ export default function SettingsModal() {
     }
   }
 
-  if (!showSettings) return null
+  if (!renderSettings) return null
+
+  const overlayAnimationClass = settingsClosing ? 'animate-overlay-out' : 'animate-overlay-in'
+  const modalAnimationClass = settingsClosing ? 'animate-modal-out' : 'animate-modal-in'
 
   return (
         <div
@@ -1154,12 +1192,12 @@ export default function SettingsModal() {
           onContextMenuCapture={blockDataTransferInteraction}
         >
       <div
-        className="absolute inset-0 bg-black/30 backdrop-blur-sm animate-overlay-in"
+        className={`absolute inset-0 bg-black/30 backdrop-blur-sm ${overlayAnimationClass}`}
         onClick={handleClose}
       />
       <div
         ref={settingsScrollBoundaryRef}
-        className="relative z-10 w-full max-w-3xl rounded-3xl border border-white/50 bg-white shadow-2xl ring-1 ring-black/5 animate-modal-in dark:border-white/[0.08] dark:bg-gray-900 dark:ring-white/10 flex h-[85vh] sm:h-[600px] flex-col overflow-hidden pointer-events-auto"
+        className={`relative z-10 w-full max-w-3xl rounded-3xl border border-white/50 bg-white shadow-2xl ring-1 ring-black/5 ${modalAnimationClass} dark:border-white/[0.08] dark:bg-gray-900 dark:ring-white/10 flex h-[85vh] sm:h-[600px] flex-col overflow-hidden pointer-events-auto`}
         onPointerDown={(event) => event.stopPropagation()}
       >
         {/* Header */}
