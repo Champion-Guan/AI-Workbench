@@ -1018,6 +1018,8 @@ const mvpNavigationStyle = `<style id="mvp-navigation">
       opacity: 1 !important;
       visibility: visible !important;
       pointer-events: auto !important;
+      transform: translateX(0) !important;
+      transition: opacity .26s ease .08s, transform .32s cubic-bezier(.4, 0, .2, 1) .04s, visibility 0s linear 0s !important;
     }
     .local-settings-toggle {
       display: none !important;
