@@ -56,10 +56,34 @@ const workbenchLogoStyle = `<style id="local-workbench-logo">
     filter: none !important;
     pointer-events: none;
   }
+  [role="dialog"] aside .local-brand-wrap {
+    display: inline-flex !important;
+    width: auto !important;
+    min-width: max-content !important;
+    height: 32px !important;
+    min-height: 32px !important;
+    align-items: center !important;
+    gap: 10px !important;
+    flex: 0 0 auto !important;
+  }
+  [role="dialog"] aside .local-brand-name {
+    display: inline-block !important;
+    color: #161719 !important;
+    font-size: 16px !important;
+    font-weight: 650 !important;
+    line-height: 1 !important;
+    letter-spacing: -.01em !important;
+    white-space: nowrap !important;
+    pointer-events: none !important;
+    user-select: none !important;
+  }
   html[data-workbench-theme="dark"] [role="dialog"] aside a[href="/"]::after,
   html[data-workbench-theme="dark"] [role="dialog"] aside a[href="/zh-CN/workbench"]::after,
   html[data-workbench-theme="dark"] [role="dialog"] aside a.local-brand-static::after {
     filter: invert(1) brightness(1.3) !important;
+  }
+  html[data-workbench-theme="dark"] [role="dialog"] aside .local-brand-name {
+    color: #f4f4f5 !important;
   }
 </style>`;
 
@@ -68,6 +92,28 @@ const localRootNavigationScript = `<script id="local-root-navigation">
     const normalizeBrandLink = () => {
       for (const link of document.querySelectorAll('[role="dialog"] aside a')) {
         link.classList.add("local-brand-static");
+        const brandWrap = link.parentElement;
+        if (brandWrap) {
+          brandWrap.classList.add("local-brand-wrap");
+          if (!brandWrap.querySelector(".local-brand-name")) {
+            const name = document.createElement("span");
+            name.className = "local-brand-name";
+            name.textContent = "AI生图工作台";
+            brandWrap.append(name);
+          }
+          const dialog = link.closest('[role="dialog"]');
+          if (dialog) {
+            const updateSelectorOffset = () => {
+              const rect = brandWrap.getBoundingClientRect();
+              dialog.style.setProperty("--local-brand-selector-left", String(Math.ceil(rect.right + 24)) + "px");
+            };
+            updateSelectorOffset();
+            if (!dialog.dataset.localBrandResizeBound) {
+              window.addEventListener("resize", updateSelectorOffset, { passive: true });
+              dialog.dataset.localBrandResizeBound = "true";
+            }
+          }
+        }
         // The archived logo uses hover:opacity-80, which makes the brand
         // mark visibly change when the pointer passes over it. This local
         // single-page build keeps the logo visually stable.
@@ -888,7 +934,7 @@ const mvpNavigationStyle = `<style id="mvp-navigation">
     display: flex !important;
     position: absolute !important;
     top: 24px !important;
-    left: 88px !important;
+    left: var(--local-brand-selector-left, 88px) !important;
     z-index: 20 !important;
   }
   [role="dialog"] button:disabled[class*="w-full"][class*="min-h-12"] {
