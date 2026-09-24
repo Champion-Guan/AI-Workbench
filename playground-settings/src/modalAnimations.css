@@ -45,6 +45,39 @@
   animation: settings-modal-out 0.2s cubic-bezier(0.4, 0, 1, 1) both;
 }
 
+/*
+ * The embedded bundle shares the host page's Tailwind runtime. The host
+ * defines transform utilities with a newer individual-transform syntax, which
+ * can override the original Playground switch thumb transform. Keep the
+ * native 2px/14px slide explicit and scoped to real switch controls.
+ */
+#playground-settings-root [role="switch"] > span {
+  transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+#playground-settings-root [role="switch"][aria-checked="false"] > span {
+  transform: translateX(2px) !important;
+}
+
+#playground-settings-root [role="switch"][aria-checked="true"] > span {
+  transform: translateX(14px) !important;
+}
+
+/*
+ * Every nested Playground dialog gets its own backdrop. This keeps the
+ * underlying settings panel visibly masked and prevents visual bleed-through
+ * when a second panel is opened.
+ */
+#playground-settings-root .settings-modal-backdrop {
+  background: rgb(0 0 0 / 0.2) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+  backdrop-filter: blur(12px) !important;
+}
+
+html.dark #playground-settings-root .settings-modal-backdrop {
+  background: rgb(0 0 0 / 0.4) !important;
+}
+
 @keyframes settings-slide-down-in {
   from { opacity: 0; transform: translateY(-20px); }
   to { opacity: 1; transform: translateY(0); }
