@@ -931,6 +931,11 @@ const mvpNavigationStyle = `<style id="mvp-navigation">
     height: 100% !important;
     object-fit: cover !important;
   }
+  [role="dialog"] button[data-local-offline-ready="true"]:focus,
+  [role="dialog"] button[data-local-offline-ready="true"]:focus-visible {
+    outline: none !important;
+    box-shadow: none !important;
+  }
   [role="dialog"] [role="radiogroup"][aria-label="工具类型"] {
     display: none !important;
   }
