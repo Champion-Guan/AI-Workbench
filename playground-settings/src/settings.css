@@ -26,6 +26,43 @@
   isolation: isolate;
 }
 
+/*
+ * The archived host page has its own theme and utility rules. Keep the
+ * profile picker labels owned by this bundle so they remain readable when
+ * the host applies a broad dialog color rule.
+ */
+#playground-settings-root [data-profile-id] span.truncate {
+  color: #3f3f46 !important;
+}
+
+#playground-settings-root [data-profile-id] span.rounded {
+  color: #71717a !important;
+}
+
+#playground-settings-root [data-profile-id][class~="text-blue-600"] span.truncate {
+  color: #2563eb !important;
+}
+
+#playground-settings-root [data-profile-id][class~="text-blue-600"] span.rounded {
+  color: #1d4ed8 !important;
+}
+
+html.dark #playground-settings-root [data-profile-id] span.truncate {
+  color: #d4d4d8 !important;
+}
+
+html.dark #playground-settings-root [data-profile-id] span.rounded {
+  color: #a1a1aa !important;
+}
+
+html.dark #playground-settings-root [data-profile-id][class~="dark:text-blue-400"] span.truncate {
+  color: #60a5fa !important;
+}
+
+html.dark #playground-settings-root [data-profile-id][class~="dark:text-blue-400"] span.rounded {
+  color: #93c5fd !important;
+}
+
 body.playground-settings-open {
   pointer-events: auto !important;
 }

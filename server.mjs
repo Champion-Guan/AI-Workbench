@@ -1156,7 +1156,7 @@ async function send(response, path, method) {
      * The original button injector only creates the trigger; the React bundle
      * owns the modal, focus scope, nested dialogs and persistence.
      */
-    response.end(refreshedFavicon.replace("</head>", `${workbenchLogoStyle}${mvpNavigationStyle}${localThemeAndUiStyle}${localRootNavigationScript}${localSettingsPanelScript}${originalPlaygroundSettingsButtonScript}${localThemeToggleScript}${localFixedFieldsScript}${localResolutionButtonsScript}${localAspectRatioButtonsScript}${localOfflineGuardsScript}${localResponsivePreviewScript}<link rel="stylesheet" href="/playground-settings/assets/index.css?v=conflict-audit-1"><script type="module" src="/playground-settings/assets/index.js?v=conflict-audit-1"></script></head>`));
+    response.end(refreshedFavicon.replace("</head>", `${workbenchLogoStyle}${mvpNavigationStyle}${localThemeAndUiStyle}${localRootNavigationScript}${localSettingsPanelScript}${originalPlaygroundSettingsButtonScript}${localThemeToggleScript}${localFixedFieldsScript}${localResolutionButtonsScript}${localAspectRatioButtonsScript}${localOfflineGuardsScript}${localResponsivePreviewScript}<link rel="stylesheet" href="/playground-settings/assets/index.css?v=settings-delete-fix-20260924-v3"><script type="module" src="/playground-settings/assets/index.js?v=settings-delete-fix-20260924-v3"></script></head>`));
     return;
   }
   createReadStream(path).pipe(response);

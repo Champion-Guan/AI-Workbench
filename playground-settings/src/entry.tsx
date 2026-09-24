@@ -1,5 +1,6 @@
 import { createRoot } from 'react-dom/client'
 import SettingsModal from './components/SettingsModal'
+import ConfirmDialog from './components/ConfirmDialog'
 import { initStore, useStore } from './store'
 import { createDefaultOpenAIProfile } from './lib/apiProfiles'
 import './settings.css'
@@ -25,7 +26,12 @@ const mountObserver = new MutationObserver(() => {
 })
 mountObserver.observe(document.documentElement, { childList: true, subtree: true })
 
-createRoot(mount).render(<SettingsModal />)
+createRoot(mount).render(
+  <>
+    <SettingsModal />
+    <ConfirmDialog />
+  </>,
+)
 
 void initStore().then(() => {
   const state = useStore.getState()

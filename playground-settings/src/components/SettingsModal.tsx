@@ -656,8 +656,6 @@ export default function SettingsModal() {
     return () => document.body.classList.remove('playground-settings-open')
   }, [showSettings])
 
-  if (!showSettings) return null
-
   const handleExport = async () => {
     if (exportTasks && hasRunningOperations) {
       showToast('当前有任务正在进行，请完成或停止后再导出', 'error')
@@ -915,6 +913,38 @@ export default function SettingsModal() {
     commitSettings(nextDraft)
   }
 
+  const requestDeleteProfile = (profile: ApiProfile) => {
+    if (presetConfigOnly || (presetProfileIds.has(profile.id) && presetDeletionPrevented)) return
+    setConfirmDialog({
+      title: '删除配置',
+      message: `确定要删除配置「${profile.name}」吗？`,
+      action: () => deleteProfile(profile.id),
+    })
+  }
+
+  useEffect(() => {
+    if (!showSettings) return
+
+    const handleProfileDeleteClick = (event: MouseEvent) => {
+      const target = event.target instanceof Element
+        ? event.target.closest('#playground-settings-root [data-profile-id] button[aria-label="删除配置"]')
+        : null
+      if (!(target instanceof HTMLButtonElement) || target.disabled) return
+
+      const row = target.closest<HTMLElement>('[data-profile-id]')
+      const profileId = row?.dataset.profileId
+      const profile = profileId ? draft.profiles.find((candidate) => candidate.id === profileId) : null
+      if (!profile) return
+
+      event.preventDefault()
+      event.stopImmediatePropagation()
+      requestDeleteProfile(profile)
+    }
+
+    document.addEventListener('click', handleProfileDeleteClick, true)
+    return () => document.removeEventListener('click', handleProfileDeleteClick, true)
+  }, [draft.profiles, presetConfigOnly, presetDeletionPrevented, showSettings])
+
   const handleProviderReorder = (sourceValue: string | number, targetValue: string | number, position: 'before' | 'after' | null) => {
     const currentOrder = draft.providerOrder || ['openai', 'sb2api-async', 'fal', ...draft.customProviders.map(p => p.id)]
     const sourceIndex = currentOrder.indexOf(String(sourceValue))
@@ -1112,6 +1142,8 @@ export default function SettingsModal() {
       setIsImportingJson(false)
     }
   }
+
+  if (!showSettings) return null
 
   return (
         <div
@@ -1406,24 +1438,38 @@ export default function SettingsModal() {
                                     <LinkIcon className="h-3.5 w-3.5" />
                                   </button>
                                   {!presetConfigOnly && (isDefaultProfile || draft.profiles.length > 1) && (
-                                    <TooltipButton
-                                      tooltip={isPresetProfile && presetDeletionPrevented ? '预置配置不可删除' : '删除配置'}
+                                    <span className="relative flex h-5 w-5 shrink-0">
+                                      <button
+                                      type="button"
                                       disabled={isPresetProfile && presetDeletionPrevented}
-                                      showOnClick={isPresetProfile && presetDeletionPrevented}
-                                      stopPropagation
-                                      onClick={(e) => {
+                                      aria-disabled={isPresetProfile && presetDeletionPrevented}
+                                      aria-label={isPresetProfile && presetDeletionPrevented ? '预置配置不可删除' : '删除配置'}
+                                      title={isPresetProfile && presetDeletionPrevented ? '预置配置不可删除' : '删除配置'}
+                                      onPointerDown={(e) => {
                                         e.preventDefault()
+                                        e.stopPropagation()
+                                        if (isPresetProfile && presetDeletionPrevented) return
                                         setConfirmDialog({
                                           title: '删除配置',
                                           message: `确定要删除配置「${profile.name}」吗？`,
                                           action: () => deleteProfile(profile.id)
                                         })
                                       }}
-                                      wrapperClassName="relative flex h-5 w-5 shrink-0"
+                                      onClick={(e) => {
+                                        e.preventDefault()
+                                        e.stopPropagation()
+                                        if (isPresetProfile && presetDeletionPrevented) return
+                                        setConfirmDialog({
+                                          title: '删除配置',
+                                          message: `确定要删除配置「${profile.name}」吗？`,
+                                          action: () => deleteProfile(profile.id)
+                                        })
+                                      }}
                                       className={`flex h-5 w-5 shrink-0 items-center justify-center rounded opacity-60 transition-all ${isPresetProfile && presetDeletionPrevented ? 'cursor-not-allowed text-gray-300 dark:text-gray-600' : 'text-gray-400 hover:bg-red-50 hover:text-red-500 hover:opacity-100 dark:hover:bg-red-500/10'}`}
-                                    >
-                                      <TrashIcon className="h-3.5 w-3.5" />
-                                    </TooltipButton>
+                                      >
+                                        <TrashIcon className="h-3.5 w-3.5" />
+                                      </button>
+                                    </span>
                                   )}
                                 </div>
                               </div>
