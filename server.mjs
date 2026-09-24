@@ -62,6 +62,7 @@ const workbenchLogoStyle = `<style id="local-workbench-logo">
     min-width: max-content !important;
     height: 32px !important;
     min-height: 32px !important;
+    margin-left: 24px !important;
     align-items: center !important;
     gap: 10px !important;
     flex: 0 0 auto !important;
@@ -931,11 +932,7 @@ const mvpNavigationStyle = `<style id="mvp-navigation">
     object-fit: cover !important;
   }
   [role="dialog"] [role="radiogroup"][aria-label="工具类型"] {
-    display: flex !important;
-    position: absolute !important;
-    top: 24px !important;
-    left: var(--local-brand-selector-left, 88px) !important;
-    z-index: 20 !important;
+    display: none !important;
   }
   [role="dialog"] button:disabled[class*="w-full"][class*="min-h-12"] {
     /* Match the archived GPT Image Playground button exactly.  This
