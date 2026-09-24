@@ -1,10 +1,10 @@
+@import './modalAnimations.css';
 @tailwind utilities;
 
 /*
- * The archived workbench disables pointer events on body while its own
- * Radix dialog is open. Settings is mounted as a body-level React root, so
- * explicitly restore hit testing and place this real settings app above the
- * workbench dialog instead of allowing clicks and wheel input to pass through.
+ * The settings React tree is mounted inside the workbench's Radix dialog so it
+ * shares the dialog focus scope. Keep the mount itself transparent to hit
+ * testing, then explicitly opt its real modal layers back in.
  */
 #playground-settings-root {
   display: contents;
@@ -18,9 +18,8 @@
   pointer-events: auto !important;
 }
 
-/* Nested settings dialogs render as siblings of the main modal. Keep every
- * full-screen layer in the settings tree hit-testable and above the workbench
- * so pointerdown/click events cannot fall through to the preview canvas. */
+/* Nested settings dialogs portal beside the main settings layer under this
+ * mount. Keep those overlays hit-testable so clicks cannot reach the canvas. */
 #playground-settings-root > [class*="fixed"][class*="inset-0"],
 #playground-settings-root > [data-no-drag-select] {
   pointer-events: auto !important;
@@ -31,20 +30,5 @@ body.playground-settings-open {
   pointer-events: auto !important;
 }
 
-@keyframes overlay-in {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-.animate-overlay-in {
-  animation: overlay-in 0.2s ease-out both;
-}
-
-@keyframes modal-in {
-  from { opacity: 0; transform: scale(0.95) translateY(10px); }
-  to { opacity: 1; transform: scale(1) translateY(0); }
-}
-
-.animate-modal-in {
-  animation: modal-in 0.25s cubic-bezier(0.16, 1, 0.3, 1) both;
-}
+/* The standalone settings entry imports shared dialog animations above.
+ * Keep their keyframes in modalAnimations.css so modal classes have one owner. */

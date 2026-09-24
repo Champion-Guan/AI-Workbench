@@ -7,10 +7,9 @@ import './settings.css'
 const mount = document.createElement('div')
 mount.id = 'playground-settings-root'
 
-// Keep the real settings React tree inside the workbench's Radix dialog. That
-// makes it part of the dialog's focus scope (so fields remain editable) while
-// its own z-index and the source components' body portals still allow nested
-// dialogs and menus to appear above the settings panel.
+// Keep the real settings React tree inside the workbench's Radix dialog so it
+// stays within the dialog focus scope. Nested settings dialogs portal to this
+// same mount, where the settings layer styles keep them above the panel.
 const placeMount = () => {
   const workbenchDialog = document.querySelector<HTMLElement>(
     '[role="dialog"][data-slot="dialog-content"]',

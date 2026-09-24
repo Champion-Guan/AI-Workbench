@@ -3,6 +3,9 @@ import colors from 'tailwindcss/colors';
 /** @type {import('tailwindcss').Config} */
 export default {
   darkMode: 'class',
+  // This bundle is embedded inside the archived workbench. Scope generated
+  // utilities to its React mount so Tailwind classes cannot restyle the host.
+  important: '#playground-settings-root',
   content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}', './node_modules/streamdown/dist/*.js'],
   theme: {
     extend: {

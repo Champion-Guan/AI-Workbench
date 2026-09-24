@@ -11,6 +11,10 @@ function globalKeyDown(e: KeyboardEvent) {
   if (e.key !== 'Escape') return
   if (escStack.length === 0) return
   e.preventDefault()
+  // Consume Escape before the archived workbench's dialog handler sees it.
+  // Otherwise one key press closes the settings modal and its underlying
+  // workbench at the same time.
+  e.stopPropagation()
   // 调用栈顶（最后注册的）handler
   escStack[escStack.length - 1].handler()
 }
@@ -20,7 +24,7 @@ let listenerAttached = false
 function ensureListener() {
   if (listenerAttached) return
   listenerAttached = true
-  window.addEventListener('keydown', globalKeyDown)
+  window.addEventListener('keydown', globalKeyDown, true)
 }
 
 export function useCloseOnEscape(enabled: boolean, onClose: () => void) {
