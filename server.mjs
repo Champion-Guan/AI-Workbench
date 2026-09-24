@@ -233,8 +233,18 @@ const localThemeAndUiStyle = `<style id="local-theme-and-ui-style">
     color: #fff !important;
     box-shadow: none !important;
   }
-  [role="dialog"] [role="radiogroup"][aria-label="工具类型"] [role="radio"][data-state="on"] svg {
-    color: #fff !important;
+  [role="dialog"] [role="radiogroup"][aria-label="工具类型"] [role="radio"][data-state="on"] > svg {
+    display: none !important;
+  }
+  [role="dialog"] [role="radiogroup"][aria-label="工具类型"] [role="radio"][data-state="on"]::before {
+    content: "" !important;
+    display: inline-block !important;
+    width: 16px !important;
+    height: 16px !important;
+    flex: 0 0 16px !important;
+    border-radius: 4px !important;
+    background: url("/_pixpix-assets/local-brand/workbench-logo.png?g-brand-v7-20260924") center / contain no-repeat !important;
+    filter: none !important;
   }
   [role="dialog"] [data-slot="field-group"] > [data-slot="item"] {
     border-color: #dfdfdf !important;
@@ -304,8 +314,8 @@ const localThemeAndUiStyle = `<style id="local-theme-and-ui-style">
     background: #f4f4f5 !important;
     color: #161719 !important;
   }
-  html[data-workbench-theme="dark"] [role="dialog"] [role="radiogroup"][aria-label="工具类型"] [role="radio"][data-state="on"] svg {
-    color: #161719 !important;
+  html[data-workbench-theme="dark"] [role="dialog"] [role="radiogroup"][aria-label="工具类型"] [role="radio"][data-state="on"]::before {
+    filter: invert(1) brightness(1.3) !important;
   }
   html[data-workbench-theme="dark"] [role="dialog"] [data-slot="field-group"] > [data-slot="item"] {
     border-color: rgba(255,255,255,.14) !important;
