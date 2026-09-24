@@ -35,6 +35,13 @@ const workbenchLogoStyle = `<style id="local-workbench-logo">
   [role="dialog"] aside a.local-brand-static {
     cursor: default !important;
     text-decoration: none !important;
+    opacity: 1 !important;
+    transition: none !important;
+  }
+  [role="dialog"] aside a.local-brand-static:hover,
+  [role="dialog"] aside a.local-brand-static:focus-visible,
+  [role="dialog"] aside a.local-brand-static:active {
+    opacity: 1 !important;
   }
   [role="dialog"] aside a[href="/"] > svg,
   [role="dialog"] aside a[href="/zh-CN/workbench"] > svg,
@@ -65,6 +72,10 @@ const localRootNavigationScript = `<script id="local-root-navigation">
     const normalizeBrandLink = () => {
       for (const link of document.querySelectorAll('[role="dialog"] aside a')) {
         link.classList.add("local-brand-static");
+        // The archived logo uses hover:opacity-80, which makes the brand
+        // mark visibly change when the pointer passes over it. This local
+        // single-page build keeps the logo visually stable.
+        link.classList.remove("transition-opacity", "hover:opacity-80");
         link.removeAttribute("href");
         link.setAttribute("aria-disabled", "true");
         link.setAttribute("tabindex", "-1");
