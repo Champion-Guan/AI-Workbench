@@ -908,7 +908,7 @@ window.GuanWorkbenchData = api;
 
 const css = document.createElement("link");
 css.rel = "stylesheet";
-css.href = "/data-contract/index.css?contract-v4-20260925";
+css.href = "/data-contract/index.css?contract-v6-20260925";
 document.head.appendChild(css);
 
 function escapeHtml(value) {
@@ -943,37 +943,107 @@ function renderHeaderControls(root) {
   });
   if (controls.dataset.stateKey === stateKey) return true;
   controls.dataset.stateKey = stateKey;
+  controls.dataset.menuOpen = "false";
   controls.innerHTML = `
-    <select class="guan-dc-file-select" aria-label="选择已上传的 Excel 文件" ${productSets.length ? "" : "disabled"}>
-      ${productSets.length
-        ? productSets.map((set) => {
+    <div class="guan-dc-file-picker">
+      <button type="button" class="guan-dc-file-trigger" aria-label="选择已上传的 Excel 文件" aria-haspopup="listbox" aria-expanded="false" ${productSets.length ? "" : "disabled"}>
+        <span class="guan-dc-file-trigger-label">${escapeHtml(productSets.find((set) => set.id === activeId)?.source?.fileName || "暂无已上传 Excel")}</span>
+        <svg class="guan-dc-file-chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg>
+      </button>
+      <div class="guan-dc-file-menu" role="listbox" aria-label="已上传的 Excel 文件" data-state="closed" hidden>
+        ${productSets.map((set) => {
           const fileName = set.source?.fileName || "未命名产品表";
           const sheetName = set.source?.sheetName;
-          return `<option value="${escapeHtml(set.id)}" ${set.id === activeId ? "selected" : ""}>${escapeHtml(fileName)}${sheetName ? ` · ${escapeHtml(sheetName)}` : ""}</option>`;
-        }).join("")
-        : `<option value="">暂无已上传 Excel</option>`}
-    </select>
+          const label = `${fileName}${sheetName ? ` · ${sheetName}` : ""}`;
+          return `
+            <button type="button" class="guan-dc-file-option" role="option" aria-selected="${set.id === activeId}" data-value="${escapeHtml(set.id)}">
+              <span class="guan-dc-file-option-label">${escapeHtml(label)}</span>
+              ${set.id === activeId ? `<svg class="guan-dc-file-check" viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4L19 6"></path></svg>` : ""}
+            </button>
+          `;
+        }).join("") || `<div class="guan-dc-file-empty">暂无已上传 Excel</div>`}
+      </div>
+    </div>
     <button type="button" class="guan-dc-header-upload" aria-label="上传 Excel" title="上传 Excel">+</button>
     <input class="guan-dc-header-file-input" type="file" accept=".xlsx,.xls,.csv" tabindex="-1" aria-hidden="true">
   `;
 
-  const select = controls.querySelector(".guan-dc-file-select");
-  select?.addEventListener("change", () => {
-    try {
-      api.setActiveProductSet(select.value || null);
-    } catch (error) {
-      alert(error instanceof Error ? error.message : String(error));
+  const closeMenu = (animate = true) => {
+    const menu = controls.querySelector(".guan-dc-file-menu");
+    if (!menu || controls.dataset.menuOpen !== "true") return;
+    controls.dataset.menuOpen = "false";
+    const trigger = controls.querySelector(".guan-dc-file-trigger");
+    trigger?.setAttribute("aria-expanded", "false");
+    menu.dataset.state = animate ? "closing" : "closed";
+    if (!animate) {
+      menu.hidden = true;
+      return;
     }
-  });
-  const input = controls.querySelector(".guan-dc-header-file-input");
-  controls.querySelector(".guan-dc-header-upload")?.addEventListener("click", (event) => {
-    event.preventDefault();
-    input?.click();
-  });
-  input?.addEventListener("change", (event) => {
-    loadExcelFile(event.currentTarget.files?.[0], root);
-    event.currentTarget.value = "";
-  });
+    window.setTimeout(() => {
+      if (controls.dataset.menuOpen !== "true") {
+        menu.hidden = true;
+        menu.dataset.state = "closed";
+      }
+    }, 170);
+  };
+
+  const openMenu = () => {
+    const menu = controls.querySelector(".guan-dc-file-menu");
+    const trigger = controls.querySelector(".guan-dc-file-trigger");
+    if (!menu || !trigger || trigger.disabled) return;
+    controls.dataset.menuOpen = "true";
+    menu.hidden = false;
+    menu.dataset.state = "opening";
+    trigger.setAttribute("aria-expanded", "true");
+    // Keep the opening state long enough for the CSS animation to finish.
+    // Switching to "open" on the very next frame would interrupt the animation.
+    window.setTimeout(() => {
+      if (controls.dataset.menuOpen === "true" && menu.dataset.state === "opening") {
+        menu.dataset.state = "open";
+      }
+    }, 190);
+  };
+
+  if (controls.dataset.interactionsBound !== "true") {
+    controls.dataset.interactionsBound = "true";
+    controls.addEventListener("click", (event) => {
+      const target = event.target instanceof Element ? event.target : null;
+      if (!target) return;
+      const trigger = target.closest(".guan-dc-file-trigger");
+      if (trigger) {
+        event.preventDefault();
+        controls.dataset.menuOpen === "true" ? closeMenu() : openMenu();
+        return;
+      }
+      const option = target.closest(".guan-dc-file-option");
+      if (option) {
+        event.preventDefault();
+        try {
+          api.setActiveProductSet(option.dataset.value || null);
+          closeMenu();
+        } catch (error) {
+          alert(error instanceof Error ? error.message : String(error));
+        }
+        return;
+      }
+      if (target.closest(".guan-dc-header-upload")) {
+        event.preventDefault();
+        controls.querySelector(".guan-dc-header-file-input")?.click();
+      }
+    });
+    document.addEventListener("mousedown", (event) => {
+      if (controls.dataset.menuOpen === "true" && !controls.contains(event.target)) closeMenu();
+    });
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && controls.dataset.menuOpen === "true") closeMenu();
+    });
+    controls.addEventListener("change", (event) => {
+      const input = event.target instanceof HTMLInputElement ? event.target : null;
+      if (!input?.classList.contains("guan-dc-header-file-input")) return;
+      loadExcelFile(input.files?.[0], root);
+      input.value = "";
+    });
+  }
   return true;
 }
 
