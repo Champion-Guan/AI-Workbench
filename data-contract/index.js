@@ -908,7 +908,7 @@ window.GuanWorkbenchData = api;
 
 const css = document.createElement("link");
 css.rel = "stylesheet";
-css.href = "/data-contract/index.css?contract-v6-20260925";
+css.href = "/data-contract/index.css?contract-v7-20260925";
 document.head.appendChild(css);
 
 function escapeHtml(value) {
@@ -945,6 +945,7 @@ function renderHeaderControls(root) {
   controls.dataset.stateKey = stateKey;
   controls.dataset.menuOpen = "false";
   controls.innerHTML = `
+    <span class="guan-dc-sheet-label" aria-hidden="true">当前工作表：</span>
     <div class="guan-dc-file-picker">
       <button type="button" class="guan-dc-file-trigger" aria-label="选择已上传的 Excel 文件" aria-haspopup="listbox" aria-expanded="false" ${productSets.length ? "" : "disabled"}>
         <span class="guan-dc-file-trigger-label">${escapeHtml(productSets.find((set) => set.id === activeId)?.source?.fileName || "暂无已上传 Excel")}</span>
