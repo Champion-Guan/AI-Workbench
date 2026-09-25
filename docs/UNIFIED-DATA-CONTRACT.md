@@ -1,6 +1,6 @@
 # AI 生图工作台统一数据合同 v1
 
-状态：设计稿，尚未接入运行代码  
+状态：v1 最小数据链已接入本地工作台；已支持本地 Excel/CSV 解析与确认导入
 设计日期：2026-09-25  
 适用范围：Excel 产品导入、图片/视频生成、提示词翻译、Fallback、素材库、无限画布、视频剪辑、批量下载
 
@@ -19,6 +19,16 @@
 5. 未来的 ComfyUI 高级工作流适配器。
 
 本合同是业务数据合同，不等于某一个项目的数据库表结构。不同实现可以使用 IndexedDB、SQLite、JSON 或其他本地存储，但对外读写的字段语义必须一致。
+
+当前实现说明：
+
+- 合同对象与关联元数据存放在浏览器 `localStorage`，页面刷新后保留。
+- 工作区顶部提供已上传 Excel 的选择框和新增上传按钮；文件在浏览器本地解析，先选择工作表并预览，再确认写入合同。左下角“数据”面板只用于查看产品、槽位和任务明细。
+- 运营界面不展示 JSON 导入/导出入口；JSON 仅作为内部合同 API 的开发验证格式保留。
+- 导入时每个非空数据行对应一个 `Product`，保留 Excel 原始行号、全部原始字段、工作表名和文件 SHA-256；空白行不创建产品。
+- 每个产品默认建立 1 个主图、10 个副图和 6 个详情图 `ProductSlot`，可在确认导入前调整。
+- `Asset` 当前持久化文件元数据和 `storageKey`，不保存图片二进制；接入生成器/素材存储后再写真实文件。
+- 当前核心引用链是 `ProductSet → Product → ProductSlot → GenerationTask → Asset`。TaskGroup 暂时仅以 `taskGroupId` 分组标识保留，不单独落表。
 
 ## 2. 总体关系
 
@@ -119,7 +129,7 @@ interface ProductSet {
   id: string;                    // set_xxx
   workspaceId: string;
   source: {
-    kind: "xlsx" | "xls" | "csv";
+    kind: "xlsx" | "xls" | "csv" | "json"; // json 仅供开发验证入口使用
     fileName: string;
     fileSha256?: string;
     sheetName?: string;
@@ -241,6 +251,7 @@ interface PromptSpec {
 type SlotKind = "image" | "video";
 
 interface ProductSlot {
+  id: string;                    // 实现层稳定行 ID
   slotId: string;                // 例如 main-01、secondary-03、detail-06
   productId: string;
   kind: SlotKind;
@@ -262,6 +273,8 @@ interface TaskGroup {
   updatedAt: string;
 }
 ```
+
+当前最小实现不单独保存 `TaskGroup` 实体；`Product.taskGroupIds` 和 `GenerationTask.taskGroupId` 暂作同一产品任务集合的分组标识，实际外键主链仍是 `Product → ProductSlot → GenerationTask`。
 
 推荐的首批结构：
 
@@ -335,7 +348,7 @@ interface GenerationRun {
   inputAssetIds: string[];
   settingsSnapshot: GenerationTask["settings"];
   fallbackPolicySnapshot: FallbackPolicySnapshot;
-  attempts: ProviderAttempt[];
+  attemptIds: string[];          // 指向工作区中的 ProviderAttempt 记录
   status: "queued" | "running" | "succeeded" | "partial" | "failed" | "paused";
   outputAssetIds: string[];
   startedAt?: string;
@@ -388,6 +401,7 @@ interface Asset {
   workspaceId: string;
   productId?: string;
   taskId?: string;
+  slotId?: string;               // 与 task.productId + task.slotId 对应
   runId?: string;
   kind: AssetKind;
   role?: PromptPurpose | "source" | "reference" | "mask" | "export";
@@ -701,6 +715,8 @@ attempt-1 running
 - ComfyUI 工作流 JSON
 - Agent/MCP 操作日志
 - 跨设备同步
+
+当前代码已经完成 ProductSet、Product、ProductSlot、PromptSpec、GenerationTask、GenerationRun、ProviderAttempt 和 Asset 的最小对象结构及本地持久化。`ImportRecord` 保存 Excel/CSV/JSON 行入口的行号与原始字段；Excel/CSV 已在本地浏览器解析并在确认后写入合同。尚未接入 AI 服务调用或图片二进制落盘；演示数据中的素材明确标记为 `missing`，不会伪装成已生成的图片。
 
 ## 19. 验收标准
 
