@@ -908,7 +908,7 @@ window.GuanWorkbenchData = api;
 
 const css = document.createElement("link");
 css.rel = "stylesheet";
-css.href = "/data-contract/index.css?contract-v9-20260925";
+css.href = "/data-contract/index.css?contract-v11-20260926";
 document.head.appendChild(css);
 
 function escapeHtml(value) {
@@ -965,7 +965,9 @@ function renderHeaderControls(root) {
         }).join("") || `<div class="guan-dc-file-empty">暂无已上传 Excel</div>`}
       </div>
     </div>
-    <button type="button" class="guan-dc-header-upload" aria-label="上传 Excel" title="上传 Excel">+</button>
+    <button type="button" class="guan-dc-header-upload" aria-label="上传 Excel" title="上传 Excel">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>
+    </button>
     <input class="guan-dc-header-file-input" type="file" accept=".xlsx,.xls,.csv" tabindex="-1" aria-hidden="true">
   `;
 

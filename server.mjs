@@ -352,6 +352,54 @@ const localThemeAndUiStyle = `<style id="local-theme-and-ui-style">
     height: 22px !important;
     pointer-events: none !important;
   }
+  /*
+   * The settings app is mounted inside the archived dialog. Keep its
+   * top-level overlay above the Excel controls and make the modal backdrop
+   * visibly blur the workbench behind it.
+   */
+  #playground-settings-root > [class*="fixed"][class*="inset-0"] {
+    z-index: 70 !important;
+  }
+  #playground-settings-root > [class*="fixed"][class*="inset-0"] > [class*="absolute"][class*="inset-0"] {
+    background: rgba(0, 0, 0, .22) !important;
+    -webkit-backdrop-filter: blur(12px) !important;
+    backdrop-filter: blur(12px) !important;
+  }
+  html.dark #playground-settings-root > [class*="fixed"][class*="inset-0"] > [class*="absolute"][class*="inset-0"] {
+    background: rgba(0, 0, 0, .42) !important;
+  }
+  .guan-dc-header-upload {
+    display: inline-flex !important;
+    width: 42px !important;
+    height: 42px !important;
+    flex: 0 0 42px !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 0 !important;
+    border: 0 !important;
+    border-radius: 12px !important;
+    background: transparent !important;
+    color: #5b5c65 !important;
+    font-size: 0 !important;
+    line-height: 0 !important;
+    transform: none !important;
+  }
+  .guan-dc-header-upload svg {
+    width: 22px !important;
+    height: 22px !important;
+    fill: none !important;
+    stroke: currentColor !important;
+    stroke-linecap: round !important;
+    stroke-linejoin: round !important;
+    stroke-width: 1.9 !important;
+    pointer-events: none !important;
+  }
+  .guan-dc-header-upload:hover {
+    background: var(--muted) !important;
+  }
+  html[data-workbench-theme="dark"] .guan-dc-header-upload {
+    color: #e6e7eb !important;
+  }
   html[data-workbench-theme="dark"],
   html[data-workbench-theme="dark"] body {
     background: #111214 !important;
@@ -1212,7 +1260,7 @@ async function send(response, path, method) {
      * The original button injector only creates the trigger; the React bundle
      * owns the modal, focus scope, nested dialogs and persistence.
      */
-      response.end(refreshedFavicon.replace("</head>", `${workbenchLogoStyle}${mvpNavigationStyle}${localThemeAndUiStyle}${localRootNavigationScript}${localSettingsPanelScript}${originalPlaygroundSettingsButtonScript}${localThemeToggleScript}${localFixedFieldsScript}${localResolutionButtonsScript}${localAspectRatioButtonsScript}${localOfflineGuardsScript}${localResponsivePreviewScript}<link rel="stylesheet" href="/playground-settings/assets/index.css?v=settings-toggle-backdrop-fix-20260924-v1"><script type="module" src="/playground-settings/assets/index.js?v=settings-toggle-backdrop-fix-20260924-v1"></script><script src="/_pixpix-assets/local-vendor/xlsx.full.min.js?sheetjs-local-0.18.5"></script><script type="module" src="/data-contract/index.js?contract-v14-20260925"></script></head>`));
+      response.end(refreshedFavicon.replace("</head>", `${workbenchLogoStyle}${mvpNavigationStyle}${localThemeAndUiStyle}${localRootNavigationScript}${localSettingsPanelScript}${originalPlaygroundSettingsButtonScript}${localThemeToggleScript}${localFixedFieldsScript}${localResolutionButtonsScript}${localAspectRatioButtonsScript}${localOfflineGuardsScript}${localResponsivePreviewScript}<link rel="stylesheet" href="/playground-settings/assets/index.css?v=settings-toggle-backdrop-fix-20260926-v2"><script type="module" src="/playground-settings/assets/index.js?v=settings-toggle-backdrop-fix-20260926-v2"></script><script src="/_pixpix-assets/local-vendor/xlsx.full.min.js?sheetjs-local-0.18.5"></script><script type="module" src="/data-contract/index.js?contract-v16-20260926"></script></head>`));
     return;
   }
   createReadStream(path).pipe(response);

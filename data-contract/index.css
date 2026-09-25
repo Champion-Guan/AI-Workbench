@@ -8,7 +8,12 @@
   position: fixed;
   left: 18px;
   bottom: 18px;
-  z-index: 90;
+  /*
+   * Keep the contract controls below the standalone settings layer.
+   * The settings app owns z-index 70 (and its nested dialogs go higher);
+   * putting this root above it made the Excel menu float over the modal.
+   */
+  z-index: 40;
   color: var(--dc-text);
   font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
@@ -28,6 +33,13 @@ html[data-workbench-theme="dark"] #guan-data-contract-root {
   gap: 8px;
   min-width: 0;
   margin-left: auto;
+  /*
+   * Keep the header controls in the normal workbench layer. The settings
+   * dialog owns a higher stacking context, so its backdrop can cover these
+   * controls while it is open.
+   */
+  position: relative;
+  z-index: 1;
 }
 
 .guan-dc-active-sheet-label {
@@ -42,7 +54,7 @@ html[data-workbench-theme="dark"] #guan-data-contract-root {
   box-sizing: border-box;
   width: min(250px, 26vw);
   min-width: 160px;
-  z-index: 220;
+  z-index: 1;
 }
 
 .guan-dc-file-trigger {
@@ -202,28 +214,38 @@ html[data-workbench-theme="dark"] #guan-data-contract-root {
 
 .guan-dc-header-upload {
   display: inline-flex;
-  flex: 0 0 40px;
+  flex: 0 0 42px;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
+  width: 42px;
+  height: 42px;
   padding: 0;
-  border: 1px solid var(--dc-border);
-  border-radius: 10px;
-  background: var(--dc-bg);
-  color: var(--dc-text);
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: #5b5c65;
   cursor: pointer;
-  font: 24px/1 ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  transition: background .16s ease, border-color .16s ease, transform .16s ease;
+  font: 0/1 ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  transition: background-color .16s ease, color .16s ease, transform .16s ease;
 }
 
 .guan-dc-header-upload:hover {
-  border-color: rgba(99, 102, 241, .5);
   background: var(--dc-soft);
 }
 
 .guan-dc-header-upload:active {
   transform: translateY(1px);
+}
+
+.guan-dc-header-upload svg {
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.9;
+  pointer-events: none;
 }
 
 .guan-dc-header-file-input {
@@ -241,8 +263,6 @@ html[data-workbench-theme="dark"] #guan-data-contract-root {
 }
 
 html[data-workbench-theme="dark"] .guan-dc-header-upload {
-  border-color: rgba(255, 255, 255, .16);
-  background: #1d1e20;
   color: #f4f4f5;
 }
 
@@ -295,9 +315,9 @@ html[data-workbench-theme="dark"] .guan-dc-file-chevron {
   }
 
   .guan-dc-header-upload {
-    flex-basis: 36px;
-    width: 36px;
-    height: 36px;
+    flex-basis: 38px;
+    width: 38px;
+    height: 38px;
   }
 }
 
