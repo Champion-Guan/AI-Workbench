@@ -683,12 +683,54 @@ const localAspectRatioButtonsScript = `<script id="local-aspect-ratio-buttons-sc
 
 const localOfflineGuardsScript = `<script id="local-offline-guards-script">
   (() => {
-    const uploadState = { files: [], urls: [], parent: null, preview: null };
+    const uploadState = { files: [], urls: [], parent: null, preview: null, input: null };
+
+    const fileKey = (file) => [file.name, file.size, file.lastModified].join(":");
+
+    const publishImageState = () => {
+      window.__localWorkbenchImageFiles = uploadState.files.slice();
+      window.dispatchEvent(new CustomEvent("local-workbench-images-change", {
+        detail: { count: uploadState.files.length },
+      }));
+    };
+
+    const syncInputFiles = () => {
+      if (!uploadState.input || typeof DataTransfer === "undefined") return;
+      try {
+        const transfer = new DataTransfer();
+        uploadState.files.forEach((file) => transfer.items.add(file));
+        uploadState.input.files = transfer.files;
+      } catch {
+        // The preview state remains authoritative if a browser disallows
+        // assigning a FileList back to the input element.
+      }
+    };
+
+    const updateUploadHint = (dialog) => {
+      const hint = Array.from(dialog?.querySelectorAll("span") || [])
+        .find((node) => node.textContent?.trim() === "支持 1-3 张图片");
+      if (hint) hint.textContent = "支持多张图片";
+    };
+
+    const removeImage = (index) => {
+      const removedUrl = uploadState.urls[index];
+      if (removedUrl) URL.revokeObjectURL(removedUrl);
+      uploadState.files.splice(index, 1);
+      uploadState.urls.splice(index, 1);
+      syncInputFiles();
+      renderLocalPreviews(uploadState.parent);
+      publishImageState();
+    };
 
     const renderLocalPreviews = (parent) => {
-      if (!parent || !uploadState.files.length) return;
+      if (!parent) return;
+      if (!uploadState.files.length) {
+        uploadState.preview?.remove();
+        uploadState.preview = null;
+        return;
+      }
       const renderKey = uploadState.files
-        .map((file) => file.name + ":" + file.size + ":" + file.lastModified)
+        .map(fileKey)
         .join("|");
       if (!uploadState.preview || !uploadState.preview.isConnected || uploadState.preview.parentElement !== parent) {
         uploadState.preview?.remove();
@@ -709,7 +751,18 @@ const localOfflineGuardsScript = `<script id="local-offline-guards-script">
         const image = document.createElement("img");
         image.src = uploadState.urls[index];
         image.alt = file.name;
-        item.append(image);
+        const removeButton = document.createElement("button");
+        removeButton.type = "button";
+        removeButton.className = "local-offline-upload-delete";
+        removeButton.setAttribute("aria-label", "删除图片 " + file.name);
+        removeButton.title = "删除图片";
+        removeButton.textContent = "×";
+        removeButton.addEventListener("click", (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          removeImage(index);
+        });
+        item.append(image, removeButton);
         return item;
       }));
     };
@@ -720,17 +773,23 @@ const localOfflineGuardsScript = `<script id="local-offline-guards-script">
       const button = input?.parentElement?.querySelector('button[aria-label="上传图片"]');
       if (!input || !button) return false;
       const parent = input.parentElement;
+      uploadState.parent = parent;
+      uploadState.input = input;
+      updateUploadHint(dialog);
 
       if (input.dataset.localOfflineReady !== "true") {
         input.dataset.localOfflineReady = "true";
         input.addEventListener("change", (event) => {
           event.preventDefault();
           event.stopImmediatePropagation();
-          uploadState.urls.forEach((url) => URL.revokeObjectURL(url));
-          uploadState.files = Array.from(input.files || []).slice(0, 3);
-          uploadState.urls = uploadState.files.map((file) => URL.createObjectURL(file));
-          uploadState.parent = parent;
+          const existing = new Set(uploadState.files.map(fileKey));
+          const incoming = Array.from(input.files || [])
+            .filter((file) => !existing.has(fileKey(file)));
+          uploadState.files.push(...incoming);
+          uploadState.urls.push(...incoming.map((file) => URL.createObjectURL(file)));
+          syncInputFiles();
           renderLocalPreviews(parent);
+          publishImageState();
         }, true);
       }
 
@@ -743,6 +802,7 @@ const localOfflineGuardsScript = `<script id="local-offline-guards-script">
         }, true);
       }
       renderLocalPreviews(parent);
+      publishImageState();
       return true;
     };
 
@@ -789,7 +849,10 @@ const localGenerationButtonScript = `<script id="local-generation-button-script"
       const button = findButton();
       if (!button) return false;
       const input = findImageInput();
-      const count = Math.min(3, input?.files?.length || 0);
+      const localFiles = Array.isArray(window.__localWorkbenchImageFiles)
+        ? window.__localWorkbenchImageFiles
+        : null;
+      const count = localFiles ? localFiles.length : (input?.files?.length || 0);
       const label = buttonLabel(count);
       const labelNode = button.querySelector("span") || button;
 
@@ -825,6 +888,7 @@ const localGenerationButtonScript = `<script id="local-generation-button-script"
       attributeFilter: ["disabled", "aria-disabled", "class"],
     });
     document.addEventListener("DOMContentLoaded", sync, { once: true });
+    window.addEventListener("local-workbench-images-change", schedule);
     sync();
   })();
 </script>`;
@@ -1057,12 +1121,54 @@ const mvpNavigationStyle = `<style id="mvp-navigation">
     gap: 8px !important;
   }
   .local-offline-upload-item {
+    position: relative !important;
     width: 128px !important;
     height: 128px !important;
     overflow: hidden !important;
     border: 1px solid var(--border) !important;
     border-radius: 12px !important;
     background: var(--card) !important;
+  }
+  .local-offline-upload-delete {
+    position: absolute !important;
+    top: 6px !important;
+    right: 6px !important;
+    z-index: 2 !important;
+    display: inline-flex !important;
+    width: 24px !important;
+    height: 24px !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 0 !important;
+    border: 0 !important;
+    border-radius: 9999px !important;
+    background: rgba(255, 255, 255, .94) !important;
+    color: #25262a !important;
+    font-size: 18px !important;
+    font-weight: 600 !important;
+    line-height: 1 !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    transform: scale(.9) !important;
+    cursor: pointer !important;
+    box-shadow: 0 2px 8px rgb(0 0 0 / 18%) !important;
+    transition: opacity .16s ease, transform .16s ease, background-color .16s ease !important;
+  }
+  .local-offline-upload-item:hover .local-offline-upload-delete,
+  .local-offline-upload-item:focus-within .local-offline-upload-delete {
+    opacity: 1 !important;
+    pointer-events: auto !important;
+    transform: scale(1) !important;
+  }
+  .local-offline-upload-delete:hover {
+    background: #f0f0f1 !important;
+  }
+  html[data-workbench-theme="dark"] .local-offline-upload-delete {
+    background: #f4f4f5 !important;
+    color: #161719 !important;
+  }
+  html[data-workbench-theme="dark"] .local-offline-upload-delete:hover {
+    background: #fff !important;
   }
   .local-offline-upload-item img {
     display: block !important;
