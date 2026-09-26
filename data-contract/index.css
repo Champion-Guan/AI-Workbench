@@ -284,6 +284,10 @@ html[data-workbench-theme="dark"] #guan-data-contract-root {
 }
 
 .guan-dc-confirm {
+  --dc-bg: #ffffff;
+  --dc-text: #17181a;
+  --dc-muted: #72757a;
+  --dc-border: rgba(20, 24, 32, .12);
   position: fixed;
   inset: 0;
   z-index: 1000;
@@ -415,6 +419,13 @@ html[data-workbench-theme="dark"] #guan-data-contract-root {
 
 html[data-workbench-theme="dark"] .guan-dc-confirm-backdrop {
   background: rgba(0, 0, 0, .48);
+}
+
+html[data-workbench-theme="dark"] .guan-dc-confirm {
+  --dc-bg: #1d1e20;
+  --dc-text: #f4f4f5;
+  --dc-muted: #a1a1aa;
+  --dc-border: rgba(255, 255, 255, .14);
 }
 
 html[data-workbench-theme="dark"] .guan-dc-confirm-icon {
