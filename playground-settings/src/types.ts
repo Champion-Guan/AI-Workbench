@@ -79,6 +79,10 @@ export interface ApiProfile {
   baseUrl: string
   apiKey: string
   model: string
+  /** 可选的单张图片价格，单位为元。 */
+  price?: number
+  /** 可选的服务商余额，单位为元。 */
+  balance?: number
   imageGenerationModel?: string
   timeout: number
   apiMode: ApiMode
@@ -89,7 +93,7 @@ export interface ApiProfile {
   streamImages?: boolean
   streamPartialImages?: number
   transparentBackgroundMethod: 'api' | 'local'
-  providerDrafts?: Partial<Record<ApiProvider, Partial<Pick<ApiProfile, 'baseUrl' | 'model' | 'imageGenerationModel' | 'apiMode' | 'reasoningEffort' | 'codexCli' | 'apiProxy' | 'responseFormatB64Json' | 'streamImages' | 'streamPartialImages' | 'transparentBackgroundMethod'>>>>
+  providerDrafts?: Partial<Record<ApiProvider, Partial<Pick<ApiProfile, 'baseUrl' | 'model' | 'price' | 'balance' | 'imageGenerationModel' | 'apiMode' | 'reasoningEffort' | 'codexCli' | 'apiProxy' | 'responseFormatB64Json' | 'streamImages' | 'streamPartialImages' | 'transparentBackgroundMethod'>>>>
 }
 
 export interface ImageApiFallbackSettings {

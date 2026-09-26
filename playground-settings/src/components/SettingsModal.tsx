@@ -132,6 +132,14 @@ function isPristineNewOpenAIProfile(profile: ApiProfile) {
     profile.transparentBackgroundMethod === defaultProfile.transparentBackgroundMethod
 }
 
+function parseOptionalAmount(value: string): number | undefined {
+  const trimmed = value.trim()
+  if (!trimmed) return undefined
+
+  const parsed = Number(trimmed)
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : undefined
+}
+
 function getImportedProfileFromMergedSettings(
   nextSettings: AppSettings,
   previousProfileIds: Set<string>,
@@ -1644,7 +1652,50 @@ export default function SettingsModal() {
                 </div>
               </div>
 
-              {/* 6. API 接口（Images/Responses） */}
+              {/* 6. 成本记录（可选） */}
+              <div className="block">
+                <div className="mb-1.5 flex items-center justify-between">
+                  <span className="block text-sm text-gray-600 dark:text-gray-300">价格与余额</span>
+                  <span className="text-xs text-gray-400 dark:text-gray-500">可选</span>
+                </div>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <label className="block">
+                    <span className="mb-1.5 block text-xs text-gray-500 dark:text-gray-400">价格（元/张）</span>
+                    <input
+                      value={activeProfile.price ?? ''}
+                      onChange={(e) => updateActiveProfile({ price: parseOptionalAmount(e.target.value) })}
+                      onBlur={(e) => commitActiveProfilePatch({ price: parseOptionalAmount(e.target.value) })}
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      inputMode="decimal"
+                      disabled={activeProfileLocked}
+                      placeholder="可选，例如 0.08"
+                      className="w-full rounded-xl border border-gray-200/70 bg-white/60 px-3 py-2.5 text-sm text-gray-700 outline-none transition focus:border-blue-300 disabled:cursor-not-allowed disabled:opacity-60 dark:border-white/[0.08] dark:bg-white/[0.03] dark:text-gray-200 dark:focus:border-blue-500/50"
+                    />
+                  </label>
+                  <label className="block">
+                    <span className="mb-1.5 block text-xs text-gray-500 dark:text-gray-400">余额（元）</span>
+                    <input
+                      value={activeProfile.balance ?? ''}
+                      onChange={(e) => updateActiveProfile({ balance: parseOptionalAmount(e.target.value) })}
+                      onBlur={(e) => commitActiveProfilePatch({ balance: parseOptionalAmount(e.target.value) })}
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      inputMode="decimal"
+                      disabled={activeProfileLocked}
+                      placeholder="可选，例如 2.52"
+                      className="w-full rounded-xl border border-gray-200/70 bg-white/60 px-3 py-2.5 text-sm text-gray-700 outline-none transition focus:border-blue-300 disabled:cursor-not-allowed disabled:opacity-60 dark:border-white/[0.08] dark:bg-white/[0.03] dark:text-gray-200 dark:focus:border-blue-500/50"
+                    />
+                  </label>
+                </div>
+                <div data-selectable-text className="mt-1.5 text-xs text-gray-500 dark:text-gray-500">
+                  仅用于记录中转站价格和余额，不影响 API 请求；留空即可跳过。
+                </div>
+              </div>
+
+              {/* 7. API 接口（Images/Responses） */}
               {activeProfile.provider === 'openai' && (
                 <div className="block">
                   <span className="mb-1.5 block text-sm text-gray-600 dark:text-gray-300">API 接口</span>
@@ -1667,7 +1718,7 @@ export default function SettingsModal() {
                 </div>
               )}
 
-              {/* 7. 模型 ID（紧跟接口选择） */}
+              {/* 8. 模型 ID（紧跟接口选择） */}
               <label className="block">
                 <span className="mb-1.5 block text-sm text-gray-600 dark:text-gray-300">
                   模型 ID

@@ -171,6 +171,17 @@ function normalizeStringRecord(value: unknown): Record<string, string> | undefin
   return entries.length ? Object.fromEntries(entries) : undefined
 }
 
+function normalizeOptionalAmount(value: unknown, fallback?: number): number | undefined {
+  const candidate = typeof value === 'number'
+    ? value
+    : typeof value === 'string' && value.trim()
+      ? Number(value)
+      : fallback
+  return typeof candidate === 'number' && Number.isFinite(candidate) && candidate >= 0
+    ? candidate
+    : undefined
+}
+
 function normalizeStringArray(value: unknown, fallback: string[]): string[] {
   return Array.isArray(value)
     ? value.filter((item): item is string => typeof item === 'string' && Boolean(item.trim())).map((item) => item.trim())
@@ -405,6 +416,8 @@ export function switchApiProfileProvider(profile: ApiProfile, provider: ApiProvi
     [profile.provider]: {
       baseUrl: profile.baseUrl,
       model: profile.model,
+      price: profile.price,
+      balance: profile.balance,
       imageGenerationModel: profile.imageGenerationModel,
       apiMode: profile.apiMode,
       reasoningEffort: profile.reasoningEffort,
@@ -424,6 +437,8 @@ export function switchApiProfileProvider(profile: ApiProfile, provider: ApiProvi
       provider,
       baseUrl: savedDraft?.baseUrl ?? DEFAULT_FAL_BASE_URL,
       model: savedDraft?.model ?? DEFAULT_FAL_MODEL,
+      price: savedDraft?.price ?? profile.price,
+      balance: savedDraft?.balance ?? profile.balance,
       imageGenerationModel: savedDraft?.imageGenerationModel ?? profile.imageGenerationModel,
       apiMode: 'images',
       reasoningEffort: savedDraft?.reasoningEffort,
@@ -445,6 +460,8 @@ export function switchApiProfileProvider(profile: ApiProfile, provider: ApiProvi
       provider: customProvider.id,
       baseUrl: savedDraft?.baseUrl ?? (shouldUseOpenAIDefaults ? DEFAULT_BASE_URL : profile.baseUrl || DEFAULT_BASE_URL),
       model: savedDraft?.model ?? (shouldUseOpenAIDefaults ? DEFAULT_IMAGES_MODEL : profile.model || DEFAULT_IMAGES_MODEL),
+      price: savedDraft?.price ?? profile.price,
+      balance: savedDraft?.balance ?? profile.balance,
       imageGenerationModel: savedDraft?.imageGenerationModel ?? profile.imageGenerationModel,
       apiMode: 'images',
       reasoningEffort: savedDraft?.reasoningEffort,
@@ -471,6 +488,8 @@ export function switchApiProfileProvider(profile: ApiProfile, provider: ApiProvi
     provider,
     baseUrl: savedDraft?.baseUrl ?? DEFAULT_BASE_URL,
     model: savedDraft?.model ?? DEFAULT_IMAGES_MODEL,
+    price: savedDraft?.price ?? profile.price,
+    balance: savedDraft?.balance ?? profile.balance,
     imageGenerationModel: savedDraft?.imageGenerationModel ?? profile.imageGenerationModel,
     apiMode: nextApiMode,
     reasoningEffort: savedDraft?.reasoningEffort ?? profile.reasoningEffort,
@@ -508,6 +527,8 @@ function normalizeProviderDraft(
       ? baseUrl?.trim().replace(/\/+$/, '') || DEFAULT_FAL_BASE_URL
       : baseUrl,
     model,
+    price: normalizeOptionalAmount(input.price, fallback.price),
+    balance: normalizeOptionalAmount(input.balance, fallback.balance),
     imageGenerationModel,
     apiMode,
     reasoningEffort: normalizeReasoningEffort(input.reasoningEffort),
@@ -567,6 +588,8 @@ export function normalizeApiProfile(
     baseUrl: provider === 'fal' ? rawBaseUrl.trim().replace(/\/+$/, '') : rawBaseUrl,
     apiKey: typeof record.apiKey === 'string' ? record.apiKey : defaults.apiKey,
     model: typeof record.model === 'string' && record.model.trim() ? record.model : defaults.model,
+    price: normalizeOptionalAmount(record.price, defaults.price),
+    balance: normalizeOptionalAmount(record.balance, defaults.balance),
     imageGenerationModel: typeof record.imageGenerationModel === 'string'
       ? record.imageGenerationModel.trim()
       : '',
@@ -1075,6 +1098,8 @@ const PRESET_PROFILE_DEPLOYMENT_KEYS = [
   'provider',
   'baseUrl',
   'model',
+  'price',
+  'balance',
   'imageGenerationModel',
   'timeout',
   'apiMode',
