@@ -6,7 +6,11 @@ const PURPOSE_ORDER = ["product-main", "product-secondary", "product-detail", "p
 const DEFAULT_SLOT_COUNTS = { main: 1, secondary: 10, detail: 6 };
 const MAX_IMPORT_ROWS = 10000;
 const MAX_IMPORT_COLUMNS = 200;
-const MAX_IMPORT_FILE_BYTES = 25 * 1024 * 1024;
+// The real product workbooks used by the operators include embedded images
+// and are commonly larger than 25 MiB. Keep a generous client-side guard so
+// import remains local while still preventing accidental multi-hundred-MiB
+// files from exhausting the browser tab.
+const MAX_IMPORT_FILE_BYTES = 100 * 1024 * 1024;
 let pendingExcelImport = null;
 
 function timestamp() {
@@ -1319,7 +1323,7 @@ async function loadExcelFile(file, root) {
     return;
   }
   if (file.size > MAX_IMPORT_FILE_BYTES) {
-    pendingExcelImport = { error: "文件超过 25 MB。请先拆分或精简文件后再导入。" };
+    pendingExcelImport = { error: "文件超过 100 MB。请先拆分或精简文件后再导入。" };
     renderPanel(root);
     return;
   }
