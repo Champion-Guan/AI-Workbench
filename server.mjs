@@ -332,6 +332,11 @@ const localThemeAndUiStyle = `<style id="local-theme-and-ui-style">
     background: #0d0d0e !important;
     color: #fff !important;
   }
+  [role="dialog"] button[type="submit"][data-local-generation-ready="true"] {
+    cursor: pointer !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+  }
   .local-workbench-theme-button,
   .local-workbench-settings-button {
     display: inline-flex !important;
@@ -448,6 +453,9 @@ const localThemeAndUiStyle = `<style id="local-theme-and-ui-style">
   html[data-workbench-theme="dark"] [role="dialog"] button[type="submit"]:not([disabled]) {
     border-color: #f4f4f5 !important;
     background: #f4f4f5 !important;
+    color: #161719 !important;
+  }
+  html[data-workbench-theme="dark"] [role="dialog"] button[type="submit"][data-local-generation-ready="true"] {
     color: #161719 !important;
   }
   html[data-workbench-theme="dark"] .local-workbench-theme-button,
@@ -755,6 +763,69 @@ const localOfflineGuardsScript = `<script id="local-offline-guards-script">
     observer.observe(document.documentElement, { childList: true, subtree: true });
     document.addEventListener("DOMContentLoaded", setupUploader, { once: true });
     setupUploader();
+  })();
+</script>`;
+
+const localGenerationButtonScript = `<script id="local-generation-button-script">
+  (() => {
+    const state = { button: null, input: null, queued: false };
+
+    const findButton = () => {
+      const dialog = document.querySelector('[role="dialog"]');
+      return Array.from(dialog?.querySelectorAll('button[type="submit"]') || [])
+        .find((button) => /生成详情页/.test(button.textContent || ""));
+    };
+
+    const findImageInput = () => document.querySelector(
+      '[role="dialog"] input[type="file"][aria-label="上传图片"]'
+    );
+
+    const buttonLabel = (count) => count > 0
+      ? "生成详情页（" + count + " 张图片）"
+      : "生成详情页（ - 张图片）";
+
+    const sync = () => {
+      state.queued = false;
+      const button = findButton();
+      if (!button) return false;
+      const input = findImageInput();
+      const count = Math.min(3, input?.files?.length || 0);
+      const label = buttonLabel(count);
+      const labelNode = button.querySelector("span") || button;
+
+      // The archived React form disables this action while it waits for the
+      // hosted account/credit state. This local build has no such gate.
+      button.disabled = false;
+      button.removeAttribute("disabled");
+      button.removeAttribute("aria-disabled");
+      button.dataset.localGenerationReady = "true";
+      if (labelNode.textContent !== label) labelNode.textContent = label;
+
+      if (state.input !== input) {
+        state.input?.removeEventListener("change", schedule);
+        state.input = input;
+        input?.addEventListener("change", schedule, true);
+      }
+      state.button = button;
+      return true;
+    };
+
+    const schedule = () => {
+      if (state.queued) return;
+      state.queued = true;
+      queueMicrotask(sync);
+    };
+
+    const observer = new MutationObserver(schedule);
+    observer.observe(document.documentElement, {
+      childList: true,
+      subtree: true,
+      characterData: true,
+      attributes: true,
+      attributeFilter: ["disabled", "aria-disabled", "class"],
+    });
+    document.addEventListener("DOMContentLoaded", sync, { once: true });
+    sync();
   })();
 </script>`;
 
@@ -1282,7 +1353,7 @@ async function send(response, path, method) {
      * The original button injector only creates the trigger; the React bundle
      * owns the modal, focus scope, nested dialogs and persistence.
      */
-      response.end(refreshedFavicon.replace("</head>", `${workbenchLogoStyle}${mvpNavigationStyle}${localThemeAndUiStyle}${localDocumentTitleScript}${localRootNavigationScript}${localSettingsPanelScript}${originalPlaygroundSettingsButtonScript}${localThemeToggleScript}${localFixedFieldsScript}${localResolutionButtonsScript}${localAspectRatioButtonsScript}${localOfflineGuardsScript}${localResponsivePreviewScript}<link rel="stylesheet" href="/playground-settings/assets/index.css?v=settings-toggle-backdrop-fix-20260926-v2"><script type="module" src="/playground-settings/assets/index.js?v=settings-toggle-backdrop-fix-20260926-v2"></script><script src="/_pixpix-assets/local-vendor/xlsx.full.min.js?sheetjs-local-0.18.5"></script><script type="module" src="/data-contract/index.js?contract-v21-20260926"></script></head>`));
+      response.end(refreshedFavicon.replace("</head>", `${workbenchLogoStyle}${mvpNavigationStyle}${localThemeAndUiStyle}${localDocumentTitleScript}${localRootNavigationScript}${localSettingsPanelScript}${originalPlaygroundSettingsButtonScript}${localThemeToggleScript}${localFixedFieldsScript}${localResolutionButtonsScript}${localAspectRatioButtonsScript}${localOfflineGuardsScript}${localGenerationButtonScript}${localResponsivePreviewScript}<link rel="stylesheet" href="/playground-settings/assets/index.css?v=settings-toggle-backdrop-fix-20260926-v2"><script type="module" src="/playground-settings/assets/index.js?v=settings-toggle-backdrop-fix-20260926-v2"></script><script src="/_pixpix-assets/local-vendor/xlsx.full.min.js?sheetjs-local-0.18.5"></script><script type="module" src="/data-contract/index.js?contract-v21-20260926"></script></head>`));
     return;
   }
   createReadStream(path).pipe(response);
