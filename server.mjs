@@ -751,6 +751,24 @@ const localOfflineGuardsScript = `<script id="local-offline-guards-script">
         const image = document.createElement("img");
         image.src = uploadState.urls[index];
         image.alt = file.name;
+        const removeBackgroundButton = document.createElement("button");
+        removeBackgroundButton.type = "button";
+        removeBackgroundButton.className = "local-offline-upload-remove-background";
+        removeBackgroundButton.setAttribute("aria-label", "移除背景 " + file.name);
+        removeBackgroundButton.setAttribute("aria-pressed", "false");
+        removeBackgroundButton.title = "移除背景";
+        removeBackgroundButton.textContent = "移除背景";
+        removeBackgroundButton.addEventListener("click", (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          const selected = removeBackgroundButton.getAttribute("aria-pressed") === "true";
+          removeBackgroundButton.setAttribute("aria-pressed", String(!selected));
+          removeBackgroundButton.textContent = selected ? "移除背景" : "已选择移除背景";
+          item.dataset.removeBackground = String(!selected);
+          window.dispatchEvent(new CustomEvent("local-workbench-remove-background", {
+            detail: { file, index, selected: !selected },
+          }));
+        });
         const removeButton = document.createElement("button");
         removeButton.type = "button";
         removeButton.className = "local-offline-upload-delete";
@@ -762,7 +780,7 @@ const localOfflineGuardsScript = `<script id="local-offline-guards-script">
           event.stopPropagation();
           removeImage(index);
         });
-        item.append(image, removeButton);
+        item.append(image, removeBackgroundButton, removeButton);
         return item;
       }));
     };
@@ -1131,8 +1149,8 @@ const mvpNavigationStyle = `<style id="mvp-navigation">
   }
   .local-offline-upload-delete {
     position: absolute !important;
-    top: 6px !important;
-    right: 6px !important;
+    top: 2px !important;
+    right: 2px !important;
     z-index: 2 !important;
     display: inline-flex !important;
     width: 24px !important;
@@ -1170,11 +1188,49 @@ const mvpNavigationStyle = `<style id="mvp-navigation">
   html[data-workbench-theme="dark"] .local-offline-upload-delete:hover {
     background: #fff !important;
   }
+  .local-offline-upload-remove-background {
+    position: absolute !important;
+    left: 6px !important;
+    right: 6px !important;
+    bottom: 6px !important;
+    z-index: 2 !important;
+    display: inline-flex !important;
+    min-height: 26px !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 4px 8px !important;
+    overflow: hidden !important;
+    border: 0 !important;
+    border-radius: 7px !important;
+    background: rgb(20 20 22 / 78%) !important;
+    color: #fff !important;
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    line-height: 16px !important;
+    white-space: nowrap !important;
+    text-overflow: ellipsis !important;
+    cursor: pointer !important;
+    box-shadow: 0 2px 8px rgb(0 0 0 / 16%) !important;
+    -webkit-backdrop-filter: blur(5px) !important;
+    backdrop-filter: blur(5px) !important;
+    transition: background-color .16s ease, transform .16s ease !important;
+  }
+  .local-offline-upload-remove-background:hover {
+    background: rgb(8 8 9 / 90%) !important;
+  }
+  .local-offline-upload-remove-background[aria-pressed="true"] {
+    background: #fff !important;
+    color: #17181b !important;
+  }
+  .local-offline-upload-remove-background:active {
+    transform: scale(.97) !important;
+  }
   .local-offline-upload-item img {
     display: block !important;
     width: 100% !important;
     height: 100% !important;
     object-fit: cover !important;
+    border-radius: 11px !important;
   }
   [role="dialog"] button[data-local-offline-ready="true"]:focus,
   [role="dialog"] button[data-local-offline-ready="true"]:focus-visible {
