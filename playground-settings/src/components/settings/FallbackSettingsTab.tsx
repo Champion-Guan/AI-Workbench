@@ -11,7 +11,6 @@ export default function FallbackSettingsTab({ draft, profiles, commitSettings }:
   profiles: ApiProfile[]
   commitSettings: (settings: AppSettings) => void
 }) {
-  type DropPosition = 'before' | 'after' | null
   type DragPreview = {
     id: string
     label: string
@@ -27,18 +26,24 @@ export default function FallbackSettingsTab({ draft, profiles, commitSettings }:
   }
   const [draggedId, setDraggedId] = useState<string | null>(null)
   const [dragOverId, setDragOverId] = useState<string | null>(null)
-  const [dragDropPosition, setDragDropPosition] = useState<DropPosition>(null)
+  const [dragInsertIndex, setDragInsertIndex] = useState<number | null>(null)
+  const [dragPointerY, setDragPointerY] = useState<number | null>(null)
   const [dragPreview, setDragPreview] = useState<DragPreview | null>(null)
-  const draggedHeightRef = useRef(96)
-  const dragDropPositionRef = useRef<DropPosition>(null)
+  const dragSlotHeightRef = useRef(106)
+  const dragPointerYRef = useRef<number | null>(null)
+  const dragInsertIndexRef = useRef<number | null>(null)
   const dragOverIdRef = useRef<string | null>(null)
+  const dragDropPositionRef = useRef<'before' | 'after' | null>(null)
+  const dragLayoutRef = useRef<Record<string, { top: number; center: number; height: number }>>({})
+  const dragOrderRef = useRef<string[]>([])
+  const dragScrollRef = useRef<{ element: HTMLElement | null; startTop: number }>({ element: null, startTop: 0 })
   const dragRef = useRef<{ id: string; pointerId: number } | null>(null)
   const dragPreviewElementRef = useRef<HTMLDivElement | null>(null)
   const dragPreviewOffsetRef = useRef({ offsetX: 0, offsetY: 0 })
   const pendingPointerRef = useRef<{ x: number; y: number } | null>(null)
   const dragFrameRef = useRef<number | null>(null)
   const dragListRef = useRef<HTMLDivElement | null>(null)
-  const moveToDropTargetRef = useRef<(sourceId: string, targetId: string, position: DropPosition) => void>(() => {})
+  const moveToDropIndexRef = useRef<(sourceId: string, insertIndex: number) => void>(() => {})
   const entryElementsRef = useRef<Record<string, HTMLDivElement | null>>({})
   const [, setRevision] = useState(0)
   const [notice, setNotice] = useState('')
@@ -72,27 +77,30 @@ export default function FallbackSettingsTab({ draft, profiles, commitSettings }:
     pendingPointerRef.current = null
     dragRef.current = null
     dragOverIdRef.current = null
+    dragInsertIndexRef.current = null
+    dragPointerYRef.current = null
+    dragLayoutRef.current = {}
+    dragOrderRef.current = []
+    dragScrollRef.current = { element: null, startTop: 0 }
     setDraggedId(null)
     setDragOverId(null)
-    setDragDropPosition(null)
+    setDragInsertIndex(null)
+    setDragPointerY(null)
     dragDropPositionRef.current = null
     setDragPreview(null)
   }
 
-  const moveToDropTarget = (sourceId: string, targetId: string, position: 'before' | 'after' | null) => {
-    if (!sourceId || !targetId || sourceId === targetId) return
+  const moveToDropIndex = (sourceId: string, insertIndex: number) => {
+    if (!sourceId || insertIndex < 0) return
     const sourceIndex = config.entries.findIndex((entry) => entry.profileId === sourceId)
-    const targetIndex = config.entries.findIndex((entry) => entry.profileId === targetId)
-    if (sourceIndex < 0 || targetIndex < 0) return
+    if (sourceIndex < 0) return
 
     const nextEntries = [...config.entries]
     const [movedEntry] = nextEntries.splice(sourceIndex, 1)
-    let nextIndex = targetIndex + (position === 'after' ? 1 : 0)
-    if (sourceIndex < targetIndex) nextIndex -= 1
-    nextEntries.splice(Math.max(0, Math.min(nextIndex, nextEntries.length)), 0, movedEntry)
+    nextEntries.splice(Math.max(0, Math.min(insertIndex, nextEntries.length)), 0, movedEntry)
     save({ ...config, entries: nextEntries })
   }
-  moveToDropTargetRef.current = moveToDropTarget
+  moveToDropIndexRef.current = moveToDropIndex
 
   const handlePointerDown = (event: ReactPointerEvent<HTMLButtonElement>, profileId: string, profile: ApiProfile) => {
     if (event.pointerType === 'mouse' && event.button !== 0) return
@@ -101,18 +109,39 @@ export default function FallbackSettingsTab({ draft, profiles, commitSettings }:
     const rect = card.getBoundingClientRect()
     event.preventDefault()
     event.stopPropagation()
-    draggedHeightRef.current = rect.height
+    const order = config.entries.map((entry) => entry.profileId)
+    const layout = Object.fromEntries(order.map((id) => {
+      const element = entryElementsRef.current[id]
+      const elementRect = element?.getBoundingClientRect()
+      return elementRect
+        ? [id, { top: elementRect.top, center: elementRect.top + elementRect.height / 2, height: elementRect.height }]
+        : [id, { top: rect.top, center: rect.top + rect.height / 2, height: rect.height }]
+    }))
+    dragOrderRef.current = order
+    dragLayoutRef.current = layout
+    const adjacentGap = order.slice(1).reduce((gap, id, index) => {
+      const previous = layout[order[index]]
+      const current = layout[id]
+      if (!previous || !current) return gap
+      return gap ?? Math.max(0, current.top - (previous.top + previous.height))
+    }, null as number | null)
+    dragSlotHeightRef.current = rect.height + (adjacentGap ?? 10)
+    const scrollContainer = dragListRef.current?.closest('.custom-scrollbar') as HTMLElement | null
+    dragScrollRef.current = { element: scrollContainer, startTop: scrollContainer?.scrollTop ?? 0 }
     dragPreviewOffsetRef.current = {
       offsetX: event.clientX - rect.left,
       offsetY: event.clientY - rect.top,
     }
     pendingPointerRef.current = { x: event.clientX, y: event.clientY }
+    dragPointerYRef.current = event.clientY
     dragRef.current = { id: profileId, pointerId: event.pointerId }
     dragOverIdRef.current = null
+    dragInsertIndexRef.current = config.entries.findIndex((entry) => entry.profileId === profileId)
     dragDropPositionRef.current = null
     setDraggedId(profileId)
     setDragOverId(null)
-    setDragDropPosition(null)
+    setDragInsertIndex(dragInsertIndexRef.current)
+    setDragPointerY(event.clientY)
     setDragPreview({
       id: profileId,
       label: profile.name,
@@ -142,55 +171,49 @@ export default function FallbackSettingsTab({ draft, profiles, commitSettings }:
       if (previewElement) {
         previewElement.style.transform = `translate3d(${clientX - offsetX}px, ${clientY - offsetY}px, 0)`
       }
+      dragPointerYRef.current = clientY
+      setDragPointerY(clientY)
 
-      const hovered = document.elementFromPoint(clientX, clientY)?.closest('[data-fallback-entry]') as HTMLElement | null
-      const targetId = hovered?.getAttribute('data-fallback-entry')
-      if (!hovered || !targetId || targetId === drag.id) {
-        // The insertion gap deliberately has pointer-events:none. When the
-        // pointer crosses that gap, elementFromPoint() therefore returns no
-        // card. Clearing the target here would collapse the gap, move the
-        // cards back under the pointer, then open it again on the next frame -
-        // the classic boundary flicker loop. Keep the last target while the
-        // pointer is still close to the sortable list.
-        const listRect = dragListRef.current?.getBoundingClientRect()
-        const nearList = listRect
-          ? clientY >= listRect.top - 40 && clientY <= listRect.bottom + 40
-          : dragOverIdRef.current !== null
-        if ((!dragOverIdRef.current && !dragDropPositionRef.current) || !nearList) {
-          dragOverIdRef.current = null
-          dragDropPositionRef.current = null
-          setDragOverId(null)
-          setDragDropPosition(null)
+      const order = dragOrderRef.current
+      const sourceIndex = order.indexOf(drag.id)
+      if (sourceIndex < 0 || order.length < 2) return
+      const scrollContainer = dragScrollRef.current.element
+      const scrollDelta = scrollContainer
+        ? scrollContainer.scrollTop - dragScrollRef.current.startTop
+        : 0
+
+      // Use the layout captured before dragging started. The cards stay in
+      // their original flow and only translate, so hit testing never feeds
+      // back into the layout being measured. Cards progressively make room
+      // as the pointer approaches their center; crossing the center selects
+      // the next final insertion slot, just like a native list.
+      let fullInsertIndex = order.length
+      for (let index = 0; index < order.length; index += 1) {
+        const item = dragLayoutRef.current[order[index]]
+        if (item && clientY < item.center - scrollDelta) {
+          fullInsertIndex = index
+          break
         }
-        return
+      }
+      const visibleLength = order.length - 1
+      const insertIndex = Math.max(0, Math.min(
+        visibleLength,
+        fullInsertIndex > sourceIndex ? fullInsertIndex - 1 : fullInsertIndex,
+      ))
+      if (dragInsertIndexRef.current !== insertIndex) {
+        dragInsertIndexRef.current = insertIndex
+        setDragInsertIndex(insertIndex)
       }
 
-      // Do not switch targets while the pointer is in the small area around
-      // the active card. The placeholder changes the card's live rectangle;
-      // this hysteresis prevents that layout transition from feeding back into
-      // hit testing and makes crossing a boundary feel continuous.
-      const activeTargetId = dragOverIdRef.current
-      if (activeTargetId && activeTargetId !== targetId) {
-        const activeTarget = Array.from(document.querySelectorAll<HTMLElement>('[data-fallback-entry]'))
-          .find((element) => element.getAttribute('data-fallback-entry') === activeTargetId)
-        const activeRect = activeTarget?.getBoundingClientRect()
-        if (activeRect && clientY >= activeRect.top - 16 && clientY <= activeRect.bottom + 16) return
-      }
-
-      const rect = hovered.getBoundingClientRect()
-      const midpoint = rect.top + rect.height / 2
-      const previousPosition = dragOverIdRef.current === targetId ? dragDropPositionRef.current : null
-      let position: DropPosition = clientY < midpoint ? 'before' : 'after'
-      if (previousPosition === 'before' && clientY < midpoint + 16) position = 'before'
-      if (previousPosition === 'after' && clientY > midpoint - 16) position = 'after'
+      const visibleOrder = order.filter((id) => id !== drag.id)
+      const targetId = visibleOrder[Math.min(insertIndex, visibleOrder.length - 1)] ?? null
+      const position: 'before' | 'after' | null = insertIndex >= visibleOrder.length ? 'after' : 'before'
       if (dragOverIdRef.current !== targetId || dragDropPositionRef.current !== position) {
         dragOverIdRef.current = targetId
         dragDropPositionRef.current = position
         setDragOverId(targetId)
-        setDragDropPosition(position)
       }
 
-      const scrollContainer = hovered.closest('.custom-scrollbar') as HTMLElement | null
       if (scrollContainer) {
         const containerRect = scrollContainer.getBoundingClientRect()
         const scrollThreshold = 30
@@ -221,13 +244,14 @@ export default function FallbackSettingsTab({ draft, profiles, commitSettings }:
         dragFrameRef.current = null
       }
       const point = pendingPointerRef.current
-      // Once the gap is rendered, the latest pointer coordinate can be over that
-      // pointer-events-none gap instead of the target card. Preserve the target
-      // already detected by the last animation frame; only flush when none exists.
-      if (!dragOverIdRef.current && point) updateDragPosition(point.x, point.y)
-      const targetId = dragOverIdRef.current
-      const position = dragDropPositionRef.current
-      if (targetId && targetId !== drag.id) moveToDropTargetRef.current(drag.id, targetId, position)
+      // Flush the last pointer coordinate before committing so a very quick
+      // release still uses the same insertion slot the preview was showing.
+      if (dragInsertIndexRef.current === null && point) updateDragPosition(point.x, point.y)
+      const insertIndex = dragInsertIndexRef.current
+      const sourceIndex = config.entries.findIndex((entry) => entry.profileId === drag.id)
+      if (insertIndex !== null && sourceIndex >= 0 && insertIndex !== sourceIndex) {
+        moveToDropIndexRef.current(drag.id, insertIndex)
+      }
       clearDragState()
     }
 
@@ -257,7 +281,32 @@ export default function FallbackSettingsTab({ draft, profiles, commitSettings }:
     if (previewElement) {
       previewElement.style.transform = `translate3d(${point.x - dragPreview.offsetX}px, ${point.y - dragPreview.offsetY}px, 0)`
     }
-  }, [dragPreview?.id, dragOverId, dragDropPosition])
+  }, [dragPreview?.id, dragInsertIndex, dragPointerY])
+  const getDragShift = (entryIndex: number) => {
+    if (!draggedId || dragPointerY === null) return 0
+    const sourceIndex = config.entries.findIndex((entry) => entry.profileId === draggedId)
+    if (sourceIndex < 0 || entryIndex === sourceIndex) return 0
+    const sourceLayout = dragLayoutRef.current[draggedId]
+    const entryLayout = dragLayoutRef.current[config.entries[entryIndex]?.profileId]
+    if (!sourceLayout || !entryLayout) return 0
+    const scrollDelta = dragScrollRef.current.element
+      ? dragScrollRef.current.element.scrollTop - dragScrollRef.current.startTop
+      : 0
+    const pointerY = dragPointerY - scrollDelta
+    const sourceCenter = sourceLayout.center
+    const slotHeight = Math.max(1, dragSlotHeightRef.current)
+    const halfSlot = slotHeight / 2
+    const clamp = (value: number) => Math.max(0, Math.min(1, value))
+    if (entryIndex > sourceIndex && pointerY > sourceCenter) {
+      const progress = clamp((pointerY - (entryLayout.center - halfSlot)) / halfSlot)
+      return -slotHeight * progress
+    }
+    if (entryIndex < sourceIndex && pointerY < sourceCenter) {
+      const progress = clamp(((entryLayout.center + halfSlot) - pointerY) / halfSlot)
+      return slotHeight * progress
+    }
+    return 0
+  }
   return (
     <>
       <section className="space-y-5" aria-label="Fallback 配置">
@@ -284,49 +333,32 @@ export default function FallbackSettingsTab({ draft, profiles, commitSettings }:
         >恢复默认顺序</button>
       </div>
       <div ref={dragListRef} className="space-y-2.5" role="list" aria-label="中转站重试顺序">
-        {config.entries.filter((entry) => entry.profileId !== draggedId).map((entry) => {
+        {config.entries.map((entry) => {
           const profile = profiles.find((candidate) => candidate.id === entry.profileId)!
           const entryIndex = config.entries.findIndex((candidate) => candidate.profileId === entry.profileId)
           const exhausted = isImageProviderExhausted(profile)
           const checked = entry.enabled && !exhausted
-          const showDropBefore = draggedId !== null && draggedId !== entry.profileId && dragOverId === entry.profileId && dragDropPosition === 'before'
-          const showDropAfter = draggedId !== null && draggedId !== entry.profileId && dragOverId === entry.profileId && dragDropPosition === 'after'
-          const isDropTarget = showDropBefore || showDropAfter
+          const isDragged = draggedId === entry.profileId
+          const isDropTarget = draggedId !== null && !isDragged && dragOverId === entry.profileId
+          const dragShift = getDragShift(entryIndex)
           return (
-            <div key={entry.profileId} className="flex flex-col">
-              <div
-                aria-hidden="true"
-                className="pointer-events-none order-none overflow-hidden rounded-xl border-2 border-dashed border-indigo-300 bg-indigo-50/50 transition-[height,opacity,margin,transform] duration-200 ease-out dark:border-indigo-400/60 dark:bg-indigo-500/10"
-                style={{
-                  height: isDropTarget ? draggedHeightRef.current : 0,
-                  opacity: isDropTarget ? 1 : 0,
-                  order: showDropBefore ? 0 : 2,
-                  marginTop: showDropAfter ? 10 : 0,
-                  marginBottom: showDropBefore ? 10 : 0,
-                  borderColor: isDropTarget ? undefined : 'transparent',
-                }}
-              >
-                {isDropTarget && dragPreview && (
-                  <div className="flex h-full min-w-0 items-center gap-3 px-3 sm:px-4">
-                    <span className="shrink-0 rounded-md bg-indigo-100 px-2 py-1 text-[11px] font-medium text-indigo-600 dark:bg-indigo-400/20 dark:text-indigo-200">
-                      正在移动
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-sm font-medium text-indigo-700 dark:text-indigo-200">
-                        {dragPreview.label}
-                      </span>
-                      <span className="mt-0.5 block truncate text-xs text-indigo-500/80 dark:text-indigo-300/80">
-                        {dragPreview.model} · {dragPreview.apiMode}
-                      </span>
-                    </span>
-                  </div>
-                )}
-              </div>
+            <div
+              key={entry.profileId}
+              className="flex flex-col transition-transform duration-150 ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform"
+              style={{
+                transform: dragShift ? `translate3d(0, ${dragShift}px, 0)` : undefined,
+              }}
+            >
               <div
                 ref={(element) => { entryElementsRef.current[entry.profileId] = element }}
                 data-fallback-entry={entry.profileId}
                 role="listitem"
-                className={`order-1 flex items-center gap-3 overflow-hidden rounded-xl border p-3 sm:p-4 transition-[height,opacity,transform,background-color,border-color,padding] duration-200 ease-out ${checked
+                aria-hidden={isDragged ? 'true' : undefined}
+                className={`flex items-center gap-3 overflow-hidden rounded-xl border p-3 sm:p-4 transition-[opacity,box-shadow,background-color,border-color] duration-200 ease-out ${isDragged
+                  ? 'pointer-events-none opacity-0'
+                  : isDropTarget
+                    ? 'ring-2 ring-indigo-300/70 ring-offset-2 ring-offset-white dark:ring-indigo-400/60 dark:ring-offset-gray-900'
+                    : ''} ${checked
                   ? 'border-indigo-400 dark:border-indigo-400/60 bg-indigo-50 dark:bg-indigo-500/10'
                   : 'border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/[0.02]'}`}
               >
@@ -387,6 +419,7 @@ export default function FallbackSettingsTab({ draft, profiles, commitSettings }:
             top: 0,
             width: dragPreview.width,
             minHeight: dragPreview.height,
+            zIndex: 2000,
           }}
         >
           <DragHandleIcon className="h-4 w-4 shrink-0 text-indigo-500" />
