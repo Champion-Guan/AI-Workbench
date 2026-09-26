@@ -37,6 +37,7 @@ export default function FallbackSettingsTab({ draft, profiles, commitSettings }:
   const dragPreviewOffsetRef = useRef({ offsetX: 0, offsetY: 0 })
   const pendingPointerRef = useRef<{ x: number; y: number } | null>(null)
   const dragFrameRef = useRef<number | null>(null)
+  const dragListRef = useRef<HTMLDivElement | null>(null)
   const moveToDropTargetRef = useRef<(sourceId: string, targetId: string, position: DropPosition) => void>(() => {})
   const entryElementsRef = useRef<Record<string, HTMLDivElement | null>>({})
   const [, setRevision] = useState(0)
@@ -145,7 +146,17 @@ export default function FallbackSettingsTab({ draft, profiles, commitSettings }:
       const hovered = document.elementFromPoint(clientX, clientY)?.closest('[data-fallback-entry]') as HTMLElement | null
       const targetId = hovered?.getAttribute('data-fallback-entry')
       if (!hovered || !targetId || targetId === drag.id) {
-        if (dragOverIdRef.current !== null || dragDropPositionRef.current !== null) {
+        // The insertion gap deliberately has pointer-events:none. When the
+        // pointer crosses that gap, elementFromPoint() therefore returns no
+        // card. Clearing the target here would collapse the gap, move the
+        // cards back under the pointer, then open it again on the next frame -
+        // the classic boundary flicker loop. Keep the last target while the
+        // pointer is still close to the sortable list.
+        const listRect = dragListRef.current?.getBoundingClientRect()
+        const nearList = listRect
+          ? clientY >= listRect.top - 40 && clientY <= listRect.bottom + 40
+          : dragOverIdRef.current !== null
+        if ((!dragOverIdRef.current && !dragDropPositionRef.current) || !nearList) {
           dragOverIdRef.current = null
           dragDropPositionRef.current = null
           setDragOverId(null)
@@ -154,12 +165,24 @@ export default function FallbackSettingsTab({ draft, profiles, commitSettings }:
         return
       }
 
+      // Do not switch targets while the pointer is in the small area around
+      // the active card. The placeholder changes the card's live rectangle;
+      // this hysteresis prevents that layout transition from feeding back into
+      // hit testing and makes crossing a boundary feel continuous.
+      const activeTargetId = dragOverIdRef.current
+      if (activeTargetId && activeTargetId !== targetId) {
+        const activeTarget = Array.from(document.querySelectorAll<HTMLElement>('[data-fallback-entry]'))
+          .find((element) => element.getAttribute('data-fallback-entry') === activeTargetId)
+        const activeRect = activeTarget?.getBoundingClientRect()
+        if (activeRect && clientY >= activeRect.top - 16 && clientY <= activeRect.bottom + 16) return
+      }
+
       const rect = hovered.getBoundingClientRect()
       const midpoint = rect.top + rect.height / 2
       const previousPosition = dragOverIdRef.current === targetId ? dragDropPositionRef.current : null
       let position: DropPosition = clientY < midpoint ? 'before' : 'after'
-      if (previousPosition === 'before' && clientY < midpoint + 8) position = 'before'
-      if (previousPosition === 'after' && clientY > midpoint - 8) position = 'after'
+      if (previousPosition === 'before' && clientY < midpoint + 16) position = 'before'
+      if (previousPosition === 'after' && clientY > midpoint - 16) position = 'after'
       if (dragOverIdRef.current !== targetId || dragDropPositionRef.current !== position) {
         dragOverIdRef.current = targetId
         dragDropPositionRef.current = position
@@ -171,8 +194,8 @@ export default function FallbackSettingsTab({ draft, profiles, commitSettings }:
       if (scrollContainer) {
         const containerRect = scrollContainer.getBoundingClientRect()
         const scrollThreshold = 30
-        if (clientY < containerRect.top + scrollThreshold) scrollContainer.scrollTop -= 10
-        if (clientY > containerRect.bottom - scrollThreshold) scrollContainer.scrollTop += 10
+        if (clientY < containerRect.top + scrollThreshold) scrollContainer.scrollTop -= 4
+        if (clientY > containerRect.bottom - scrollThreshold) scrollContainer.scrollTop += 4
       }
     }
 
@@ -260,7 +283,7 @@ export default function FallbackSettingsTab({ draft, profiles, commitSettings }:
           })}
         >恢复默认顺序</button>
       </div>
-      <div className="space-y-2.5" role="list" aria-label="中转站重试顺序">
+      <div ref={dragListRef} className="space-y-2.5" role="list" aria-label="中转站重试顺序">
         {config.entries.filter((entry) => entry.profileId !== draggedId).map((entry) => {
           const profile = profiles.find((candidate) => candidate.id === entry.profileId)!
           const entryIndex = config.entries.findIndex((candidate) => candidate.profileId === entry.profileId)
@@ -273,7 +296,7 @@ export default function FallbackSettingsTab({ draft, profiles, commitSettings }:
             <div key={entry.profileId} className="flex flex-col">
               <div
                 aria-hidden="true"
-                className="pointer-events-none order-none overflow-hidden rounded-xl border-2 border-dashed border-indigo-300 bg-indigo-50/50 transition-[height,opacity,margin] duration-200 ease-out dark:border-indigo-400/60 dark:bg-indigo-500/10"
+                className="pointer-events-none order-none overflow-hidden rounded-xl border-2 border-dashed border-indigo-300 bg-indigo-50/50 transition-[height,opacity,margin,transform] duration-200 ease-out dark:border-indigo-400/60 dark:bg-indigo-500/10"
                 style={{
                   height: isDropTarget ? draggedHeightRef.current : 0,
                   opacity: isDropTarget ? 1 : 0,
