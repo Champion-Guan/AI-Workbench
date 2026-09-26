@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
 import { createPortal } from 'react-dom'
 import type { ApiProfile, AppSettings, ImageApiFallbackSettings } from '../../types'
 import { getDefaultImageApiFallback, moveImageFallbackEntry, normalizeImageApiFallback } from '../../lib/imageApiFallbackSettings'
@@ -20,8 +20,8 @@ export default function FallbackSettingsTab({ draft, profiles, commitSettings }:
     baseUrl: string
     width: number
     height: number
-    x: number
-    y: number
+    startX: number
+    startY: number
     offsetX: number
     offsetY: number
   }
@@ -33,6 +33,10 @@ export default function FallbackSettingsTab({ draft, profiles, commitSettings }:
   const dragDropPositionRef = useRef<DropPosition>(null)
   const dragOverIdRef = useRef<string | null>(null)
   const dragRef = useRef<{ id: string; pointerId: number } | null>(null)
+  const dragPreviewElementRef = useRef<HTMLDivElement | null>(null)
+  const dragPreviewOffsetRef = useRef({ offsetX: 0, offsetY: 0 })
+  const pendingPointerRef = useRef<{ x: number; y: number } | null>(null)
+  const dragFrameRef = useRef<number | null>(null)
   const moveToDropTargetRef = useRef<(sourceId: string, targetId: string, position: DropPosition) => void>(() => {})
   const entryElementsRef = useRef<Record<string, HTMLDivElement | null>>({})
   const [, setRevision] = useState(0)
@@ -60,6 +64,11 @@ export default function FallbackSettingsTab({ draft, profiles, commitSettings }:
   }
 
   const clearDragState = () => {
+    if (dragFrameRef.current !== null) {
+      cancelAnimationFrame(dragFrameRef.current)
+      dragFrameRef.current = null
+    }
+    pendingPointerRef.current = null
     dragRef.current = null
     dragOverIdRef.current = null
     setDraggedId(null)
@@ -92,6 +101,11 @@ export default function FallbackSettingsTab({ draft, profiles, commitSettings }:
     event.preventDefault()
     event.stopPropagation()
     draggedHeightRef.current = rect.height
+    dragPreviewOffsetRef.current = {
+      offsetX: event.clientX - rect.left,
+      offsetY: event.clientY - rect.top,
+    }
+    pendingPointerRef.current = { x: event.clientX, y: event.clientY }
     dragRef.current = { id: profileId, pointerId: event.pointerId }
     dragOverIdRef.current = null
     dragDropPositionRef.current = null
@@ -106,8 +120,8 @@ export default function FallbackSettingsTab({ draft, profiles, commitSettings }:
       baseUrl: profile.baseUrl,
       width: rect.width,
       height: rect.height,
-      x: event.clientX,
-      y: event.clientY,
+      startX: event.clientX,
+      startY: event.clientY,
       offsetX: event.clientX - rect.left,
       offsetY: event.clientY - rect.top,
     })
@@ -118,41 +132,76 @@ export default function FallbackSettingsTab({ draft, profiles, commitSettings }:
     const previousUserSelect = document.body.style.userSelect
     document.body.style.userSelect = 'none'
 
-    const handlePointerMove = (event: PointerEvent) => {
+    const updateDragPosition = (clientX: number, clientY: number) => {
       const drag = dragRef.current
-      if (!drag || event.pointerId !== drag.pointerId) return
-      event.preventDefault()
-      setDragPreview((current) => current ? { ...current, x: event.clientX, y: event.clientY } : current)
+      if (!drag) return
+      const { offsetX, offsetY } = dragPreviewOffsetRef.current
+      const previewElement = dragPreviewElementRef.current
+        ?? document.querySelector<HTMLElement>('[data-fallback-drag-preview]')
+      if (previewElement) {
+        previewElement.style.transform = `translate3d(${clientX - offsetX}px, ${clientY - offsetY}px, 0)`
+      }
 
-      const hovered = document.elementFromPoint(event.clientX, event.clientY)?.closest('[data-fallback-entry]') as HTMLElement | null
+      const hovered = document.elementFromPoint(clientX, clientY)?.closest('[data-fallback-entry]') as HTMLElement | null
       const targetId = hovered?.getAttribute('data-fallback-entry')
       if (!hovered || !targetId || targetId === drag.id) {
-        dragOverIdRef.current = null
-        dragDropPositionRef.current = null
-        setDragOverId(null)
-        setDragDropPosition(null)
+        if (dragOverIdRef.current !== null || dragDropPositionRef.current !== null) {
+          dragOverIdRef.current = null
+          dragDropPositionRef.current = null
+          setDragOverId(null)
+          setDragDropPosition(null)
+        }
         return
       }
 
       const rect = hovered.getBoundingClientRect()
-      const position: DropPosition = event.clientY < rect.top + rect.height / 2 ? 'before' : 'after'
-      dragOverIdRef.current = targetId
-      dragDropPositionRef.current = position
-      setDragOverId((current) => current === targetId ? current : targetId)
-      setDragDropPosition((current) => current === position ? current : position)
+      const midpoint = rect.top + rect.height / 2
+      const previousPosition = dragOverIdRef.current === targetId ? dragDropPositionRef.current : null
+      let position: DropPosition = clientY < midpoint ? 'before' : 'after'
+      if (previousPosition === 'before' && clientY < midpoint + 8) position = 'before'
+      if (previousPosition === 'after' && clientY > midpoint - 8) position = 'after'
+      if (dragOverIdRef.current !== targetId || dragDropPositionRef.current !== position) {
+        dragOverIdRef.current = targetId
+        dragDropPositionRef.current = position
+        setDragOverId(targetId)
+        setDragDropPosition(position)
+      }
 
       const scrollContainer = hovered.closest('.custom-scrollbar') as HTMLElement | null
       if (scrollContainer) {
         const containerRect = scrollContainer.getBoundingClientRect()
         const scrollThreshold = 30
-        if (event.clientY < containerRect.top + scrollThreshold) scrollContainer.scrollTop -= 10
-        if (event.clientY > containerRect.bottom - scrollThreshold) scrollContainer.scrollTop += 10
+        if (clientY < containerRect.top + scrollThreshold) scrollContainer.scrollTop -= 10
+        if (clientY > containerRect.bottom - scrollThreshold) scrollContainer.scrollTop += 10
+      }
+    }
+
+    const handlePointerMove = (event: PointerEvent) => {
+      const drag = dragRef.current
+      if (!drag || event.pointerId !== drag.pointerId) return
+      event.preventDefault()
+      pendingPointerRef.current = { x: event.clientX, y: event.clientY }
+      if (dragFrameRef.current === null) {
+        dragFrameRef.current = requestAnimationFrame(() => {
+          dragFrameRef.current = null
+          const point = pendingPointerRef.current
+          if (point) updateDragPosition(point.x, point.y)
+        })
       }
     }
 
     const handlePointerUp = (event: PointerEvent) => {
       const drag = dragRef.current
       if (!drag || event.pointerId !== drag.pointerId) return
+      if (dragFrameRef.current !== null) {
+        cancelAnimationFrame(dragFrameRef.current)
+        dragFrameRef.current = null
+      }
+      const point = pendingPointerRef.current
+      // Once the gap is rendered, the latest pointer coordinate can be over that
+      // pointer-events-none gap instead of the target card. Preserve the target
+      // already detected by the last animation frame; only flush when none exists.
+      if (!dragOverIdRef.current && point) updateDragPosition(point.x, point.y)
       const targetId = dragOverIdRef.current
       const position = dragDropPositionRef.current
       if (targetId && targetId !== drag.id) moveToDropTargetRef.current(drag.id, targetId, position)
@@ -170,9 +219,22 @@ export default function FallbackSettingsTab({ draft, profiles, commitSettings }:
       window.removeEventListener('pointermove', handlePointerMove)
       window.removeEventListener('pointerup', handlePointerUp)
       window.removeEventListener('pointercancel', handlePointerCancel)
+      if (dragFrameRef.current !== null) {
+        cancelAnimationFrame(dragFrameRef.current)
+        dragFrameRef.current = null
+      }
       document.body.style.userSelect = previousUserSelect
     }
   }, [draggedId])
+  useLayoutEffect(() => {
+    if (!dragPreview) return
+    const point = pendingPointerRef.current ?? { x: dragPreview.startX, y: dragPreview.startY }
+    const previewElement = dragPreviewElementRef.current
+      ?? document.querySelector<HTMLElement>('[data-fallback-drag-preview]')
+    if (previewElement) {
+      previewElement.style.transform = `translate3d(${point.x - dragPreview.offsetX}px, ${point.y - dragPreview.offsetY}px, 0)`
+    }
+  }, [dragPreview?.id, dragOverId, dragDropPosition])
   return (
     <>
       <section className="space-y-5" aria-label="Fallback 配置">
@@ -206,20 +268,26 @@ export default function FallbackSettingsTab({ draft, profiles, commitSettings }:
           const checked = entry.enabled && !exhausted
           const showDropBefore = draggedId !== null && draggedId !== entry.profileId && dragOverId === entry.profileId && dragDropPosition === 'before'
           const showDropAfter = draggedId !== null && draggedId !== entry.profileId && dragOverId === entry.profileId && dragDropPosition === 'after'
+          const isDropTarget = showDropBefore || showDropAfter
           return (
-            <div key={entry.profileId}>
-              {showDropBefore && (
-                <div
-                  aria-hidden="true"
-                  className="mb-2.5 overflow-hidden rounded-xl border-2 border-dashed border-indigo-300 bg-indigo-50/50 animate-dropdown-down transition-[height,opacity,margin] duration-200 ease-out dark:border-indigo-400/60 dark:bg-indigo-500/10"
-                  style={{ height: draggedHeightRef.current, opacity: 1 }}
-                />
-              )}
+            <div key={entry.profileId} className="flex flex-col">
+              <div
+                aria-hidden="true"
+                className="pointer-events-none order-none overflow-hidden rounded-xl border-2 border-dashed border-indigo-300 bg-indigo-50/50 transition-[height,opacity,margin] duration-200 ease-out dark:border-indigo-400/60 dark:bg-indigo-500/10"
+                style={{
+                  height: isDropTarget ? draggedHeightRef.current : 0,
+                  opacity: isDropTarget ? 1 : 0,
+                  order: showDropBefore ? 0 : 2,
+                  marginTop: showDropAfter ? 10 : 0,
+                  marginBottom: showDropBefore ? 10 : 0,
+                  borderColor: isDropTarget ? undefined : 'transparent',
+                }}
+              />
               <div
                 ref={(element) => { entryElementsRef.current[entry.profileId] = element }}
                 data-fallback-entry={entry.profileId}
                 role="listitem"
-                className={`flex items-center gap-3 overflow-hidden rounded-xl border p-3 sm:p-4 transition-[height,opacity,transform,background-color,border-color,padding] duration-200 ease-out ${checked
+                className={`order-1 flex items-center gap-3 overflow-hidden rounded-xl border p-3 sm:p-4 transition-[height,opacity,transform,background-color,border-color,padding] duration-200 ease-out ${checked
                   ? 'border-indigo-400 dark:border-indigo-400/60 bg-indigo-50 dark:bg-indigo-500/10'
                   : 'border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/[0.02]'}`}
               >
@@ -256,13 +324,6 @@ export default function FallbackSettingsTab({ draft, profiles, commitSettings }:
                   onClick={() => move(entry.profileId, config.entries[entryIndex + 1].profileId)}>↓</button>
               </div>
               </div>
-              {showDropAfter && (
-                <div
-                  aria-hidden="true"
-                  className="mt-2.5 overflow-hidden rounded-xl border-2 border-dashed border-indigo-300 bg-indigo-50/50 animate-dropdown-down transition-[height,opacity,margin] duration-200 ease-out dark:border-indigo-400/60 dark:bg-indigo-500/10"
-                  style={{ height: draggedHeightRef.current, opacity: 1 }}
-                />
-              )}
             </div>
           )
         })}
@@ -279,10 +340,12 @@ export default function FallbackSettingsTab({ draft, profiles, commitSettings }:
       {dragPreview && createPortal(
         <div
           aria-hidden="true"
-          className="pointer-events-none fixed z-[180] flex items-center gap-3 rounded-xl border border-indigo-400 bg-indigo-50/95 p-3 shadow-2xl ring-2 ring-indigo-400/30 backdrop-blur dark:border-indigo-300/70 dark:bg-indigo-500/20"
+          data-fallback-drag-preview="true"
+          ref={(element) => { dragPreviewElementRef.current = element }}
+          className="pointer-events-none fixed z-[180] flex will-change-transform items-center gap-3 rounded-xl border border-indigo-400 bg-indigo-50/95 p-3 shadow-2xl ring-2 ring-indigo-400/30 backdrop-blur dark:border-indigo-300/70 dark:bg-indigo-500/20"
           style={{
-            left: dragPreview.x - dragPreview.offsetX,
-            top: dragPreview.y - dragPreview.offsetY,
+            left: 0,
+            top: 0,
             width: dragPreview.width,
             minHeight: dragPreview.height,
           }}
