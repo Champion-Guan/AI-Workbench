@@ -683,7 +683,14 @@ const localAspectRatioButtonsScript = `<script id="local-aspect-ratio-buttons-sc
 
 const localOfflineGuardsScript = `<script id="local-offline-guards-script">
   (() => {
-    const uploadState = { files: [], urls: [], parent: null, preview: null, input: null };
+    const uploadState = {
+      files: [],
+      urls: [],
+      parent: null,
+      preview: null,
+      input: null,
+      removeBackground: new Set(),
+    };
 
     const fileKey = (file) => [file.name, file.size, file.lastModified].join(":");
 
@@ -712,9 +719,89 @@ const localOfflineGuardsScript = `<script id="local-offline-guards-script">
       if (hint) hint.textContent = "支持多张图片";
     };
 
+    const closeRemoveBackgroundDialog = () => {
+      const dialog = document.querySelector(".local-remove-bg-confirm");
+      if (!dialog) return;
+      dialog.dataset.state = "closing";
+      window.setTimeout(() => {
+        if (dialog.dataset.state === "closing") dialog.remove();
+      }, 170);
+    };
+
+    const openRemoveBackgroundDialog = ({ file, index, button, item }) => {
+      closeRemoveBackgroundDialog();
+      const dialog = document.createElement("div");
+      dialog.className = "local-remove-bg-confirm";
+      dialog.dataset.state = "opening";
+      dialog.setAttribute("role", "dialog");
+      dialog.setAttribute("aria-modal", "true");
+      dialog.setAttribute("aria-label", "确认移除背景");
+
+      const backdrop = document.createElement("div");
+      backdrop.className = "local-remove-bg-confirm-backdrop";
+      const card = document.createElement("section");
+      card.className = "local-remove-bg-confirm-card";
+      const icon = document.createElement("div");
+      icon.className = "local-remove-bg-confirm-icon";
+      icon.setAttribute("aria-hidden", "true");
+      icon.textContent = "✦";
+      const copy = document.createElement("div");
+      copy.className = "local-remove-bg-confirm-copy";
+      const title = document.createElement("h2");
+      title.textContent = "移除背景？";
+      const message = document.createElement("p");
+      message.textContent = "确认要为图片“" + file.name + "”移除背景吗？";
+      copy.append(title, message);
+      const actions = document.createElement("div");
+      actions.className = "local-remove-bg-confirm-actions";
+      const cancel = document.createElement("button");
+      cancel.type = "button";
+      cancel.textContent = "取消";
+      const confirm = document.createElement("button");
+      confirm.type = "button";
+      confirm.className = "primary";
+      confirm.textContent = "确认移除";
+      actions.append(cancel, confirm);
+      card.append(icon, copy, actions);
+      dialog.append(backdrop, card);
+      document.body.append(dialog);
+
+      const cancelDialog = () => closeRemoveBackgroundDialog();
+      const confirmRemoval = () => {
+        uploadState.removeBackground.add(fileKey(file));
+        if (button?.isConnected) {
+          button.setAttribute("aria-pressed", "true");
+          button.textContent = "已选择移除背景";
+          item.dataset.removeBackground = "true";
+        } else {
+          renderLocalPreviews(uploadState.parent);
+        }
+        window.dispatchEvent(new CustomEvent("local-workbench-remove-background", {
+          detail: { file, index, selected: true },
+        }));
+        closeRemoveBackgroundDialog();
+      };
+
+      backdrop.addEventListener("click", cancelDialog);
+      cancel.addEventListener("click", cancelDialog);
+      confirm.addEventListener("click", confirmRemoval);
+      dialog.addEventListener("keydown", (event) => {
+        if (event.key === "Escape") {
+          event.preventDefault();
+          cancelDialog();
+        }
+      });
+      window.setTimeout(() => {
+        if (dialog.dataset.state === "opening") dialog.dataset.state = "open";
+        cancel.focus();
+      }, 20);
+    };
+
     const removeImage = (index) => {
+      const removedFile = uploadState.files[index];
       const removedUrl = uploadState.urls[index];
       if (removedUrl) URL.revokeObjectURL(removedUrl);
+      if (removedFile) uploadState.removeBackground.delete(fileKey(removedFile));
       uploadState.files.splice(index, 1);
       uploadState.urls.splice(index, 1);
       syncInputFiles();
@@ -751,24 +838,20 @@ const localOfflineGuardsScript = `<script id="local-offline-guards-script">
         const image = document.createElement("img");
         image.src = uploadState.urls[index];
         image.alt = file.name;
+        const backgroundSelected = uploadState.removeBackground.has(fileKey(file));
         const removeBackgroundButton = document.createElement("button");
         removeBackgroundButton.type = "button";
         removeBackgroundButton.className = "local-offline-upload-remove-background";
         removeBackgroundButton.setAttribute("aria-label", "移除背景 " + file.name);
-        removeBackgroundButton.setAttribute("aria-pressed", "false");
+        removeBackgroundButton.setAttribute("aria-pressed", String(backgroundSelected));
         removeBackgroundButton.title = "移除背景";
-        removeBackgroundButton.textContent = "移除背景";
+        removeBackgroundButton.textContent = backgroundSelected ? "已选择移除背景" : "移除背景";
         removeBackgroundButton.addEventListener("click", (event) => {
           event.preventDefault();
           event.stopPropagation();
-          const selected = removeBackgroundButton.getAttribute("aria-pressed") === "true";
-          removeBackgroundButton.setAttribute("aria-pressed", String(!selected));
-          removeBackgroundButton.textContent = selected ? "移除背景" : "已选择移除背景";
-          item.dataset.removeBackground = String(!selected);
-          window.dispatchEvent(new CustomEvent("local-workbench-remove-background", {
-            detail: { file, index, selected: !selected },
-          }));
+          openRemoveBackgroundDialog({ file, index, button: removeBackgroundButton, item });
         });
+        item.dataset.removeBackground = String(backgroundSelected);
         const removeButton = document.createElement("button");
         removeButton.type = "button";
         removeButton.className = "local-offline-upload-delete";
@@ -791,6 +874,7 @@ const localOfflineGuardsScript = `<script id="local-offline-guards-script">
       const button = input?.parentElement?.querySelector('button[aria-label="上传图片"]');
       if (!input || !button) return false;
       const parent = input.parentElement;
+      parent.classList.add("local-offline-upload-input-row");
       uploadState.parent = parent;
       uploadState.input = input;
       updateUploadHint(dialog);
@@ -1142,15 +1226,18 @@ const mvpNavigationStyle = `<style id="mvp-navigation">
     position: relative !important;
     width: 128px !important;
     height: 128px !important;
-    overflow: hidden !important;
+    overflow: visible !important;
     border: 1px solid var(--border) !important;
     border-radius: 12px !important;
     background: var(--card) !important;
   }
+  .local-offline-upload-input-row {
+    overflow: visible !important;
+  }
   .local-offline-upload-delete {
     position: absolute !important;
-    top: 2px !important;
-    right: 2px !important;
+    top: -10px !important;
+    right: -10px !important;
     z-index: 2 !important;
     display: inline-flex !important;
     width: 24px !important;
@@ -1214,6 +1301,15 @@ const mvpNavigationStyle = `<style id="mvp-navigation">
     -webkit-backdrop-filter: blur(5px) !important;
     backdrop-filter: blur(5px) !important;
     transition: background-color .16s ease, transform .16s ease !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    transform: translateY(4px) !important;
+  }
+  .local-offline-upload-item:hover .local-offline-upload-remove-background,
+  .local-offline-upload-item:focus-within .local-offline-upload-remove-background {
+    opacity: .94 !important;
+    pointer-events: auto !important;
+    transform: translateY(0) !important;
   }
   .local-offline-upload-remove-background:hover {
     background: rgb(8 8 9 / 90%) !important;
@@ -1231,6 +1327,122 @@ const mvpNavigationStyle = `<style id="mvp-navigation">
     height: 100% !important;
     object-fit: cover !important;
     border-radius: 11px !important;
+  }
+  .local-remove-bg-confirm {
+    --local-remove-bg-card: #fff;
+    --local-remove-bg-text: #17181a;
+    --local-remove-bg-muted: #72757a;
+    --local-remove-bg-border: rgba(20, 24, 32, .12);
+    position: fixed !important;
+    inset: 0 !important;
+    z-index: 1100 !important;
+    display: grid !important;
+    place-items: center !important;
+    padding: 20px !important;
+    pointer-events: auto !important;
+    color: var(--local-remove-bg-text) !important;
+    font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+  }
+  .local-remove-bg-confirm-backdrop {
+    position: absolute !important;
+    inset: 0 !important;
+    pointer-events: auto !important;
+    background: rgba(9, 10, 12, .34) !important;
+    -webkit-backdrop-filter: blur(8px) !important;
+    backdrop-filter: blur(8px) !important;
+  }
+  .local-remove-bg-confirm-card {
+    position: relative !important;
+    z-index: 1 !important;
+    display: grid !important;
+    grid-template-columns: auto minmax(0, 1fr) !important;
+    gap: 14px !important;
+    width: min(440px, calc(100vw - 40px)) !important;
+    box-sizing: border-box !important;
+    padding: 22px !important;
+    border: 1px solid var(--local-remove-bg-border) !important;
+    border-radius: 20px !important;
+    background: var(--local-remove-bg-card) !important;
+    box-shadow: 0 28px 80px rgb(0 0 0 / 28%) !important;
+    animation: local-remove-bg-confirm-in .18s cubic-bezier(.16, 1, .3, 1) both !important;
+    pointer-events: auto !important;
+  }
+  .local-remove-bg-confirm[data-state="closing"] .local-remove-bg-confirm-card {
+    animation: local-remove-bg-confirm-out .15s cubic-bezier(.4, 0, .2, 1) both !important;
+  }
+  .local-remove-bg-confirm-icon {
+    display: grid !important;
+    width: 38px !important;
+    height: 38px !important;
+    place-items: center !important;
+    border-radius: 12px !important;
+    background: rgba(37, 99, 235, .1) !important;
+    color: #2563eb !important;
+    font-size: 21px !important;
+  }
+  .local-remove-bg-confirm-copy h2 {
+    margin: 1px 0 6px !important;
+    color: var(--local-remove-bg-text) !important;
+    font-size: 17px !important;
+    line-height: 1.25 !important;
+  }
+  .local-remove-bg-confirm-copy p {
+    margin: 0 !important;
+    color: var(--local-remove-bg-muted) !important;
+    font-size: 13px !important;
+    line-height: 1.55 !important;
+    overflow-wrap: anywhere !important;
+  }
+  .local-remove-bg-confirm-actions {
+    grid-column: 2 !important;
+    display: flex !important;
+    justify-content: flex-end !important;
+    gap: 8px !important;
+    margin-top: 4px !important;
+  }
+  .local-remove-bg-confirm-actions button {
+    min-width: 72px !important;
+    padding: 9px 14px !important;
+    border: 1px solid var(--local-remove-bg-border) !important;
+    border-radius: 10px !important;
+    background: var(--local-remove-bg-card) !important;
+    color: var(--local-remove-bg-text) !important;
+    cursor: pointer !important;
+    font: 13px/1.2 inherit !important;
+    transition: background .14s ease, border-color .14s ease, transform .14s ease !important;
+  }
+  .local-remove-bg-confirm-actions button:hover {
+    background: var(--muted) !important;
+  }
+  .local-remove-bg-confirm-actions button:active {
+    transform: translateY(1px) !important;
+  }
+  .local-remove-bg-confirm-actions button.primary {
+    border-color: #2563eb !important;
+    background: #2563eb !important;
+    color: #fff !important;
+  }
+  .local-remove-bg-confirm-actions button.primary:hover {
+    border-color: #1d4ed8 !important;
+    background: #1d4ed8 !important;
+  }
+  html[data-workbench-theme="dark"] .local-remove-bg-confirm {
+    --local-remove-bg-card: #1d1e20;
+    --local-remove-bg-text: #f4f4f5;
+    --local-remove-bg-muted: #a1a1aa;
+    --local-remove-bg-border: rgba(255, 255, 255, .14);
+  }
+  html[data-workbench-theme="dark"] .local-remove-bg-confirm-icon {
+    background: rgba(96, 165, 250, .16) !important;
+    color: #93c5fd !important;
+  }
+  @keyframes local-remove-bg-confirm-in {
+    from { opacity: 0; transform: translateY(8px) scale(.97); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  @keyframes local-remove-bg-confirm-out {
+    from { opacity: 1; transform: translateY(0) scale(1); }
+    to { opacity: 0; transform: translateY(5px) scale(.98); }
   }
   [role="dialog"] button[data-local-offline-ready="true"]:focus,
   [role="dialog"] button[data-local-offline-ready="true"]:focus-visible {
