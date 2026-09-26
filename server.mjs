@@ -349,7 +349,11 @@ const localThemeAndUiStyle = `<style id="local-theme-and-ui-style">
     transition: background-color .16s ease, color .16s ease, transform .16s ease !important;
   }
   .local-workbench-theme-button {
-    margin-left: auto !important;
+    position: fixed !important;
+    left: 76px !important;
+    bottom: 18px !important;
+    z-index: 40 !important;
+    margin: 0 !important;
   }
   .local-workbench-settings-button {
     margin-left: 8px !important;
