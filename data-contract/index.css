@@ -39,7 +39,7 @@ html[data-workbench-theme="dark"] #guan-data-contract-root {
    * controls while it is open.
    */
   position: relative;
-  z-index: 1;
+  z-index: 10;
 }
 
 .guan-dc-active-sheet-label {
@@ -54,7 +54,7 @@ html[data-workbench-theme="dark"] #guan-data-contract-root {
   box-sizing: border-box;
   width: min(250px, 26vw);
   min-width: 160px;
-  z-index: 1;
+  z-index: 10;
 }
 
 .guan-dc-file-trigger {

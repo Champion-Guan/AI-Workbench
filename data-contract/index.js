@@ -908,7 +908,7 @@ window.GuanWorkbenchData = api;
 
 const css = document.createElement("link");
 css.rel = "stylesheet";
-css.href = "/data-contract/index.css?contract-v11-20260926";
+css.href = "/data-contract/index.css?contract-v12-20260926";
 document.head.appendChild(css);
 
 function escapeHtml(value) {
