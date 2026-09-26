@@ -1116,9 +1116,9 @@ const mvpNavigationStyle = `<style id="mvp-navigation">
     color: var(--primary-foreground) !important;
   }
   .local-offline-upload-preview {
-    display: flex !important;
-    flex-wrap: wrap !important;
-    gap: 8px !important;
+    /* Let preview tiles and the upload trigger share the same flex row. If
+       the last row has room, the trigger therefore stays on its right. */
+    display: contents !important;
   }
   .local-offline-upload-item {
     position: relative !important;
