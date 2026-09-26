@@ -282,7 +282,23 @@ export default function FallbackSettingsTab({ draft, profiles, commitSettings }:
                   marginBottom: showDropBefore ? 10 : 0,
                   borderColor: isDropTarget ? undefined : 'transparent',
                 }}
-              />
+              >
+                {isDropTarget && dragPreview && (
+                  <div className="flex h-full min-w-0 items-center gap-3 px-3 sm:px-4">
+                    <span className="shrink-0 rounded-md bg-indigo-100 px-2 py-1 text-[11px] font-medium text-indigo-600 dark:bg-indigo-400/20 dark:text-indigo-200">
+                      正在移动
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm font-medium text-indigo-700 dark:text-indigo-200">
+                        {dragPreview.label}
+                      </span>
+                      <span className="mt-0.5 block truncate text-xs text-indigo-500/80 dark:text-indigo-300/80">
+                        {dragPreview.model} · {dragPreview.apiMode}
+                      </span>
+                    </span>
+                  </div>
+                )}
+              </div>
               <div
                 ref={(element) => { entryElementsRef.current[entry.profileId] = element }}
                 data-fallback-entry={entry.profileId}
@@ -352,7 +368,10 @@ export default function FallbackSettingsTab({ draft, profiles, commitSettings }:
         >
           <DragHandleIcon className="h-4 w-4 shrink-0 text-indigo-500" />
           <span className="min-w-0 flex-1">
-            <span className="block break-words text-sm font-medium text-gray-900 dark:text-gray-100">{dragPreview.label}</span>
+            <span className="flex items-center gap-2">
+              <span className="shrink-0 rounded-md bg-indigo-100 px-1.5 py-0.5 text-[10px] font-medium text-indigo-600 dark:bg-indigo-400/20 dark:text-indigo-200">拖动中</span>
+              <span className="min-w-0 truncate text-sm font-medium text-gray-900 dark:text-gray-100">{dragPreview.label}</span>
+            </span>
             <span className="mt-1 block break-all text-xs text-gray-500 dark:text-gray-400">
               {dragPreview.model} · {dragPreview.apiMode} · {dragPreview.baseUrl}
             </span>
