@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState, type DragEvent } from 'react'
+import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
+import { createPortal } from 'react-dom'
 import type { ApiProfile, AppSettings, ImageApiFallbackSettings } from '../../types'
 import { getDefaultImageApiFallback, moveImageFallbackEntry, normalizeImageApiFallback } from '../../lib/imageApiFallbackSettings'
 import { isImageProviderExhausted, resetImageProviderExhausted } from '../../lib/imageApiFallback'
@@ -10,11 +11,29 @@ export default function FallbackSettingsTab({ draft, profiles, commitSettings }:
   profiles: ApiProfile[]
   commitSettings: (settings: AppSettings) => void
 }) {
+  type DropPosition = 'before' | 'after' | null
+  type DragPreview = {
+    id: string
+    label: string
+    model: string
+    apiMode: string
+    baseUrl: string
+    width: number
+    height: number
+    x: number
+    y: number
+    offsetX: number
+    offsetY: number
+  }
   const [draggedId, setDraggedId] = useState<string | null>(null)
   const [dragOverId, setDragOverId] = useState<string | null>(null)
-  const [dragDropPosition, setDragDropPosition] = useState<'before' | 'after' | null>(null)
+  const [dragDropPosition, setDragDropPosition] = useState<DropPosition>(null)
+  const [dragPreview, setDragPreview] = useState<DragPreview | null>(null)
   const draggedHeightRef = useRef(96)
-  const dragDropPositionRef = useRef<'before' | 'after' | null>(null)
+  const dragDropPositionRef = useRef<DropPosition>(null)
+  const dragOverIdRef = useRef<string | null>(null)
+  const dragRef = useRef<{ id: string; pointerId: number } | null>(null)
+  const moveToDropTargetRef = useRef<(sourceId: string, targetId: string, position: DropPosition) => void>(() => {})
   const entryElementsRef = useRef<Record<string, HTMLDivElement | null>>({})
   const [, setRevision] = useState(0)
   const [notice, setNotice] = useState('')
@@ -27,17 +46,6 @@ export default function FallbackSettingsTab({ draft, profiles, commitSettings }:
       window.removeEventListener('image-provider-exhausted', update)
     }
   }, [])
-  useEffect(() => {
-    if (!draggedId) return
-    const handleGlobalDragEnd = () => {
-      setDraggedId(null)
-      setDragOverId(null)
-      setDragDropPosition(null)
-      dragDropPositionRef.current = null
-    }
-    window.addEventListener('dragend', handleGlobalDragEnd)
-    return () => window.removeEventListener('dragend', handleGlobalDragEnd)
-  }, [draggedId])
   const config = normalizeImageApiFallback(draft.imageApiFallback, profiles) ?? getDefaultImageApiFallback(profiles)
   const enabledProfiles = config.entries.flatMap((entry) => {
     const profile = profiles.find((candidate) => candidate.id === entry.profileId)
@@ -52,46 +60,13 @@ export default function FallbackSettingsTab({ draft, profiles, commitSettings }:
   }
 
   const clearDragState = () => {
+    dragRef.current = null
+    dragOverIdRef.current = null
     setDraggedId(null)
     setDragOverId(null)
     setDragDropPosition(null)
     dragDropPositionRef.current = null
-  }
-
-  const handleDragStart = (event: DragEvent<HTMLButtonElement>, profileId: string) => {
-    const card = entryElementsRef.current[profileId]
-    if (card) {
-      const rect = card.getBoundingClientRect()
-      draggedHeightRef.current = rect.height
-      event.dataTransfer.setDragImage(card, Math.max(12, event.clientX - rect.left), Math.max(12, event.clientY - rect.top))
-    }
-    event.dataTransfer.effectAllowed = 'move'
-    event.dataTransfer.setData('text/plain', profileId)
-    setDraggedId(profileId)
-    setDragOverId(null)
-    setDragDropPosition(null)
-    dragDropPositionRef.current = null
-  }
-
-  const handleDragOver = (event: DragEvent<HTMLDivElement>, targetId: string) => {
-    if (!draggedId || draggedId === targetId) return
-    event.preventDefault()
-    event.dataTransfer.dropEffect = 'move'
-
-    const targetElement = event.currentTarget
-    const rect = targetElement.getBoundingClientRect()
-    const position = event.clientY < rect.top + rect.height / 2 ? 'before' : 'after'
-    dragDropPositionRef.current = position
-    setDragOverId((current) => current === targetId ? current : targetId)
-    setDragDropPosition((current) => current === position ? current : position)
-
-    const scrollContainer = targetElement.closest('.custom-scrollbar') as HTMLElement | null
-    if (scrollContainer) {
-      const containerRect = scrollContainer.getBoundingClientRect()
-      const scrollThreshold = 30
-      if (event.clientY < containerRect.top + scrollThreshold) scrollContainer.scrollTop -= 10
-      if (event.clientY > containerRect.bottom - scrollThreshold) scrollContainer.scrollTop += 10
-    }
+    setDragPreview(null)
   }
 
   const moveToDropTarget = (sourceId: string, targetId: string, position: 'before' | 'after' | null) => {
@@ -107,16 +82,100 @@ export default function FallbackSettingsTab({ draft, profiles, commitSettings }:
     nextEntries.splice(Math.max(0, Math.min(nextIndex, nextEntries.length)), 0, movedEntry)
     save({ ...config, entries: nextEntries })
   }
+  moveToDropTargetRef.current = moveToDropTarget
 
-  const handleDrop = (event: DragEvent<HTMLDivElement>, targetId: string) => {
+  const handlePointerDown = (event: ReactPointerEvent<HTMLButtonElement>, profileId: string, profile: ApiProfile) => {
+    if (event.pointerType === 'mouse' && event.button !== 0) return
+    const card = entryElementsRef.current[profileId]
+    if (!card) return
+    const rect = card.getBoundingClientRect()
     event.preventDefault()
     event.stopPropagation()
-    const sourceId = event.dataTransfer.getData('text/plain') || draggedId
-    if (sourceId) moveToDropTarget(sourceId, targetId, dragDropPositionRef.current ?? dragDropPosition)
-    clearDragState()
+    draggedHeightRef.current = rect.height
+    dragRef.current = { id: profileId, pointerId: event.pointerId }
+    dragOverIdRef.current = null
+    dragDropPositionRef.current = null
+    setDraggedId(profileId)
+    setDragOverId(null)
+    setDragDropPosition(null)
+    setDragPreview({
+      id: profileId,
+      label: profile.name,
+      model: profile.model,
+      apiMode: profile.apiMode === 'responses' ? 'Responses API' : 'Images API',
+      baseUrl: profile.baseUrl,
+      width: rect.width,
+      height: rect.height,
+      x: event.clientX,
+      y: event.clientY,
+      offsetX: event.clientX - rect.left,
+      offsetY: event.clientY - rect.top,
+    })
   }
+
+  useEffect(() => {
+    if (!dragRef.current) return
+    const previousUserSelect = document.body.style.userSelect
+    document.body.style.userSelect = 'none'
+
+    const handlePointerMove = (event: PointerEvent) => {
+      const drag = dragRef.current
+      if (!drag || event.pointerId !== drag.pointerId) return
+      event.preventDefault()
+      setDragPreview((current) => current ? { ...current, x: event.clientX, y: event.clientY } : current)
+
+      const hovered = document.elementFromPoint(event.clientX, event.clientY)?.closest('[data-fallback-entry]') as HTMLElement | null
+      const targetId = hovered?.getAttribute('data-fallback-entry')
+      if (!hovered || !targetId || targetId === drag.id) {
+        dragOverIdRef.current = null
+        dragDropPositionRef.current = null
+        setDragOverId(null)
+        setDragDropPosition(null)
+        return
+      }
+
+      const rect = hovered.getBoundingClientRect()
+      const position: DropPosition = event.clientY < rect.top + rect.height / 2 ? 'before' : 'after'
+      dragOverIdRef.current = targetId
+      dragDropPositionRef.current = position
+      setDragOverId((current) => current === targetId ? current : targetId)
+      setDragDropPosition((current) => current === position ? current : position)
+
+      const scrollContainer = hovered.closest('.custom-scrollbar') as HTMLElement | null
+      if (scrollContainer) {
+        const containerRect = scrollContainer.getBoundingClientRect()
+        const scrollThreshold = 30
+        if (event.clientY < containerRect.top + scrollThreshold) scrollContainer.scrollTop -= 10
+        if (event.clientY > containerRect.bottom - scrollThreshold) scrollContainer.scrollTop += 10
+      }
+    }
+
+    const handlePointerUp = (event: PointerEvent) => {
+      const drag = dragRef.current
+      if (!drag || event.pointerId !== drag.pointerId) return
+      const targetId = dragOverIdRef.current
+      const position = dragDropPositionRef.current
+      if (targetId && targetId !== drag.id) moveToDropTargetRef.current(drag.id, targetId, position)
+      clearDragState()
+    }
+
+    const handlePointerCancel = (event: PointerEvent) => {
+      if (dragRef.current?.pointerId === event.pointerId) clearDragState()
+    }
+
+    window.addEventListener('pointermove', handlePointerMove, { passive: false })
+    window.addEventListener('pointerup', handlePointerUp)
+    window.addEventListener('pointercancel', handlePointerCancel)
+    return () => {
+      window.removeEventListener('pointermove', handlePointerMove)
+      window.removeEventListener('pointerup', handlePointerUp)
+      window.removeEventListener('pointercancel', handlePointerCancel)
+      document.body.style.userSelect = previousUserSelect
+    }
+  }, [draggedId])
   return (
-    <section className="space-y-5" aria-label="Fallback 配置">
+    <>
+      <section className="space-y-5" aria-label="Fallback 配置">
       <div>
         <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">失败自动切换</h3>
         <p className="mt-2 text-sm leading-relaxed text-gray-500 dark:text-gray-400">
@@ -140,12 +199,11 @@ export default function FallbackSettingsTab({ draft, profiles, commitSettings }:
         >恢复默认顺序</button>
       </div>
       <div className="space-y-2.5" role="list" aria-label="中转站重试顺序">
-        {config.entries.map((entry) => {
+        {config.entries.filter((entry) => entry.profileId !== draggedId).map((entry) => {
           const profile = profiles.find((candidate) => candidate.id === entry.profileId)!
           const entryIndex = config.entries.findIndex((candidate) => candidate.profileId === entry.profileId)
           const exhausted = isImageProviderExhausted(profile)
           const checked = entry.enabled && !exhausted
-          const isDraggingEntry = draggedId === entry.profileId
           const showDropBefore = draggedId !== null && draggedId !== entry.profileId && dragOverId === entry.profileId && dragDropPosition === 'before'
           const showDropAfter = draggedId !== null && draggedId !== entry.profileId && dragOverId === entry.profileId && dragDropPosition === 'after'
           return (
@@ -164,16 +222,10 @@ export default function FallbackSettingsTab({ draft, profiles, commitSettings }:
                 className={`flex items-center gap-3 overflow-hidden rounded-xl border p-3 sm:p-4 transition-[height,opacity,transform,background-color,border-color,padding] duration-200 ease-out ${checked
                   ? 'border-indigo-400 dark:border-indigo-400/60 bg-indigo-50 dark:bg-indigo-500/10'
                   : 'border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/[0.02]'}`}
-                style={isDraggingEntry
-                  ? { height: 0, minHeight: 0, paddingTop: 0, paddingBottom: 0, borderWidth: 0, opacity: 0 }
-                  : undefined}
-                onDragOver={(event) => handleDragOver(event, entry.profileId)}
-                onDrop={(event) => handleDrop(event, entry.profileId)}
               >
-                <button type="button" draggable aria-label={`拖动排序 ${profile.name}`} title="拖动调整顺序"
-                  className="text-gray-400 cursor-grab active:cursor-grabbing p-1 shrink-0"
-                  onDragStart={(event) => handleDragStart(event, entry.profileId)}
-                  onDragEnd={clearDragState}
+                <button type="button" aria-label={`拖动排序 ${profile.name}`} title="拖动调整顺序"
+                  className="touch-none select-none text-gray-400 cursor-grab active:cursor-grabbing p-1 shrink-0"
+                  onPointerDown={(event) => handlePointerDown(event, entry.profileId, profile)}
                 ><DragHandleIcon className="w-4 h-4" /></button>
               <span className="text-xs tabular-nums text-gray-400 shrink-0">{entryIndex + 1}</span>
               <Checkbox checked={checked} aria-label={`启用 ${profile.name}`} className="min-w-0 flex-1"
@@ -223,6 +275,28 @@ export default function FallbackSettingsTab({ draft, profiles, commitSettings }:
           : '自动切换已关闭，仅使用当前 API 配置。'}
       </div>
       <p role="status" className="text-xs text-gray-500 dark:text-gray-400">{notice || '设置自动保存在当前浏览器，不影响正在生成的任务。'}</p>
-    </section>
+      </section>
+      {dragPreview && createPortal(
+        <div
+          aria-hidden="true"
+          className="pointer-events-none fixed z-[180] flex items-center gap-3 rounded-xl border border-indigo-400 bg-indigo-50/95 p-3 shadow-2xl ring-2 ring-indigo-400/30 backdrop-blur dark:border-indigo-300/70 dark:bg-indigo-500/20"
+          style={{
+            left: dragPreview.x - dragPreview.offsetX,
+            top: dragPreview.y - dragPreview.offsetY,
+            width: dragPreview.width,
+            minHeight: dragPreview.height,
+          }}
+        >
+          <DragHandleIcon className="h-4 w-4 shrink-0 text-indigo-500" />
+          <span className="min-w-0 flex-1">
+            <span className="block break-words text-sm font-medium text-gray-900 dark:text-gray-100">{dragPreview.label}</span>
+            <span className="mt-1 block break-all text-xs text-gray-500 dark:text-gray-400">
+              {dragPreview.model} · {dragPreview.apiMode} · {dragPreview.baseUrl}
+            </span>
+          </span>
+        </div>,
+        document.body,
+      )}
+    </>
   )
 }
