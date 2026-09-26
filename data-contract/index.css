@@ -156,6 +156,23 @@ html[data-workbench-theme="dark"] #guan-data-contract-root {
   transition: background .14s ease, color .14s ease;
 }
 
+.guan-dc-file-option-row {
+  display: flex;
+  align-items: stretch;
+  gap: 3px;
+  min-width: 0;
+  border-radius: 12px;
+}
+
+.guan-dc-file-option-row:hover {
+  background: rgba(20, 24, 32, .055);
+}
+
+.guan-dc-file-option-row .guan-dc-file-option {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
 .guan-dc-file-option:hover {
   background: rgba(20, 24, 32, .055);
 }
@@ -183,11 +200,198 @@ html[data-workbench-theme="dark"] #guan-data-contract-root {
   stroke-width: 2.2;
 }
 
+.guan-dc-file-delete {
+  display: inline-flex;
+  flex: 0 0 34px;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  min-height: 34px;
+  align-self: center;
+  margin-right: 4px;
+  padding: 0;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: #8b8f96;
+  cursor: pointer;
+  transition: background-color .14s ease, color .14s ease, transform .14s ease;
+}
+
+.guan-dc-file-delete:hover {
+  background: rgba(220, 38, 38, .11);
+  color: #c62828;
+}
+
+.guan-dc-file-delete:active {
+  transform: translateY(1px);
+}
+
+.guan-dc-file-delete svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
+  pointer-events: none;
+}
+
 .guan-dc-file-empty {
   padding: 16px 12px;
   color: var(--dc-muted);
   font-size: 13px;
   text-align: center;
+}
+
+.guan-dc-confirm {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  /*
+   * The archived Radix dialog sets `body { pointer-events: none; }` while
+   * its own modal is open. This confirmation layer is mounted directly under
+   * body, so it must explicitly restore hit testing or its buttons/backdrop
+   * become visually present but unc​lickable.
+   */
+  pointer-events: auto;
+  color: var(--dc-text);
+  font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.guan-dc-confirm-backdrop {
+  position: absolute;
+  inset: 0;
+  pointer-events: auto;
+  background: rgba(9, 10, 12, .32);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.guan-dc-confirm-card {
+  position: relative;
+  pointer-events: auto;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 14px;
+  width: min(440px, calc(100vw - 40px));
+  box-sizing: border-box;
+  padding: 22px;
+  border: 1px solid var(--dc-border);
+  border-radius: 20px;
+  background: var(--dc-bg);
+  box-shadow: 0 28px 80px rgba(0, 0, 0, .28);
+  animation: guan-dc-confirm-in .18s cubic-bezier(.16, 1, .3, 1) both;
+}
+
+.guan-dc-confirm[data-state="closing"] .guan-dc-confirm-card {
+  animation: guan-dc-confirm-out .15s cubic-bezier(.4, 0, .2, 1) both;
+}
+
+.guan-dc-confirm-icon {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  background: rgba(220, 38, 38, .1);
+  color: #c62828;
+}
+
+.guan-dc-confirm-icon svg {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
+}
+
+.guan-dc-confirm-copy h2 {
+  margin: 1px 0 6px;
+  color: var(--dc-text);
+  font-size: 17px;
+  line-height: 1.25;
+}
+
+.guan-dc-confirm-copy p {
+  margin: 0;
+  color: var(--dc-muted);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.guan-dc-confirm-copy strong {
+  color: var(--dc-text);
+  font-weight: 600;
+}
+
+.guan-dc-confirm-actions {
+  grid-column: 2;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.guan-dc-confirm-actions button {
+  min-width: 72px;
+  padding: 9px 14px;
+  border: 1px solid var(--dc-border);
+  border-radius: 10px;
+  background: var(--dc-bg);
+  color: var(--dc-text);
+  cursor: pointer;
+  font: 13px/1.2 inherit;
+  transition: background .14s ease, border-color .14s ease, transform .14s ease;
+}
+
+.guan-dc-confirm-actions button:hover {
+  background: var(--dc-soft);
+}
+
+.guan-dc-confirm-actions button:active {
+  transform: translateY(1px);
+}
+
+.guan-dc-confirm-actions button.danger {
+  border-color: #c62828;
+  background: #c62828;
+  color: #fff;
+}
+
+.guan-dc-confirm-actions button.danger:hover {
+  border-color: #a91f1f;
+  background: #a91f1f;
+}
+
+.guan-dc-confirm-actions button:disabled {
+  cursor: wait;
+  opacity: .58;
+}
+
+html[data-workbench-theme="dark"] .guan-dc-confirm-backdrop {
+  background: rgba(0, 0, 0, .48);
+}
+
+html[data-workbench-theme="dark"] .guan-dc-confirm-icon {
+  background: rgba(248, 113, 113, .14);
+  color: #f87171;
+}
+
+@keyframes guan-dc-confirm-in {
+  from { opacity: 0; transform: translateY(8px) scale(.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes guan-dc-confirm-out {
+  from { opacity: 1; transform: translateY(0) scale(1); }
+  to { opacity: 0; transform: translateY(5px) scale(.98); }
 }
 
 @keyframes guan-dc-dropdown-down {
@@ -281,6 +485,19 @@ html[data-workbench-theme="dark"] .guan-dc-file-option:hover {
 
 html[data-workbench-theme="dark"] .guan-dc-file-option[aria-selected="true"] {
   background: rgba(255, 255, 255, .12);
+}
+
+html[data-workbench-theme="dark"] .guan-dc-file-option-row:hover {
+  background: rgba(255, 255, 255, .08);
+}
+
+html[data-workbench-theme="dark"] .guan-dc-file-delete {
+  color: #a1a1aa;
+}
+
+html[data-workbench-theme="dark"] .guan-dc-file-delete:hover {
+  background: rgba(248, 113, 113, .15);
+  color: #f87171;
 }
 
 html[data-workbench-theme="dark"] .guan-dc-file-chevron {
@@ -758,6 +975,43 @@ html[data-workbench-theme="dark"] .guan-dc-file-chevron {
   color: var(--dc-muted);
   font-size: 10px;
   line-height: 1.45;
+}
+
+.guan-dc-prompt-detected,
+.guan-dc-prompt-hint {
+  margin: 0;
+  padding: 10px 11px;
+  border: 1px solid rgba(99, 102, 241, .22);
+  border-radius: 11px;
+  background: rgba(99, 102, 241, .07);
+  color: var(--dc-text);
+  font-size: 11px;
+  line-height: 1.55;
+}
+
+.guan-dc-prompt-detected strong {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 12px;
+}
+
+.guan-dc-prompt-detected p {
+  margin: 3px 0 0;
+}
+
+.guan-dc-prompt-hint {
+  color: var(--dc-muted);
+}
+
+.guan-dc-prompt-hint b {
+  color: var(--dc-text);
+  font-weight: 600;
+}
+
+html[data-workbench-theme="dark"] .guan-dc-prompt-detected,
+html[data-workbench-theme="dark"] .guan-dc-prompt-hint {
+  border-color: rgba(129, 140, 248, .34);
+  background: rgba(99, 102, 241, .16);
 }
 
 .guan-dc-sheet-label {

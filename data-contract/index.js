@@ -12,6 +12,7 @@ const MAX_IMPORT_COLUMNS = 200;
 // files from exhausting the browser tab.
 const MAX_IMPORT_FILE_BYTES = 100 * 1024 * 1024;
 let pendingExcelImport = null;
+let activeExcelDeleteDialog = null;
 
 function timestamp() {
   return new Date().toISOString();
@@ -811,6 +812,63 @@ const api = {
     return state.workspace.activeProductSetId;
   })),
   createProductSet: (input) => clone(mutate((state) => createProductSetInternal(state, input))),
+  deleteProductSet: (productSetId) => {
+    const result = mutate((state) => {
+      const productSet = requireById(state.productSets, productSetId, "ProductSet");
+      const productIds = new Set(
+        state.products
+          .filter((product) => product.productSetId === productSet.id)
+          .map((product) => product.id)
+      );
+      const slotIds = new Set(
+        state.slots
+          .filter((slot) => productIds.has(slot.productId))
+          .map((slot) => slot.id)
+      );
+      const taskIds = new Set(
+        state.tasks
+          .filter((task) => productIds.has(task.productId))
+          .map((task) => task.id)
+      );
+      const runIds = new Set(
+        state.runs
+          .filter((run) => taskIds.has(run.taskId) || productIds.has(run.productId))
+          .map((run) => run.id)
+      );
+
+      state.productSets = state.productSets.filter((set) => set.id !== productSet.id);
+      state.products = state.products.filter((product) => !productIds.has(product.id));
+      state.importRecords = state.importRecords.filter((record) => record.productSetId !== productSet.id);
+      state.slots = state.slots.filter((slot) => !slotIds.has(slot.id) && !productIds.has(slot.productId));
+      state.prompts = state.prompts.filter((prompt) => !productIds.has(prompt.productId));
+      state.tasks = state.tasks.filter((task) => !taskIds.has(task.id) && !productIds.has(task.productId));
+      state.runs = state.runs.filter((run) => !runIds.has(run.id) && !taskIds.has(run.taskId));
+      state.providerAttempts = state.providerAttempts.filter((attempt) => !runIds.has(attempt.runId));
+      state.assets = state.assets.filter((asset) => (
+        !productIds.has(asset.productId)
+        && !taskIds.has(asset.taskId)
+        && !runIds.has(asset.runId)
+      ));
+
+      const nextActive = state.productSets
+        .slice()
+        .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)))[0]?.id || null;
+      state.workspace.activeProductSetId = state.workspace.activeProductSetId === productSet.id
+        ? nextActive
+        : (state.productSets.some((set) => set.id === state.workspace.activeProductSetId)
+          ? state.workspace.activeProductSetId
+          : nextActive);
+      return {
+        deletedProductSetId: productSet.id,
+        deletedFileName: productSet.source?.fileName || "未命名产品表",
+        activeProductSetId: state.workspace.activeProductSetId,
+      };
+    });
+    window.dispatchEvent(new CustomEvent(ACTIVE_PRODUCT_SET_EVENT, {
+      detail: { productSetId: result.activeProductSetId },
+    }));
+    return clone(result);
+  },
   createProduct: (input) => clone(mutate((state) => {
     const product = createProductInternal(state, input);
     const set = requireById(state.productSets, input.productSetId, "ProductSet");
@@ -912,13 +970,78 @@ window.GuanWorkbenchData = api;
 
 const css = document.createElement("link");
 css.rel = "stylesheet";
-css.href = "/data-contract/index.css?contract-v12-20260926";
+css.href = "/data-contract/index.css?contract-v13-20260926";
 document.head.appendChild(css);
 
 function escapeHtml(value) {
   return String(value ?? "").replace(/[&<>"']/g, (char) => ({
     "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
   }[char]));
+}
+
+function closeExcelDeleteDialog() {
+  const dialog = document.querySelector(".guan-dc-confirm");
+  if (!dialog) {
+    activeExcelDeleteDialog = null;
+    return;
+  }
+  dialog.dataset.state = "closing";
+  window.setTimeout(() => {
+    if (dialog.dataset.state === "closing") dialog.remove();
+  }, 170);
+  activeExcelDeleteDialog = null;
+}
+
+function openExcelDeleteDialog({ fileName, onConfirm }) {
+  closeExcelDeleteDialog();
+  const dialog = document.createElement("div");
+  dialog.className = "guan-dc-confirm";
+  dialog.dataset.state = "opening";
+  dialog.setAttribute("role", "dialog");
+  dialog.setAttribute("aria-modal", "true");
+  dialog.setAttribute("aria-labelledby", "guan-dc-confirm-title");
+  dialog.innerHTML = `
+    <div class="guan-dc-confirm-backdrop" data-confirm-cancel></div>
+    <section class="guan-dc-confirm-card" role="document">
+      <div class="guan-dc-confirm-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6.5 7l.8 12h9.4l.8-12M9 7l1-3h4l1 3"></path></svg>
+      </div>
+      <div class="guan-dc-confirm-copy">
+        <h2 id="guan-dc-confirm-title">删除 Excel？</h2>
+        <p>确定删除“<strong>${escapeHtml(fileName)}</strong>”吗？关联的产品、任务和素材记录也会从本地数据中删除。</p>
+      </div>
+      <div class="guan-dc-confirm-actions">
+        <button type="button" data-confirm-cancel>取消</button>
+        <button type="button" class="danger" data-confirm-submit>删除</button>
+      </div>
+    </section>
+  `;
+  document.body.append(dialog);
+  activeExcelDeleteDialog = dialog;
+  const cancel = () => closeExcelDeleteDialog();
+  dialog.querySelectorAll("[data-confirm-cancel]").forEach((element) => element.addEventListener("click", cancel));
+  dialog.querySelector("[data-confirm-submit]")?.addEventListener("click", () => {
+    const submit = dialog.querySelector("[data-confirm-submit]");
+    if (!submit || submit.disabled) return;
+    submit.disabled = true;
+    try {
+      onConfirm();
+      closeExcelDeleteDialog();
+    } catch (error) {
+      submit.disabled = false;
+      alert(error instanceof Error ? error.message : String(error));
+    }
+  });
+  dialog.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      cancel();
+    }
+  });
+  window.setTimeout(() => {
+    if (dialog.dataset.state === "opening") dialog.dataset.state = "open";
+    dialog.querySelector("[data-confirm-submit]")?.focus();
+  }, 20);
 }
 
 function renderHeaderControls(root) {
@@ -961,10 +1084,15 @@ function renderHeaderControls(root) {
           const sheetName = set.source?.sheetName;
           const label = `${fileName}${sheetName ? ` · ${sheetName}` : ""}`;
           return `
-            <button type="button" class="guan-dc-file-option" role="option" aria-selected="${set.id === activeId}" data-value="${escapeHtml(set.id)}">
-              <span class="guan-dc-file-option-label">${escapeHtml(label)}</span>
-              ${set.id === activeId ? `<svg class="guan-dc-file-check" viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4L19 6"></path></svg>` : ""}
-            </button>
+            <div class="guan-dc-file-option-row">
+              <button type="button" class="guan-dc-file-option" role="option" aria-selected="${set.id === activeId}" data-value="${escapeHtml(set.id)}">
+                <span class="guan-dc-file-option-label">${escapeHtml(label)}</span>
+                ${set.id === activeId ? `<svg class="guan-dc-file-check" viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4L19 6"></path></svg>` : ""}
+              </button>
+              <button type="button" class="guan-dc-file-delete" data-delete-product-set="${escapeHtml(set.id)}" aria-label="删除 ${escapeHtml(fileName)}" title="删除 Excel">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6.5 7l.8 12h9.4l.8-12M9 7l1-3h4l1 3"></path></svg>
+              </button>
+            </div>
           `;
         }).join("") || `<div class="guan-dc-file-empty">暂无已上传 Excel</div>`}
       </div>
@@ -1031,6 +1159,23 @@ function renderHeaderControls(root) {
         } catch (error) {
           alert(error instanceof Error ? error.message : String(error));
         }
+        return;
+      }
+      const deleteButton = target.closest(".guan-dc-file-delete");
+      if (deleteButton) {
+        event.preventDefault();
+        event.stopPropagation();
+        const productSetId = deleteButton.dataset.deleteProductSet;
+        const productSet = readState().productSets.find((set) => set.id === productSetId);
+        if (!productSet) return;
+        const fileName = productSet.source?.fileName || "未命名产品表";
+        openExcelDeleteDialog({
+          fileName,
+          onConfirm: () => {
+            closeMenu(false);
+            api.deleteProductSet(productSetId);
+          },
+        });
         return;
       }
       if (target.closest(".guan-dc-header-upload")) {
@@ -1157,6 +1302,7 @@ function renderExcelPreview(pending) {
     </section>`;
   }
   const parsed = pending.parsed;
+  const isPromptTemplate = parsed.kind === "prompt-template";
   const visibleHeaders = parsed.headers.slice(0, 8);
   const previewRows = parsed.rows.slice(0, 6);
   const sheetOptions = pending.sheetNames.map((name) =>
@@ -1175,21 +1321,38 @@ function renderExcelPreview(pending) {
   return `
     <section class="guan-dc-excel-preview">
       <div class="guan-dc-excel-title">
-        <div><strong>导入预览</strong><span title="${escapeHtml(pending.fileName)}">${escapeHtml(pending.fileName)}</span></div>
+        <div><strong>${isPromptTemplate ? "提示词预览" : "导入预览"}</strong><span title="${escapeHtml(pending.fileName)}">${escapeHtml(pending.fileName)}</span></div>
         <button type="button" data-dc-action="clear-excel" aria-label="取消 Excel 导入">×</button>
       </div>
-      <div class="guan-dc-excel-meta">${parsed.rows.length} 个产品行 · ${parsed.headers.length} 列 · ${parsed.headerRowNumber} 行为表头</div>
-      ${pending.sheetNames.length > 1 ? `<label class="guan-dc-sheet-label">工作表<select data-dc-input="sheet">${sheetOptions}</select></label>` : `<div class="guan-dc-sheet-name">工作表：${escapeHtml(pending.sheetName)}</div>`}
-      <div class="guan-dc-slot-counts">
-        <strong>每个产品建立图片槽位</strong>
-        <label>主图<input data-dc-input="slot-main" type="number" min="0" max="100" value="${pending.slotCounts.main}"></label>
-        <label>副图<input data-dc-input="slot-secondary" type="number" min="0" max="100" value="${pending.slotCounts.secondary}"></label>
-        <label>详情图<input data-dc-input="slot-detail" type="number" min="0" max="100" value="${pending.slotCounts.detail}"></label>
+      <div class="guan-dc-excel-meta">
+        ${isPromptTemplate
+          ? `${parsed.rows.length} 条产品路线 · ${parsed.promptColumnCount} 个提示词字段 · 第 ${parsed.headerRowNumber} 行为表头`
+          : `${parsed.rows.length} 个产品行 · ${parsed.headers.length} 列 · 第 ${parsed.headerRowNumber} 行为表头`}
       </div>
+      ${pending.sheetNames.length > 1 ? `<label class="guan-dc-sheet-label">工作表<select data-dc-input="sheet">${sheetOptions}</select></label>` : `<div class="guan-dc-sheet-name">工作表：${escapeHtml(pending.sheetName)}</div>`}
+      ${isPromptTemplate ? `
+        <div class="guan-dc-prompt-detected">
+          <strong>已识别“最终英文提示词”区域</strong>
+          <p>这里是一行一个产品路线的提示词模板，不是一行一个商品。Main Prompt、Detail Prompt 01-10、Rich Prompt 01-06 会按列分别展示。</p>
+          <p>如需建立产品和图片槽位，请切换到 <b>Data</b> 工作表；当前提示词表不会被误导入成产品。</p>
+        </div>
+      ` : `
+        <div class="guan-dc-slot-counts">
+          <strong>每个产品建立图片槽位</strong>
+          <label>主图<input data-dc-input="slot-main" type="number" min="0" max="100" value="${pending.slotCounts.main}"></label>
+          <label>副图<input data-dc-input="slot-secondary" type="number" min="0" max="100" value="${pending.slotCounts.secondary}"></label>
+          <label>详情图<input data-dc-input="slot-detail" type="number" min="0" max="100" value="${pending.slotCounts.detail}"></label>
+        </div>
+        ${pending.promptSheetInfo ? `
+          <div class="guan-dc-prompt-hint">
+            已检测到提示词工作表“${escapeHtml(pending.promptSheetInfo.sheetName)}”：最终英文提示词从第 ${pending.promptSheetInfo.headerRowNumber} 行表头开始，共 ${pending.promptSheetInfo.rowCount} 条产品路线。可在上方切换查看。
+          </div>
+        ` : ""}
+      `}
       ${parsed.headers.length > visibleHeaders.length ? `<p class="guan-dc-preview-note">预览仅显示前 8 列，导入时会保留全部 ${parsed.headers.length} 列。</p>` : ""}
       ${table}
       <p class="guan-dc-preview-note">显示前 ${Math.min(6, parsed.rows.length)} 行。完全空白行会跳过，Excel 原始行号和字段会保留。</p>
-      <button type="button" class="guan-dc-confirm-import" data-dc-action="confirm-excel" ${parsed.rows.length ? "" : "disabled"}>确认导入 ${parsed.rows.length} 个产品</button>
+      <button type="button" class="guan-dc-confirm-import" data-dc-action="confirm-excel" ${parsed.rows.length && !isPromptTemplate ? "" : "disabled"}>${isPromptTemplate ? "提示词工作表不能直接导入产品" : `确认导入 ${parsed.rows.length} 个产品`}</button>
     </section>
   `;
 }
@@ -1217,6 +1380,198 @@ function cellValueForImport(cell) {
   return String(value);
 }
 
+function sheetNameLooksLikePrompt(name) {
+  const normalized = normalizeHeader(name);
+  return normalized.includes("视觉内容与ai提示词")
+    || normalized.includes("提示词")
+    || normalized.includes("prompt")
+    || normalized.includes("visualcontent");
+}
+
+function valueAt(worksheet, rowIndex, columnIndex) {
+  return cellValueForImport(worksheet[XLSX.utils.encode_cell({ r: rowIndex, c: columnIndex })]);
+}
+
+function rowValues(worksheet, range, rowIndex) {
+  const values = [];
+  for (let columnIndex = range.s.c; columnIndex <= range.e.c; columnIndex += 1) {
+    values.push(valueAt(worksheet, rowIndex, columnIndex));
+  }
+  return values;
+}
+
+function rowText(values) {
+  return values
+    .filter((value) => value !== null && String(value).trim() !== "")
+    .map((value) => String(value).trim())
+    .join(" | ");
+}
+
+function promptColumnLabel(value) {
+  const text = String(value ?? "").trim();
+  // Prompt headers in the client workbooks include dimensions after a pipe,
+  // for example "Detail Prompt 01 | 900 x 1200 | 3:4". Strip that suffix
+  // before extracting the prompt number so "01 | 900" is not read as 1900.
+  const headerPart = text.split("|", 1)[0].trim();
+  const normalized = normalizeHeader(headerPart);
+  if (normalized.includes("mainprompt")) return "Main Prompt";
+  const detail = normalized.match(/^detailprompt0*(\d{1,2})$/);
+  if (detail) return `Detail Prompt ${String(Number(detail[1])).padStart(2, "0")}`;
+  const rich = normalized.match(/^richprompt0*(\d{1,2})$/);
+  if (rich) return `Rich Prompt ${String(Number(rich[1])).padStart(2, "0")}`;
+  return "";
+}
+
+function findPromptSectionRow(worksheet, range) {
+  for (let rowIndex = range.s.r; rowIndex <= range.e.r; rowIndex += 1) {
+    const text = rowText(rowValues(worksheet, range, rowIndex)).toLowerCase();
+    if (text.includes("final english prompts") || text.includes("最终英文提示词")) return rowIndex;
+  }
+  return -1;
+}
+
+function parsePromptSheet(workbook, sheetName) {
+  const worksheet = workbook.Sheets[sheetName];
+  if (!worksheet?.["!ref"]) throw new Error(`提示词工作表「${sheetName}」没有可读取的单元格`);
+  const range = XLSX.utils.decode_range(worksheet["!ref"]);
+  const columnCount = range.e.c - range.s.c + 1;
+  if (columnCount > MAX_IMPORT_COLUMNS) throw new Error(`工作表共有 ${columnCount} 列，当前最多支持 ${MAX_IMPORT_COLUMNS} 列。请先精简工作表后再导入。`);
+
+  const sectionRowIndex = findPromptSectionRow(worksheet, range);
+  const searchStart = sectionRowIndex >= 0 ? sectionRowIndex + 1 : range.s.r;
+  let headerRowIndex = -1;
+  let promptDescriptors = [];
+  let orderColumnIndex = -1;
+  let routeColumnIndex = -1;
+  for (let rowIndex = searchStart; rowIndex <= range.e.r; rowIndex += 1) {
+    const values = rowValues(worksheet, range, rowIndex);
+    const descriptors = [];
+    values.forEach((value, offset) => {
+      const label = promptColumnLabel(value);
+      if (label) descriptors.push({ label, columnIndex: range.s.c + offset, originalHeader: String(value).trim() });
+    });
+    if (!descriptors.length) continue;
+    const normalizedValues = values.map((value) => normalizeHeader(value));
+    const candidateOrder = normalizedValues.findIndex((value) => value === "order" || value === "序号");
+    const candidateRoute = normalizedValues.findIndex((value) => value.includes("productroute") || value.includes("产品路线"));
+    // A prompt sheet must expose a real prompt matrix. A lone "Order" or
+    // route column is common in documentation sections and is not enough to
+    // classify the sheet as importable prompt data.
+    if (descriptors.length >= 2 && (candidateOrder >= 0 || candidateRoute >= 0)) {
+      headerRowIndex = rowIndex;
+      promptDescriptors = descriptors;
+      orderColumnIndex = candidateOrder >= 0 ? range.s.c + candidateOrder : -1;
+      routeColumnIndex = candidateRoute >= 0 ? range.s.c + candidateRoute : -1;
+      break;
+    }
+  }
+  if (headerRowIndex < 0 || !promptDescriptors.length) {
+    throw new Error(`工作表「${sheetName}」未找到“最终英文提示词”区域或 Prompt 表头`);
+  }
+
+  const seenLabels = new Set();
+  promptDescriptors = promptDescriptors.filter((descriptor) => {
+    if (seenLabels.has(descriptor.label)) return false;
+    seenLabels.add(descriptor.label);
+    return true;
+  });
+  const columns = [];
+  if (orderColumnIndex >= 0) columns.push({ key: "Order", label: "Order", columnIndex: orderColumnIndex });
+  if (routeColumnIndex >= 0) {
+    columns.push({
+      key: "Product route / core advantage",
+      label: "Product route / core advantage",
+      columnIndex: routeColumnIndex,
+    });
+  }
+  promptDescriptors.forEach((descriptor) => columns.push({
+    key: descriptor.label,
+    label: descriptor.label,
+    columnIndex: descriptor.columnIndex,
+    originalHeader: descriptor.originalHeader,
+  }));
+
+  const headers = columns.map((column) => column.key);
+  const headerMap = Object.fromEntries(columns.map((column) => [column.key, column.originalHeader || column.label]));
+  const lastRowIndex = Math.min(range.e.r, headerRowIndex + MAX_IMPORT_ROWS);
+  if (range.e.r - headerRowIndex > MAX_IMPORT_ROWS) {
+    throw new Error(`工作表超过 ${MAX_IMPORT_ROWS} 个数据行。请先拆分工作表后再导入，避免浏览器存储和预览过载。`);
+  }
+  const rows = [];
+  for (let rowIndex = headerRowIndex + 1; rowIndex <= lastRowIndex; rowIndex += 1) {
+    const values = {};
+    let hasPrompt = false;
+    columns.forEach((column) => {
+      const value = valueAt(worksheet, rowIndex, column.columnIndex);
+      values[column.key] = value;
+      if (promptColumnLabel(column.label) && value !== null && String(value).trim() !== "") hasPrompt = true;
+    });
+    const orderValue = values.Order;
+    const hasNumericOrder = orderValue !== null
+      && String(orderValue).trim() !== ""
+      && Number.isFinite(Number(orderValue));
+    // Section titles such as "8. Mandatory pre-delivery checks" can appear
+    // under the Order column. They are documentation, not product routes.
+    // Keep a row only when it has a real numeric order or prompt content.
+    if (hasPrompt || hasNumericOrder) rows.push({ sourceRowNumber: rowIndex + 1, values });
+  }
+  return {
+    kind: "prompt-template",
+    headers,
+    headerMap,
+    rows,
+    headerRowNumber: headerRowIndex + 1,
+    sectionRowNumber: sectionRowIndex >= 0 ? sectionRowIndex + 1 : null,
+    promptColumns: promptDescriptors.map((descriptor) => descriptor.label),
+    promptColumnCount: promptDescriptors.length,
+  };
+}
+
+function headerFieldKind(value) {
+  const normalized = normalizeHeader(value);
+  if (!normalized) return "";
+  if ([
+    "sku", "skucode", "商品编码", "货号", "商品id", "产品id", "商品编号",
+  ].some((alias) => normalized === normalizeHeader(alias) || normalized.includes(normalizeHeader(alias)))) return "sku";
+  if ([
+    "title", "商品名称", "商品标题", "标题", "名称", "产品名称",
+  ].some((alias) => normalized === normalizeHeader(alias) || normalized.includes(normalizeHeader(alias)))) return "title";
+  if ([
+    "url", "链接", "商品链接", "产品链接", "详情页地址", "详情页链接",
+    "主图", "主图高清原图url", "主图url", "图片详情", "图片详情地址",
+  ].some((alias) => normalized === normalizeHeader(alias) || normalized.includes(normalizeHeader(alias)))) return "url";
+  return "";
+}
+
+function inspectProductHeader(values) {
+  const fields = { sku: [], title: [], url: [] };
+  values.forEach((value, offset) => {
+    const kind = headerFieldKind(value);
+    if (kind) fields[kind].push(offset);
+  });
+  const kinds = Object.entries(fields).filter(([, columns]) => columns.length).map(([kind]) => kind);
+  const valid = kinds.length >= 2
+    && (fields.sku.length > 0 || fields.title.length > 0)
+    && (fields.sku.length > 0 || fields.url.length > 0);
+  return { fields, kinds, valid };
+}
+
+function findStandardHeaderRow(worksheet, range) {
+  for (let rowIndex = range.s.r; rowIndex <= range.e.r; rowIndex += 1) {
+    const values = rowValues(worksheet, range, rowIndex);
+    const nonEmpty = values.filter((value) => value !== null && String(value).trim() !== "");
+    if (!nonEmpty.length) continue;
+    const nextValues = rowIndex < range.e.r ? rowValues(worksheet, range, rowIndex + 1) : [];
+    const nextCount = nextValues.filter((value) => value !== null && String(value).trim() !== "").length;
+    const inspection = inspectProductHeader(values);
+    if (inspection.valid && (nonEmpty.length >= 2 || nextCount >= 2)) return {
+      rowIndex,
+      inspection,
+    };
+  }
+  return null;
+}
+
 function parseExcelSheet(workbook, sheetName) {
   const worksheet = workbook.Sheets[sheetName];
   if (!worksheet?.["!ref"]) throw new Error(`工作表「${sheetName}」没有可读取的单元格`);
@@ -1224,18 +1579,11 @@ function parseExcelSheet(workbook, sheetName) {
   const columnCount = range.e.c - range.s.c + 1;
   if (columnCount > MAX_IMPORT_COLUMNS) throw new Error(`工作表共有 ${columnCount} 列，当前最多支持 ${MAX_IMPORT_COLUMNS} 列。请先精简工作表后再导入。`);
 
-  let headerRowIndex = -1;
-  for (let rowIndex = range.s.r; rowIndex <= range.e.r; rowIndex += 1) {
-    const hasValue = Array.from({ length: columnCount }, (_, offset) => {
-      const cell = worksheet[XLSX.utils.encode_cell({ r: rowIndex, c: range.s.c + offset })];
-      return cellValueForImport(cell) !== null;
-    }).some(Boolean);
-    if (hasValue) {
-      headerRowIndex = rowIndex;
-      break;
-    }
-  }
-  if (headerRowIndex < 0) throw new Error(`工作表「${sheetName}」没有非空表头`);
+  if (sheetNameLooksLikePrompt(sheetName)) return parsePromptSheet(workbook, sheetName);
+
+  const headerInfo = findStandardHeaderRow(worksheet, range);
+  if (!headerInfo) throw new Error(`工作表「${sheetName}」未找到可识别的产品主表表头（至少需要 SKU/标题/链接中的两类字段）`);
+  const { rowIndex: headerRowIndex, inspection: headerInspection } = headerInfo;
 
   const headers = [];
   const headerMap = {};
@@ -1266,13 +1614,28 @@ function parseExcelSheet(workbook, sheetName) {
       values[header] = value;
       if (value !== null && String(value).trim() !== "") hasData = true;
     });
-    if (hasData) rows.push({ sourceRowNumber: rowIndex + 1, values });
+    const identityKindsPresent = Object.entries(headerInspection.fields).filter(([, offsets]) => (
+      offsets.some((offset) => {
+        const header = headers[offset];
+        const value = values[header];
+        return value !== null && String(value).trim() !== "";
+      })
+    )).map(([kind]) => kind);
+    // Keep only rows that still look like product records. This excludes
+    // narrative/analysis rows beneath a valid header while allowing one
+    // missing identity field in a partially completed workbook.
+    if (hasData && identityKindsPresent.length >= 2) {
+      rows.push({ sourceRowNumber: rowIndex + 1, values });
+    }
   }
+  if (!rows.length) throw new Error(`工作表「${sheetName}」找到表头，但没有满足 SKU/标题/链接两类身份字段的产品行`);
   return {
+    kind: "product-table",
     headers,
     headerMap,
     rows,
     headerRowNumber: headerRowIndex + 1,
+    identityColumns: headerInspection.kinds,
   };
 }
 
@@ -1351,8 +1714,26 @@ async function loadExcelFile(file, root) {
     });
     const sheetNames = [...workbook.SheetNames];
     if (!sheetNames.length) throw new Error("文件中没有工作表");
-    const sheetName = sheetNames.find((name) => workbook.Sheets[name]?.["!ref"]) || sheetNames[0];
+    const dataSheetName = sheetNames.find((name) => normalizeHeader(name) === "data");
+    const fallbackSheetName = sheetNames.find((name) => !sheetNameLooksLikePrompt(name) && workbook.Sheets[name]?.["!ref"]);
+    const sheetName = dataSheetName || fallbackSheetName || sheetNames[0];
     const parsed = parseExcelSheet(workbook, sheetName);
+    const promptSheetName = sheetNames.find((name) => sheetNameLooksLikePrompt(name) && workbook.Sheets[name]?.["!ref"]);
+    let promptSheetInfo = null;
+    if (promptSheetName) {
+      try {
+        const promptParsed = parsePromptSheet(workbook, promptSheetName);
+        promptSheetInfo = {
+          sheetName: promptSheetName,
+          sectionRowNumber: promptParsed.sectionRowNumber,
+          headerRowNumber: promptParsed.headerRowNumber,
+          rowCount: promptParsed.rows.length,
+          promptColumns: promptParsed.promptColumns,
+        };
+      } catch {
+        promptSheetInfo = null;
+      }
+    }
     let fileSha256;
     if (globalThis.crypto?.subtle) {
       const digest = await crypto.subtle.digest("SHA-256", buffer);
@@ -1361,7 +1742,7 @@ async function loadExcelFile(file, root) {
     if (pendingExcelImport?.token !== token) return;
     pendingExcelImport = {
       token, file, fileName: file.name, kind: extension, fileSha256,
-      workbook, sheetNames, sheetName, parsed, busy: false,
+      workbook, sheetNames, sheetName, parsed, promptSheetInfo, busy: false,
       slotCounts: { ...DEFAULT_SLOT_COUNTS },
     };
   } catch (error) {
