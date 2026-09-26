@@ -24,11 +24,17 @@ export default function FallbackSettingsTab({ draft, profiles, commitSettings }:
     offsetX: number
     offsetY: number
   }
+  type DropAnimation = {
+    sourceId: string
+    deltas: Record<string, number>
+    phase: 'from' | 'to'
+  }
   const [draggedId, setDraggedId] = useState<string | null>(null)
   const [dragOverId, setDragOverId] = useState<string | null>(null)
   const [dragInsertIndex, setDragInsertIndex] = useState<number | null>(null)
   const [dragPointerY, setDragPointerY] = useState<number | null>(null)
   const [dragPreview, setDragPreview] = useState<DragPreview | null>(null)
+  const [dropAnimation, setDropAnimation] = useState<DropAnimation | null>(null)
   const dragSlotHeightRef = useRef(106)
   const dragPointerYRef = useRef<number | null>(null)
   const dragInsertIndexRef = useRef<number | null>(null)
@@ -42,6 +48,8 @@ export default function FallbackSettingsTab({ draft, profiles, commitSettings }:
   const dragPreviewOffsetRef = useRef({ offsetX: 0, offsetY: 0 })
   const pendingPointerRef = useRef<{ x: number; y: number } | null>(null)
   const dragFrameRef = useRef<number | null>(null)
+  const dropAnimationFrameRef = useRef<number | null>(null)
+  const dropAnimationTimerRef = useRef<number | null>(null)
   const dragListRef = useRef<HTMLDivElement | null>(null)
   const moveToDropIndexRef = useRef<(sourceId: string, insertIndex: number) => void>(() => {})
   const entryElementsRef = useRef<Record<string, HTMLDivElement | null>>({})
@@ -55,6 +63,23 @@ export default function FallbackSettingsTab({ draft, profiles, commitSettings }:
       window.removeEventListener('storage', update)
       window.removeEventListener('image-provider-exhausted', update)
     }
+  }, [])
+  useEffect(() => {
+    if (!dropAnimation || dropAnimation.phase !== 'to') return
+    dropAnimationTimerRef.current = window.setTimeout(() => {
+      dropAnimationTimerRef.current = null
+      setDropAnimation(null)
+    }, 240)
+    return () => {
+      if (dropAnimationTimerRef.current !== null) {
+        window.clearTimeout(dropAnimationTimerRef.current)
+        dropAnimationTimerRef.current = null
+      }
+    }
+  }, [dropAnimation?.phase])
+  useEffect(() => () => {
+    if (dropAnimationFrameRef.current !== null) cancelAnimationFrame(dropAnimationFrameRef.current)
+    if (dropAnimationTimerRef.current !== null) window.clearTimeout(dropAnimationTimerRef.current)
   }, [])
   const config = normalizeImageApiFallback(draft.imageApiFallback, profiles) ?? getDefaultImageApiFallback(profiles)
   const enabledProfiles = config.entries.flatMap((entry) => {
@@ -102,8 +127,88 @@ export default function FallbackSettingsTab({ draft, profiles, commitSettings }:
   }
   moveToDropIndexRef.current = moveToDropIndex
 
+  const cancelDropAnimation = () => {
+    if (dropAnimationFrameRef.current !== null) {
+      cancelAnimationFrame(dropAnimationFrameRef.current)
+      dropAnimationFrameRef.current = null
+    }
+    if (dropAnimationTimerRef.current !== null) {
+      window.clearTimeout(dropAnimationTimerRef.current)
+      dropAnimationTimerRef.current = null
+    }
+    setDropAnimation(null)
+  }
+
+  const getDragScrollDelta = () => {
+    const scrollContainer = dragScrollRef.current.element
+    return scrollContainer
+      ? scrollContainer.scrollTop - dragScrollRef.current.startTop
+      : 0
+  }
+
+  const getInsertIndexAtPointer = (clientY: number) => {
+    const order = dragOrderRef.current
+    const sourceId = dragRef.current?.id ?? draggedId
+    const sourceIndex = sourceId ? order.indexOf(sourceId) : -1
+    const sourceLayout = sourceId ? dragLayoutRef.current[sourceId] : undefined
+    if (sourceIndex < 0 || !sourceLayout || order.length < 2) return sourceIndex >= 0 ? sourceIndex : null
+
+    const pointerY = clientY - getDragScrollDelta()
+    const halfSlot = Math.max(1, dragSlotHeightRef.current) / 2
+    let insertIndex = sourceIndex
+
+    if (pointerY < sourceLayout.center) {
+      for (let index = sourceIndex - 1; index >= 0; index -= 1) {
+        const item = dragLayoutRef.current[order[index]]
+        if (!item || pointerY >= item.center + halfSlot) break
+        insertIndex = index
+      }
+    } else if (pointerY > sourceLayout.center) {
+      for (let index = sourceIndex + 1; index < order.length; index += 1) {
+        const item = dragLayoutRef.current[order[index]]
+        if (!item || pointerY < item.center - halfSlot) break
+        insertIndex = index
+      }
+    }
+
+    return Math.max(0, Math.min(order.length - 1, insertIndex))
+  }
+
+  const prepareDropAnimation = (sourceId: string, insertIndex: number) => {
+    const order = dragOrderRef.current
+    if (!order.length) return {}
+    const scrollDelta = getDragScrollDelta()
+    const slotTops = order.map((id) => {
+      const item = dragLayoutRef.current[id]
+      return item ? item.top - scrollDelta : null
+    })
+    const nextOrder = [...order]
+    const sourceIndex = nextOrder.indexOf(sourceId)
+    if (sourceIndex < 0) return {}
+    const [moved] = nextOrder.splice(sourceIndex, 1)
+    nextOrder.splice(Math.max(0, Math.min(insertIndex, nextOrder.length)), 0, moved)
+
+    const nextTopById = Object.fromEntries(nextOrder.map((id, index) => [id, slotTops[index]]))
+    return Object.fromEntries(order.flatMap((id) => {
+      const currentTop = entryElementsRef.current[id]?.getBoundingClientRect().top
+      const nextTop = nextTopById[id]
+      return typeof currentTop === 'number' && typeof nextTop === 'number' ? [[id, currentTop - nextTop]] : []
+    })) as Record<string, number>
+  }
+
+  const startDropAnimation = (sourceId: string, insertIndex: number) => {
+    cancelDropAnimation()
+    const deltas = prepareDropAnimation(sourceId, insertIndex)
+    setDropAnimation({ sourceId, deltas, phase: 'from' })
+    dropAnimationFrameRef.current = requestAnimationFrame(() => {
+      dropAnimationFrameRef.current = null
+      setDropAnimation((current) => current ? { ...current, phase: 'to' } : null)
+    })
+  }
+
   const handlePointerDown = (event: ReactPointerEvent<HTMLButtonElement>, profileId: string, profile: ApiProfile) => {
     if (event.pointerType === 'mouse' && event.button !== 0) return
+    if (dropAnimation) return
     const card = entryElementsRef.current[profileId]
     if (!card) return
     const rect = card.getBoundingClientRect()
@@ -178,28 +283,13 @@ export default function FallbackSettingsTab({ draft, profiles, commitSettings }:
       const sourceIndex = order.indexOf(drag.id)
       if (sourceIndex < 0 || order.length < 2) return
       const scrollContainer = dragScrollRef.current.element
-      const scrollDelta = scrollContainer
-        ? scrollContainer.scrollTop - dragScrollRef.current.startTop
-        : 0
 
-      // Use the layout captured before dragging started. The cards stay in
-      // their original flow and only translate, so hit testing never feeds
-      // back into the layout being measured. Cards progressively make room
-      // as the pointer approaches their center; crossing the center selects
-      // the next final insertion slot, just like a native list.
-      let fullInsertIndex = order.length
-      for (let index = 0; index < order.length; index += 1) {
-        const item = dragLayoutRef.current[order[index]]
-        if (item && clientY < item.center - scrollDelta) {
-          fullInsertIndex = index
-          break
-        }
-      }
-      const visibleLength = order.length - 1
-      const insertIndex = Math.max(0, Math.min(
-        visibleLength,
-        fullInsertIndex > sourceIndex ? fullInsertIndex - 1 : fullInsertIndex,
-      ))
+      // Use the layout captured before dragging started. Cards begin making
+      // room one half-slot before the pointer reaches their center, and the
+      // same threshold is used on pointerup so a visible drop never reverts
+      // to the old order.
+      const insertIndex = getInsertIndexAtPointer(clientY)
+      if (insertIndex === null) return
       if (dragInsertIndexRef.current !== insertIndex) {
         dragInsertIndexRef.current = insertIndex
         setDragInsertIndex(insertIndex)
@@ -244,12 +334,12 @@ export default function FallbackSettingsTab({ draft, profiles, commitSettings }:
         dragFrameRef.current = null
       }
       const point = pendingPointerRef.current
-      // Flush the last pointer coordinate before committing so a very quick
-      // release still uses the same insertion slot the preview was showing.
-      if (dragInsertIndexRef.current === null && point) updateDragPosition(point.x, point.y)
-      const insertIndex = dragInsertIndexRef.current
+      // Resolve the final slot directly from pointerup. This avoids losing a
+      // last pointermove that was still waiting for requestAnimationFrame.
+      const insertIndex = getInsertIndexAtPointer(point?.y ?? event.clientY)
       const sourceIndex = config.entries.findIndex((entry) => entry.profileId === drag.id)
       if (insertIndex !== null && sourceIndex >= 0 && insertIndex !== sourceIndex) {
+        startDropAnimation(drag.id, insertIndex)
         moveToDropIndexRef.current(drag.id, insertIndex)
       }
       clearDragState()
@@ -341,20 +431,26 @@ export default function FallbackSettingsTab({ draft, profiles, commitSettings }:
           const isDragged = draggedId === entry.profileId
           const isDropTarget = draggedId !== null && !isDragged && dragOverId === entry.profileId
           const dragShift = getDragShift(entryIndex)
+          const isDropSource = dropAnimation?.sourceId === entry.profileId
+          const dropShift = dropAnimation?.deltas[entry.profileId] ?? 0
+          const wrapperTransform = dropAnimation
+            ? `translate3d(0, ${dropAnimation.phase === 'from' ? dropShift : 0}px, 0)`
+            : dragShift ? `translate3d(0, ${dragShift}px, 0)` : undefined
+          const isDropHidden = isDropSource && dropAnimation?.phase === 'from'
           return (
             <div
               key={entry.profileId}
-              className="flex flex-col transition-transform duration-150 ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform"
-              style={{
-                transform: dragShift ? `translate3d(0, ${dragShift}px, 0)` : undefined,
-              }}
+              className={`flex flex-col will-change-transform ${dropAnimation?.phase === 'from'
+                ? 'transition-none'
+                : 'transition-transform duration-150 ease-[cubic-bezier(0.22,1,0.36,1)]'}`}
+              style={{ transform: wrapperTransform }}
             >
               <div
                 ref={(element) => { entryElementsRef.current[entry.profileId] = element }}
                 data-fallback-entry={entry.profileId}
                 role="listitem"
-                aria-hidden={isDragged ? 'true' : undefined}
-                className={`flex items-center gap-3 overflow-hidden rounded-xl border p-3 sm:p-4 transition-[opacity,box-shadow,background-color,border-color] duration-200 ease-out ${isDragged
+                aria-hidden={isDragged || isDropHidden ? 'true' : undefined}
+                className={`flex items-center gap-3 overflow-hidden rounded-xl border p-3 sm:p-4 transition-[opacity,box-shadow,background-color,border-color] duration-200 ease-out ${isDragged || isDropHidden
                   ? 'pointer-events-none opacity-0'
                   : isDropTarget
                     ? 'ring-2 ring-indigo-300/70 ring-offset-2 ring-offset-white dark:ring-indigo-400/60 dark:ring-offset-gray-900'
