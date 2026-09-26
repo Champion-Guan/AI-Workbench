@@ -245,6 +245,44 @@ html[data-workbench-theme="dark"] #guan-data-contract-root {
   text-align: center;
 }
 
+.guan-dc-file-upload {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  width: 100%;
+  min-height: 42px;
+  margin-top: 5px;
+  padding: 9px 12px;
+  border: 0;
+  border-top: 1px solid var(--dc-border);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--dc-text);
+  cursor: pointer;
+  font: 13px/1.2 ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  transition: background .14s ease, color .14s ease;
+}
+
+.guan-dc-file-upload:hover {
+  background: var(--dc-soft);
+}
+
+.guan-dc-file-upload:active {
+  transform: translateY(1px);
+}
+
+.guan-dc-file-upload svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.9;
+  pointer-events: none;
+}
+
 .guan-dc-confirm {
   position: fixed;
   inset: 0;
@@ -416,42 +454,6 @@ html[data-workbench-theme="dark"] .guan-dc-confirm-icon {
   }
 }
 
-.guan-dc-header-upload {
-  display: inline-flex;
-  flex: 0 0 42px;
-  align-items: center;
-  justify-content: center;
-  width: 42px;
-  height: 42px;
-  padding: 0;
-  border: 0;
-  border-radius: 12px;
-  background: transparent;
-  color: #5b5c65;
-  cursor: pointer;
-  font: 0/1 ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  transition: background-color .16s ease, color .16s ease, transform .16s ease;
-}
-
-.guan-dc-header-upload:hover {
-  background: var(--dc-soft);
-}
-
-.guan-dc-header-upload:active {
-  transform: translateY(1px);
-}
-
-.guan-dc-header-upload svg {
-  width: 22px;
-  height: 22px;
-  fill: none;
-  stroke: currentColor;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  stroke-width: 1.9;
-  pointer-events: none;
-}
-
 .guan-dc-header-file-input {
   position: absolute;
   width: 1px;
@@ -464,10 +466,6 @@ html[data-workbench-theme="dark"] .guan-dc-confirm-icon {
 
 .guan-dc-header-controls ~ .local-workbench-theme-button {
   margin-left: 8px !important;
-}
-
-html[data-workbench-theme="dark"] .guan-dc-header-upload {
-  color: #f4f4f5;
 }
 
 html[data-workbench-theme="dark"] .guan-dc-file-trigger,
@@ -531,11 +529,6 @@ html[data-workbench-theme="dark"] .guan-dc-file-chevron {
     font-size: 12px;
   }
 
-  .guan-dc-header-upload {
-    flex-basis: 38px;
-    width: 38px;
-    height: 38px;
-  }
 }
 
 .guan-dc-trigger,

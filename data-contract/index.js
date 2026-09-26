@@ -970,7 +970,7 @@ window.GuanWorkbenchData = api;
 
 const css = document.createElement("link");
 css.rel = "stylesheet";
-css.href = "/data-contract/index.css?contract-v13-20260926";
+css.href = "/data-contract/index.css?contract-v20-20260926";
 document.head.appendChild(css);
 
 function escapeHtml(value) {
@@ -1074,7 +1074,7 @@ function renderHeaderControls(root) {
   controls.innerHTML = `
     <span class="guan-dc-active-sheet-label" aria-hidden="true">当前工作表：</span>
     <div class="guan-dc-file-picker">
-      <button type="button" class="guan-dc-file-trigger" aria-label="选择已上传的 Excel 文件" aria-haspopup="listbox" aria-expanded="false" ${productSets.length ? "" : "disabled"}>
+      <button type="button" class="guan-dc-file-trigger" aria-label="选择已上传的 Excel 文件" aria-haspopup="listbox" aria-expanded="false">
         <span class="guan-dc-file-trigger-label">${escapeHtml(productSets.find((set) => set.id === activeId)?.source?.fileName || "暂无已上传 Excel")}</span>
         <svg class="guan-dc-file-chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg>
       </button>
@@ -1095,11 +1095,12 @@ function renderHeaderControls(root) {
             </div>
           `;
         }).join("") || `<div class="guan-dc-file-empty">暂无已上传 Excel</div>`}
+        <button type="button" class="guan-dc-file-upload" aria-label="上传 Excel">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>
+          <span>上传 Excel</span>
+        </button>
       </div>
     </div>
-    <button type="button" class="guan-dc-header-upload" aria-label="上传 Excel" title="上传 Excel">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>
-    </button>
     <input class="guan-dc-header-file-input" type="file" accept=".xlsx,.xls,.csv" tabindex="-1" aria-hidden="true">
   `;
 
@@ -1178,8 +1179,9 @@ function renderHeaderControls(root) {
         });
         return;
       }
-      if (target.closest(".guan-dc-header-upload")) {
+      if (target.closest(".guan-dc-file-upload")) {
         event.preventDefault();
+        closeMenu(false);
         controls.querySelector(".guan-dc-header-file-input")?.click();
       }
     });
