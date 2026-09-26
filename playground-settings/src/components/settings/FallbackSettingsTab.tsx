@@ -190,6 +190,10 @@ export default function FallbackSettingsTab({ draft, profiles, commitSettings }:
 
     const nextTopById = Object.fromEntries(nextOrder.map((id, index) => [id, slotTops[index]]))
     return Object.fromEntries(order.flatMap((id) => {
+      // The floating preview already represents the dragged card at the
+      // pointer. On drop it should simply appear in its final slot instead
+      // of replaying the whole trip from its old slot a second time.
+      if (id === sourceId) return []
       const currentTop = entryElementsRef.current[id]?.getBoundingClientRect().top
       const nextTop = nextTopById[id]
       return typeof currentTop === 'number' && typeof nextTop === 'number' ? [[id, currentTop - nextTop]] : []
