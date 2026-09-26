@@ -88,6 +88,22 @@ const workbenchLogoStyle = `<style id="local-workbench-logo">
   }
 </style>`;
 
+const localDocumentTitleScript = `<script id="local-document-title">
+  (() => {
+    const title = "AI生图工作台";
+    const applyTitle = () => {
+      if (document.title !== title) document.title = title;
+    };
+    applyTitle();
+    new MutationObserver(applyTitle).observe(document.head, {
+      subtree: true,
+      childList: true,
+      characterData: true,
+    });
+    window.addEventListener("load", applyTitle, { passive: true });
+  })();
+</script>`;
+
 const localRootNavigationScript = `<script id="local-root-navigation">
   (() => {
     const normalizeBrandLink = () => {
@@ -1241,7 +1257,9 @@ async function send(response, path, method) {
   if (method === "HEAD") return response.end();
   if (isHtml) {
     const document = await readFile(path, "utf8");
-    const refreshedFavicon = document
+    const refreshedFavicon = (path === pageFile
+      ? document.replace(/<title>[\s\S]*?<\/title>/i, "<title>AI生图工作台</title>")
+      : document)
       // The archived page includes PixPix's locale-selection redirect, which
       // would turn this project's root entry point into /zh-CN at runtime.
       // The archived detail page itself is Chinese, so the redirect is neither
@@ -1260,7 +1278,7 @@ async function send(response, path, method) {
      * The original button injector only creates the trigger; the React bundle
      * owns the modal, focus scope, nested dialogs and persistence.
      */
-      response.end(refreshedFavicon.replace("</head>", `${workbenchLogoStyle}${mvpNavigationStyle}${localThemeAndUiStyle}${localRootNavigationScript}${localSettingsPanelScript}${originalPlaygroundSettingsButtonScript}${localThemeToggleScript}${localFixedFieldsScript}${localResolutionButtonsScript}${localAspectRatioButtonsScript}${localOfflineGuardsScript}${localResponsivePreviewScript}<link rel="stylesheet" href="/playground-settings/assets/index.css?v=settings-toggle-backdrop-fix-20260926-v2"><script type="module" src="/playground-settings/assets/index.js?v=settings-toggle-backdrop-fix-20260926-v2"></script><script src="/_pixpix-assets/local-vendor/xlsx.full.min.js?sheetjs-local-0.18.5"></script><script type="module" src="/data-contract/index.js?contract-v21-20260926"></script></head>`));
+      response.end(refreshedFavicon.replace("</head>", `${workbenchLogoStyle}${mvpNavigationStyle}${localThemeAndUiStyle}${localDocumentTitleScript}${localRootNavigationScript}${localSettingsPanelScript}${originalPlaygroundSettingsButtonScript}${localThemeToggleScript}${localFixedFieldsScript}${localResolutionButtonsScript}${localAspectRatioButtonsScript}${localOfflineGuardsScript}${localResponsivePreviewScript}<link rel="stylesheet" href="/playground-settings/assets/index.css?v=settings-toggle-backdrop-fix-20260926-v2"><script type="module" src="/playground-settings/assets/index.js?v=settings-toggle-backdrop-fix-20260926-v2"></script><script src="/_pixpix-assets/local-vendor/xlsx.full.min.js?sheetjs-local-0.18.5"></script><script type="module" src="/data-contract/index.js?contract-v21-20260926"></script></head>`));
     return;
   }
   createReadStream(path).pipe(response);
