@@ -1128,7 +1128,7 @@ window.GuanWorkbenchData = api;
 
 const css = document.createElement("link");
 css.rel = "stylesheet";
-css.href = "/data-contract/index.css?contract-v27-20260927";
+css.href = "/data-contract/index.css?contract-v28-20260927";
 document.head.appendChild(css);
 
 function escapeHtml(value) {
@@ -1372,6 +1372,12 @@ function openExcelDeleteDialog({ fileName, onConfirm }) {
   }, 20);
 }
 
+function productDisplayName(product, index = 0) {
+  const raw = product?.identity?.titleZh || product?.identity?.sku || `产品 ${index + 1}`;
+  const name = String(raw).split(/[|｜]/, 1)[0].trim();
+  return name || `产品 ${index + 1}`;
+}
+
 function renderHeaderControls(root) {
   const dialog = document.querySelector('[role="dialog"]');
   const header = dialog?.querySelector(':scope > .flex.size-full > aside');
@@ -1404,7 +1410,7 @@ function renderHeaderControls(root) {
     sets: productSets.map((set) => [set.id, set.source?.fileName || "未命名产品表", set.source?.sheetName || ""]),
     products: activeProducts.map((product) => [
       product.id,
-      product.identity?.titleZh || product.identity?.sku || `产品 ${product.order}`,
+      productDisplayName(product, product.order - 1),
     ]),
   });
   if (controls.dataset.stateKey === stateKey) return true;
@@ -1413,7 +1419,7 @@ function renderHeaderControls(root) {
   controls.innerHTML = `
     <div class="guan-dc-product-nav" role="tablist" aria-label="当前工作表产品">
       ${activeProducts.map((product, index) => {
-        const label = product.identity?.titleZh || product.identity?.sku || `产品 ${index + 1}`;
+        const label = productDisplayName(product, index);
         return `
           <button type="button" class="guan-dc-product-capsule ${product.id === activeProductId ? "is-active" : ""}"
             role="tab" aria-selected="${product.id === activeProductId}" data-product-id="${escapeHtml(product.id)}"
