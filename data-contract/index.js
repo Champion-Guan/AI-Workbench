@@ -556,6 +556,7 @@ function createProductSetInternal(state, input = {}) {
       fileName: String(input.fileName || "未命名产品表.xlsx"),
       fileSha256: input.fileSha256 || undefined,
       sheetName: input.sheetName || undefined,
+      role: input.role || undefined,
       promptSheetName: input.promptSheetName || undefined,
       ...(input.headerMap && typeof input.headerMap === "object"
         ? { headerMap: clone(input.headerMap) }
@@ -989,35 +990,74 @@ const api = {
     return clone(publish(state));
   },
   importRows: (input = {}) => clone(mutate((state) => createProductSetInternal(state, input))),
-  importPromptTemplates: (input = {}) => clone(mutate((state) => {
+  importPromptProducts: (input = {}) => clone(mutate((state) => {
     const templates = Array.isArray(input.promptTemplates) ? clone(input.promptTemplates) : [];
     if (!templates.length) throw new Error("没有可导入的提示词模板");
-    let set = state.productSets.find((candidate) => (
-      input.fileSha256 && candidate.source?.fileSha256 === input.fileSha256
-    ) || (
-      !input.fileSha256
-      && candidate.source?.fileName === String(input.fileName || "未命名产品表.xlsx")
-      && candidate.source?.kind === (input.kind || "xlsx")
+    const productRows = Array.isArray(input.productRows) && input.productRows.length
+      ? clone(input.productRows)
+      : templates.map((template) => ({
+          "产品名称": template.route || `提示词产品 ${template.order}`,
+          "提示词路线": template.route,
+          "提示词序号": template.order,
+          ...template.prompts,
+        }));
+    const existing = state.productSets.find((candidate) => (
+      candidate.source?.role === "prompt-products"
+      && input.fileSha256
+      && candidate.source?.fileSha256 === input.fileSha256
+      && candidate.source?.sheetName === input.sheetName
     ));
-    if (!set) {
-      set = createProductSetInternal(state, {
-        fileName: input.fileName,
-        kind: input.kind,
-        fileSha256: input.fileSha256,
-        sheetName: input.sheetName,
-        promptSheetName: input.promptSheetName,
-        promptTemplates: templates,
-        rows: [],
-      });
-    } else {
-      set.source.promptSheetName = input.promptSheetName || set.source.promptSheetName;
-      set.source.promptTemplates = templates;
-      set.source.promptTemplateCount = templates.length;
-      set.updatedAt = timestamp();
-      state.workspace.activeProductSetId = set.id;
+    const set = existing || createProductSetInternal(state, {
+      fileName: input.fileName,
+      kind: input.kind,
+      role: "prompt-products",
+      fileSha256: input.fileSha256,
+      sheetName: input.sheetName,
+      promptSheetName: input.promptSheetName,
+      promptTemplates: templates,
+      rows: productRows,
+      sourceRowNumbers: input.sourceRowNumbers,
+      headerMap: input.headerMap,
+      slotCounts: input.slotCounts,
+      slotTemplates: input.slotTemplates,
+    });
+    if (existing) {
+      existing.source.promptSheetName = input.promptSheetName || existing.source.promptSheetName;
+      existing.source.promptTemplates = templates;
+      existing.source.promptTemplateCount = templates.length;
+      existing.updatedAt = timestamp();
+      state.workspace.activeProductSetId = existing.id;
     }
     return {
       productSetId: set.id,
+      productCount: set.productIds.length,
+      promptTemplateCount: templates.length,
+      fileName: set.source.fileName,
+      promptSheetName: set.source.promptSheetName || "",
+    };
+  })),
+  // Backward-compatible API name for callers that used the earlier template-only
+  // import. New UI flows use importPromptProducts so each prompt row becomes a Product.
+  importPromptTemplates: (input = {}) => clone(mutate((state) => {
+    const templates = Array.isArray(input.promptTemplates) ? clone(input.promptTemplates) : [];
+    if (!templates.length) throw new Error("没有可导入的提示词模板");
+    const productRows = Array.isArray(input.productRows) && input.productRows.length
+      ? clone(input.productRows)
+      : templates.map((template) => ({
+          "产品名称": template.route || `提示词产品 ${template.order}`,
+          "提示词路线": template.route,
+          "提示词序号": template.order,
+          ...template.prompts,
+        }));
+    const set = createProductSetInternal(state, {
+      ...input,
+      role: "prompt-products",
+      rows: productRows,
+      promptTemplates: templates,
+    });
+    return {
+      productSetId: set.id,
+      productCount: set.productIds.length,
       promptTemplateCount: templates.length,
       fileName: set.source.fileName,
       promptSheetName: set.source.promptSheetName || "",
@@ -1051,7 +1091,7 @@ window.GuanWorkbenchData = api;
 
 const css = document.createElement("link");
 css.rel = "stylesheet";
-css.href = "/data-contract/index.css?contract-v24-20260927";
+css.href = "/data-contract/index.css?contract-v26-20260927";
 document.head.appendChild(css);
 
 function escapeHtml(value) {
@@ -1327,7 +1367,11 @@ function renderPanel(root) {
                   <b>${escapeHtml(set.source.fileName)}</b>
                   ${set.source.sheetName ? `<small>${escapeHtml(set.source.sheetName)}</small>` : ""}
                   ${set.id === activeProductSetId ? `<small class="guan-dc-active-label">当前使用</small>` : ""}
-                  ${set.source.promptTemplateCount ? `<small class="guan-dc-prompt-template-label">已导入 ${set.source.promptTemplateCount} 条提示词模板</small>` : ""}
+                  ${set.source.role === "prompt-products"
+                    ? `<small class="guan-dc-prompt-template-label">已导入 ${setProducts.length} 个提示词产品</small>`
+                    : set.source.promptTemplateCount
+                      ? `<small class="guan-dc-prompt-template-label">已关联 ${set.source.promptTemplateCount} 条提示词模板</small>`
+                      : ""}
                 </div>
                 <small>${setProducts.length} 个产品</small>
               </header>
@@ -1342,7 +1386,7 @@ function renderPanel(root) {
                           <b>${escapeHtml(product.identity.sku || product.id)}</b>
                           <span>${escapeHtml(product.identity.titleZh || "未命名产品")}</span>
                         </div>
-                        <small>Excel/数据表第 ${product.sourceRowNumber || product.order + 1} 行</small>
+                        <small>${set.source.role === "prompt-products" ? "提示词表" : "Excel/数据表"}第 ${product.sourceRowNumber || product.order + 1} 行</small>
                       </div>
                       <div class="guan-dc-slots">
                         ${slots.map((slot) => {
@@ -1386,7 +1430,9 @@ function renderExcelPreview(pending) {
     </section>`;
   }
   const parsed = pending.parsed;
-  const isPromptTemplate = parsed.kind === "prompt-template";
+  const isPromptProductSheet = parsed.kind === "prompt-template";
+  const isCompetitorSheet = parsed.kind === "product-table"
+    && (normalizeHeader(pending.sheetName) === "data" || Boolean(pending.promptSheetInfo));
   const visibleHeaders = parsed.headers.slice(0, 8);
   const previewRows = parsed.rows.slice(0, 6);
   const sheetOptions = pending.sheetNames.map((name) =>
@@ -1401,26 +1447,33 @@ function renderExcelPreview(pending) {
         `).join("")}</tbody>
       </table>
     </div>
-  ` : `<div class="guan-dc-excel-no-rows">当前工作表没有可导入的产品行。</div>`;
+  ` : `<div class="guan-dc-excel-no-rows">当前工作表没有可导入的${isPromptProductSheet ? "提示词产品" : "产品"}行。</div>`;
   return `
     <section class="guan-dc-excel-preview">
       <div class="guan-dc-excel-title">
-        <div><strong>${isPromptTemplate ? "提示词预览" : "导入预览"}</strong><span title="${escapeHtml(pending.fileName)}">${escapeHtml(pending.fileName)}</span></div>
+        <div><strong>${isPromptProductSheet ? "提示词产品预览" : "竞品/数据预览"}</strong><span title="${escapeHtml(pending.fileName)}">${escapeHtml(pending.fileName)}</span></div>
         <button type="button" data-dc-action="clear-excel" aria-label="取消 Excel 导入">×</button>
       </div>
       <div class="guan-dc-excel-meta">
-        ${isPromptTemplate
-          ? `${parsed.rows.length} 条产品路线 · ${parsed.promptColumnCount} 个提示词字段 · 第 ${parsed.headerRowNumber} 行为表头`
+        ${isPromptProductSheet
+          ? `${parsed.rows.length} 个待生成产品 · ${parsed.promptColumnCount} 个提示词字段 · 第 ${parsed.headerRowNumber} 行为表头`
           : `${parsed.rows.length} 个产品行 · ${parsed.headers.length} 列 · 第 ${parsed.headerRowNumber} 行为表头`}
       </div>
       ${pending.sheetNames.length > 1 ? `<label class="guan-dc-sheet-label">工作表<select data-dc-input="sheet">${sheetOptions}</select></label>` : `<div class="guan-dc-sheet-name">工作表：${escapeHtml(pending.sheetName)}</div>`}
-      ${isPromptTemplate ? `
+      ${isPromptProductSheet ? `
         <div class="guan-dc-prompt-detected">
-          <strong>已识别“最终英文提示词”区域</strong>
-          <p>这里是一行一个产品路线的提示词模板，不是一行一个商品。Main Prompt、Detail Prompt 01-10、Rich Prompt 01-06 会按列分别保存。</p>
-          <p>点击下方按钮会只导入提示词模板，不会把这 5 条路线误导入成商品；如果同一文件还包含 <b>Data</b>，切换到 Data 后确认导入会自动同时保存这些模板。</p>
+          <strong>已识别“最终英文提示词”产品表</strong>
+          <p>这里一行就是一个待生成产品。Main Prompt、Detail Prompt 01-10、Rich Prompt 01-06 和 Video Prompt 会按列保存到该产品的提示词配置。</p>
+          <p><b>Data</b> 以及前面的分析工作表是竞品参考资料，不会作为商品导入。SKU、规格等产品参数后续可在自定义面板补充，并与这些提示词组合。</p>
+          <div class="guan-dc-slot-counts">
+            <strong>每个提示词产品建立图片槽位</strong>
+            <label>主图<input data-dc-input="slot-main" type="number" min="0" max="100" value="${pending.slotCounts.main}"></label>
+            <label>副图<input data-dc-input="slot-secondary" type="number" min="0" max="100" value="${pending.slotCounts.secondary}"></label>
+            <label>详情图<input data-dc-input="slot-detail" type="number" min="0" max="100" value="${pending.slotCounts.detail}"></label>
+          </div>
         </div>
       ` : `
+        ${isCompetitorSheet ? `<div class="guan-dc-prompt-detected"><strong>这是竞品参考数据</strong><p>当前工作表不会导入为待生成商品，请切换到最后的提示词产品表。</p></div>` : ""}
         <div class="guan-dc-slot-counts">
           <strong>每个产品建立图片槽位</strong>
           <label>主图<input data-dc-input="slot-main" type="number" min="0" max="100" value="${pending.slotCounts.main}"></label>
@@ -1429,14 +1482,14 @@ function renderExcelPreview(pending) {
         </div>
         ${pending.promptSheetInfo ? `
           <div class="guan-dc-prompt-hint">
-            已检测到提示词工作表“${escapeHtml(pending.promptSheetInfo.sheetName)}”：最终英文提示词从第 ${pending.promptSheetInfo.headerRowNumber} 行表头开始，共 ${pending.promptSheetInfo.rowCount} 条产品路线。确认导入 Data 时会自动一起保存这些提示词模板，也可以切换工作表单独导入模板。
+            已检测到提示词产品表“${escapeHtml(pending.promptSheetInfo.sheetName)}”：共 ${pending.promptSheetInfo.rowCount} 个待生成产品。请切换到该工作表导入；当前 Data/分析表仅作竞品参考。
           </div>
         ` : ""}
       `}
       ${parsed.headers.length > visibleHeaders.length ? `<p class="guan-dc-preview-note">预览仅显示前 8 列，导入时会保留全部 ${parsed.headers.length} 列。</p>` : ""}
       ${table}
       <p class="guan-dc-preview-note">显示前 ${Math.min(6, parsed.rows.length)} 行。完全空白行会跳过，Excel 原始行号和字段会保留。</p>
-      <button type="button" class="guan-dc-confirm-import" data-dc-action="confirm-excel" ${parsed.rows.length ? "" : "disabled"}>${isPromptTemplate ? `导入 ${parsed.rows.length} 条提示词模板` : `确认导入 ${parsed.rows.length} 个产品`}</button>
+      <button type="button" class="guan-dc-confirm-import" data-dc-action="confirm-excel" ${(parsed.rows.length && !isCompetitorSheet) ? "" : "disabled"}>${isPromptProductSheet ? `导入 ${parsed.rows.length} 个提示词产品` : isCompetitorSheet ? "竞品数据不可作为产品导入" : `确认导入 ${parsed.rows.length} 个产品`}</button>
     </section>
   `;
 }
@@ -1650,6 +1703,19 @@ function promptTemplatesFromParsed(parsed) {
       sourceRowNumber: row.sourceRowNumber,
     };
   }).filter((template) => Object.keys(template.prompts).length > 0);
+}
+
+function promptProductRowsFromParsed(parsed) {
+  return promptTemplatesFromParsed(parsed).map((template) => ({
+    "产品名称": template.route || `提示词产品 ${template.order}`,
+    "提示词路线": template.route,
+    "提示词序号": template.order,
+    ...template.prompts,
+  }));
+}
+
+function promptProductSourceRowsFromParsed(parsed) {
+  return promptTemplatesFromParsed(parsed).map((template) => template.sourceRowNumber);
 }
 
 function promptTemplateScore(product, template) {
@@ -1910,7 +1976,10 @@ async function loadExcelFile(file, root) {
       sheetNames,
       promptCandidate?.sheetName || "",
     );
-    const selectedCandidate = productCandidate || promptCandidate;
+    // The prompt sheet is the operator's product source. Data and the other
+    // analysis sheets are reference-only competitor research, so default the
+    // preview to the prompt products whenever one is found.
+    const selectedCandidate = promptCandidate || productCandidate;
     if (!selectedCandidate) throw new Error("文件中没有可识别的 Data 产品表或提示词模板工作表");
     const sheetName = selectedCandidate.sheetName;
     const parsed = selectedCandidate.parsed;
@@ -2011,7 +2080,9 @@ function bindPanelEvents(root) {
     try {
       const slotCounts = readSlotCounts(root);
       const sheetName = event.currentTarget.value;
-      const nextParsed = parseExcelSheet(pending.workbook, sheetName);
+      const nextParsed = sheetName === pending.promptSheetInfo?.sheetName && pending.promptSheetParsed
+        ? pending.promptSheetParsed
+        : parseExcelSheet(pending.workbook, sheetName);
       pendingExcelImport = {
         ...pending,
         sheetName,
@@ -2044,13 +2115,20 @@ function bindPanelEvents(root) {
     if (!pending?.parsed?.rows?.length) return;
     try {
       if (pending.parsed.kind === "prompt-template") {
-        const result = api.importPromptTemplates({
+        const promptTemplates = promptTemplatesFromParsed(pending.parsed);
+        const slotCounts = readSlotCounts(root);
+        const result = api.importPromptProducts({
           fileName: pending.fileName,
           kind: pending.kind,
           fileSha256: pending.fileSha256,
           sheetName: pending.sheetName,
           promptSheetName: pending.sheetName,
-          promptTemplates: promptTemplatesFromParsed(pending.parsed),
+          promptTemplates,
+          productRows: promptProductRowsFromParsed(pending.parsed),
+          sourceRowNumbers: promptProductSourceRowsFromParsed(pending.parsed),
+          headerMap: pending.parsed.headerMap,
+          slotCounts,
+          slotTemplates: buildSlotTemplates(slotCounts),
         });
         pendingExcelImport = null;
         root.dataset.open = "true";
@@ -2059,6 +2137,9 @@ function bindPanelEvents(root) {
           root.querySelector(".guan-dc-prompt-template-label")?.scrollIntoView({ block: "nearest" });
         }, 0);
         return result;
+      }
+      if (pending.promptSheetInfo && normalizeHeader(pending.sheetName) === "data") {
+        throw new Error("Data 是竞品参考数据，请切换到最后的提示词工作表后导入");
       }
       const slotCounts = readSlotCounts(root);
       const rows = pending.parsed.rows.map((row) => row.values);
