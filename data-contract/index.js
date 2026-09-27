@@ -14,6 +14,7 @@ const MAX_IMPORT_FILE_BYTES = 100 * 1024 * 1024;
 const COMPRESSED_STORAGE_PREFIX = "guan-workbench-compressed-v1:";
 let pendingExcelImport = null;
 let activeExcelDeleteDialog = null;
+let activeExcelImportDialog = null;
 
 function timestamp() {
   return new Date().toISOString();
@@ -75,6 +76,7 @@ function createEmptyState() {
       language: "ru",
       storageMode: "local-only",
       activeProductSetId: null,
+      activeProductId: null,
       createdAt: now,
       updatedAt: now,
     },
@@ -248,6 +250,17 @@ function normalizeState(value) {
     normalized.workspace.activeProductSetId = normalized.productSets
       .slice()
       .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)))[0].id;
+  }
+  if (normalized.workspace.activeProductId && !productById.has(normalized.workspace.activeProductId)) {
+    normalized.workspace.activeProductId = null;
+  }
+  const activeSetProductIds = new Set(normalized.products
+    .filter((product) => product.productSetId === normalized.workspace.activeProductSetId)
+    .map((product) => product.id));
+  if (!activeSetProductIds.has(normalized.workspace.activeProductId)) {
+    normalized.workspace.activeProductId = normalized.products
+      .filter((product) => product.productSetId === normalized.workspace.activeProductSetId)
+      .sort((a, b) => a.order - b.order || String(a.createdAt).localeCompare(String(b.createdAt)))[0]?.id || null;
   }
 
   // ProductSet.productIds is a derived index; rebuild it from each Product's
@@ -558,6 +571,7 @@ function createProductSetInternal(state, input = {}) {
       sheetName: input.sheetName || undefined,
       role: input.role || undefined,
       promptSheetName: input.promptSheetName || undefined,
+      promptSelectionKey: input.promptSelectionKey || undefined,
       ...(input.headerMap && typeof input.headerMap === "object"
         ? { headerMap: clone(input.headerMap) }
         : {}),
@@ -612,6 +626,7 @@ function createProductSetInternal(state, input = {}) {
     set.productIds.push(product.id);
   });
   set.status = rows.length || (Array.isArray(input.promptTemplates) && input.promptTemplates.length) ? "ready" : "draft";
+  state.workspace.activeProductId = set.productIds[0] || null;
   set.updatedAt = now;
   return set;
 }
@@ -851,13 +866,26 @@ const api = {
     if (productSetId !== null && productSetId !== undefined && productSetId !== "") {
       requireById(state.productSets, productSetId, "ProductSet");
       state.workspace.activeProductSetId = productSetId;
+      state.workspace.activeProductId = state.products
+        .filter((product) => product.productSetId === productSetId)
+        .sort((a, b) => a.order - b.order)[0]?.id || null;
     } else {
       state.workspace.activeProductSetId = null;
+      state.workspace.activeProductId = null;
     }
     window.dispatchEvent(new CustomEvent(ACTIVE_PRODUCT_SET_EVENT, {
       detail: { productSetId: state.workspace.activeProductSetId },
     }));
     return state.workspace.activeProductSetId;
+  })),
+  setActiveProduct: (productId) => clone(mutate((state) => {
+    const product = requireById(state.products, productId, "Product");
+    state.workspace.activeProductId = product.id;
+    state.workspace.activeProductSetId = product.productSetId;
+    window.dispatchEvent(new CustomEvent(ACTIVE_PRODUCT_SET_EVENT, {
+      detail: { productSetId: state.workspace.activeProductSetId, productId: product.id },
+    }));
+    return product.id;
   })),
   createProductSet: (input) => clone(mutate((state) => createProductSetInternal(state, input))),
   deleteProductSet: (productSetId) => {
@@ -906,6 +934,9 @@ const api = {
         : (state.productSets.some((set) => set.id === state.workspace.activeProductSetId)
           ? state.workspace.activeProductSetId
           : nextActive);
+      state.workspace.activeProductId = state.products
+        .filter((product) => product.productSetId === state.workspace.activeProductSetId)
+        .sort((a, b) => a.order - b.order)[0]?.id || null;
       return {
         deletedProductSetId: productSet.id,
         deletedFileName: productSet.source?.fileName || "未命名产品表",
@@ -1001,11 +1032,15 @@ const api = {
           "提示词序号": template.order,
           ...template.prompts,
         }));
+    const promptSelectionKey = templates
+      .map((template, index) => `${template.sourceRowNumber || template.order || index + 1}:${template.id || ""}`)
+      .join(",");
     const existing = state.productSets.find((candidate) => (
       candidate.source?.role === "prompt-products"
       && input.fileSha256
       && candidate.source?.fileSha256 === input.fileSha256
       && candidate.source?.sheetName === input.sheetName
+      && candidate.source?.promptSelectionKey === promptSelectionKey
     ));
     const set = existing || createProductSetInternal(state, {
       fileName: input.fileName,
@@ -1014,6 +1049,7 @@ const api = {
       fileSha256: input.fileSha256,
       sheetName: input.sheetName,
       promptSheetName: input.promptSheetName,
+      promptSelectionKey,
       promptTemplates: templates,
       rows: productRows,
       sourceRowNumbers: input.sourceRowNumbers,
@@ -1027,6 +1063,7 @@ const api = {
       existing.source.promptTemplateCount = templates.length;
       existing.updatedAt = timestamp();
       state.workspace.activeProductSetId = existing.id;
+      state.workspace.activeProductId = existing.productIds[0] || null;
     }
     return {
       productSetId: set.id,
@@ -1091,7 +1128,7 @@ window.GuanWorkbenchData = api;
 
 const css = document.createElement("link");
 css.rel = "stylesheet";
-css.href = "/data-contract/index.css?contract-v26-20260927";
+css.href = "/data-contract/index.css?contract-v27-20260927";
 document.head.appendChild(css);
 
 function escapeHtml(value) {
@@ -1111,6 +1148,176 @@ function closeExcelDeleteDialog() {
     if (dialog.dataset.state === "closing") dialog.remove();
   }, 170);
   activeExcelDeleteDialog = null;
+}
+
+function closeExcelImportDialog() {
+  const dialog = activeExcelImportDialog || document.querySelector(".guan-dc-excel-import-modal");
+  pendingExcelImport = null;
+  if (!dialog) {
+    activeExcelImportDialog = null;
+    return;
+  }
+  dialog.dataset.state = "closing";
+  window.setTimeout(() => {
+    if (dialog.dataset.state === "closing") dialog.remove();
+  }, 180);
+  activeExcelImportDialog = null;
+}
+
+function renderExcelImportDialog(root) {
+  const pending = pendingExcelImport;
+  if (!pending) {
+    if (activeExcelImportDialog) closeExcelImportDialog();
+    return;
+  }
+  let dialog = activeExcelImportDialog || document.querySelector(".guan-dc-excel-import-modal");
+  if (!dialog) {
+    dialog = document.createElement("div");
+    dialog.className = "guan-dc-excel-import-modal";
+    dialog.dataset.state = "opening";
+    dialog.setAttribute("role", "dialog");
+    dialog.setAttribute("aria-modal", "true");
+    dialog.setAttribute("aria-labelledby", "guan-dc-excel-import-title");
+    document.body.append(dialog);
+    activeExcelImportDialog = dialog;
+    dialog.addEventListener("click", (event) => {
+      const target = event.target instanceof Element ? event.target : null;
+      if (!target) return;
+      if (target.closest("[data-excel-import-cancel]")) {
+        event.preventDefault();
+        closeExcelImportDialog();
+        return;
+      }
+      if (!target.closest("[data-excel-import-confirm]")) return;
+      event.preventDefault();
+      const current = pendingExcelImport;
+      if (!current || current.busy || current.error) return;
+      const templates = Array.isArray(current.promptTemplates) ? current.promptTemplates : [];
+      const indexes = Array.isArray(current.selectedPromptIndexes) ? current.selectedPromptIndexes : [];
+      const selectedSet = new Set(indexes);
+      const selectedTemplates = templates.filter((_, index) => selectedSet.has(index));
+      if (!selectedTemplates.length) return;
+      try {
+        const selectedSourceRows = new Set(selectedTemplates.map((template) => template.sourceRowNumber));
+        const selectedParsed = {
+          ...current.promptSheetParsed,
+          rows: current.promptSheetParsed.rows.filter((row) => selectedSourceRows.has(row.sourceRowNumber)),
+        };
+        const slotCounts = current.slotCounts || { ...DEFAULT_SLOT_COUNTS };
+        api.importPromptProducts({
+          fileName: current.fileName,
+          kind: current.kind,
+          fileSha256: current.fileSha256,
+          sheetName: current.sheetName,
+          promptSheetName: current.sheetName,
+          promptTemplates: selectedTemplates,
+          productRows: promptProductRowsFromParsed(selectedParsed),
+          sourceRowNumbers: promptProductSourceRowsFromParsed(selectedParsed),
+          headerMap: current.promptSheetParsed.headerMap,
+          slotCounts,
+          slotTemplates: buildSlotTemplates(slotCounts),
+        });
+        closeExcelImportDialog();
+        renderHeaderControls(root);
+        if (root.dataset.open === "true") renderPanel(root);
+      } catch (error) {
+        current.error = error instanceof Error ? error.message : String(error);
+        current.busy = false;
+        renderExcelImportDialog(root);
+      }
+    });
+    dialog.addEventListener("change", (event) => {
+      const target = event.target instanceof HTMLInputElement ? event.target : null;
+      if (!target) return;
+      const current = pendingExcelImport;
+      if (!current || current.busy || current.error) return;
+      if (target.matches("[data-prompt-select-all]")) {
+        const templates = Array.isArray(current.promptTemplates) ? current.promptTemplates : [];
+        current.selectedPromptIndexes = target.checked ? templates.map((_, index) => index) : [];
+        renderExcelImportDialog(root);
+        return;
+      }
+      if (target.matches("[data-prompt-index]")) {
+        const index = Number(target.dataset.promptIndex);
+        const selected = new Set(current.selectedPromptIndexes || []);
+        if (target.checked) selected.add(index);
+        else selected.delete(index);
+        current.selectedPromptIndexes = [...selected].sort((a, b) => a - b);
+        renderExcelImportDialog(root);
+      }
+    });
+    dialog.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        closeExcelImportDialog();
+      }
+    });
+    window.setTimeout(() => {
+      if (dialog.dataset.state === "opening") dialog.dataset.state = "open";
+    }, 20);
+  }
+  const progress = Math.max(0, Math.min(100, Number(pending.progress || 0)));
+  const templates = Array.isArray(pending.promptTemplates) ? pending.promptTemplates : [];
+  const selected = new Set(Array.isArray(pending.selectedPromptIndexes) ? pending.selectedPromptIndexes : []);
+  const selectedCount = templates.filter((_, index) => selected.has(index)).length;
+  const allSelected = templates.length > 0 && selectedCount === templates.length;
+  const productRows = templates.map((template, index) => {
+    const title = template.route || `提示词产品 ${template.order || index + 1}`;
+    const mainPrompt = template.prompts?.["Main Prompt"] || "";
+    return `
+      <label class="guan-dc-import-product ${selected.has(index) ? "is-selected" : ""}">
+        <input type="checkbox" data-prompt-index="${index}" ${selected.has(index) ? "checked" : ""}>
+        <span class="guan-dc-import-product-check" aria-hidden="true"></span>
+        <span class="guan-dc-import-product-copy">
+          <strong>${escapeHtml(title)}</strong>
+          <small>${escapeHtml(mainPrompt.slice(0, 160) || "已读取提示词列，可在产品面板继续补充 SKU 与规格")}${mainPrompt.length > 160 ? "…" : ""}</small>
+        </span>
+        <em>产品 ${index + 1}</em>
+      </label>
+    `;
+  }).join("");
+  dialog.innerHTML = `
+    <div class="guan-dc-excel-import-backdrop" data-excel-import-cancel></div>
+    <section class="guan-dc-excel-import-card" role="document">
+      <header class="guan-dc-excel-import-head">
+        <div>
+          <strong id="guan-dc-excel-import-title">导入提示词产品</strong>
+          <span>${escapeHtml(pending.fileName || "Excel")}</span>
+        </div>
+        <button type="button" data-excel-import-cancel aria-label="取消上传">×</button>
+      </header>
+      ${pending.busy ? `
+        <div class="guan-dc-excel-import-progress" aria-live="polite">
+          <div class="guan-dc-excel-import-progress-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M5.6 5.6l2.8 2.8M15.6 15.6l2.8 2.8M18.4 5.6l-2.8 2.8M8.4 15.6l-2.8 2.8"></path></svg>
+          </div>
+          <strong>${escapeHtml(pending.progressMessage || "正在读取 Excel…")}</strong>
+          <div class="guan-dc-excel-progress-track"><span style="width:${progress}%"></span></div>
+          <small>${progress}% · 文件仅在本机浏览器中解析</small>
+        </div>
+      ` : pending.error ? `
+        <div class="guan-dc-excel-import-error" role="alert">
+          <strong>无法导入这个 Excel</strong>
+          <p>${escapeHtml(pending.error)}</p>
+          <button type="button" data-excel-import-cancel>关闭</button>
+        </div>
+      ` : `
+        <div class="guan-dc-excel-import-summary">
+          <strong>已读取提示词工作表「${escapeHtml(pending.sheetName || "") }」</strong>
+          <span>识别到 ${templates.length} 个产品，默认全部勾选；Data 及前面的工作表仅作为竞品参考。</span>
+        </div>
+        <div class="guan-dc-import-select-all">
+          <label><input type="checkbox" data-prompt-select-all ${allSelected ? "checked" : ""}> 全选产品</label>
+          <span>已选择 ${selectedCount} / ${templates.length}</span>
+        </div>
+        <div class="guan-dc-import-products">${productRows || `<div class="guan-dc-excel-import-empty">没有找到可导入的提示词产品。</div>`}</div>
+        <footer class="guan-dc-excel-import-actions">
+          <button type="button" data-excel-import-cancel>取消</button>
+          <button type="button" class="primary" data-excel-import-confirm ${selectedCount ? "" : "disabled"}>导入${selectedCount ? ` ${selectedCount} 个产品` : ""}</button>
+        </footer>
+      `}
+    </section>
+  `;
 }
 
 function openExcelDeleteDialog({ fileName, onConfirm }) {
@@ -1185,14 +1392,38 @@ function renderHeaderControls(root) {
     String(b.createdAt).localeCompare(String(a.createdAt))
   );
   const activeId = state.workspace.activeProductSetId || productSets[0]?.id || "";
+  const activeProducts = state.products
+    .filter((product) => product.productSetId === activeId)
+    .sort((a, b) => a.order - b.order || String(a.createdAt).localeCompare(String(b.createdAt)));
+  const activeProductId = activeProducts.some((product) => product.id === state.workspace.activeProductId)
+    ? state.workspace.activeProductId
+    : activeProducts[0]?.id || "";
   const stateKey = JSON.stringify({
     activeId,
+    activeProductId,
     sets: productSets.map((set) => [set.id, set.source?.fileName || "未命名产品表", set.source?.sheetName || ""]),
+    products: activeProducts.map((product) => [
+      product.id,
+      product.identity?.titleZh || product.identity?.sku || `产品 ${product.order}`,
+    ]),
   });
   if (controls.dataset.stateKey === stateKey) return true;
   controls.dataset.stateKey = stateKey;
   controls.dataset.menuOpen = "false";
   controls.innerHTML = `
+    <div class="guan-dc-product-nav" role="tablist" aria-label="当前工作表产品">
+      ${activeProducts.map((product, index) => {
+        const label = product.identity?.titleZh || product.identity?.sku || `产品 ${index + 1}`;
+        return `
+          <button type="button" class="guan-dc-product-capsule ${product.id === activeProductId ? "is-active" : ""}"
+            role="tab" aria-selected="${product.id === activeProductId}" data-product-id="${escapeHtml(product.id)}"
+            title="${escapeHtml(label)}">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="4.5" width="17" height="15" rx="2"></rect><circle cx="8.5" cy="9" r="1.5"></circle><path d="m5.5 17 4.4-4.4 3.2 3.2 2.2-2.2 3.2 3.4"></path></svg>
+            <span>${escapeHtml(label)}</span>
+          </button>
+        `;
+      }).join("")}
+    </div>
     <span class="guan-dc-active-sheet-label" aria-hidden="true">当前工作表：</span>
     <div class="guan-dc-file-picker">
       <button type="button" class="guan-dc-file-trigger" aria-label="选择已上传的 Excel 文件" aria-haspopup="listbox" aria-expanded="false">
@@ -1266,6 +1497,16 @@ function renderHeaderControls(root) {
     controls.addEventListener("click", (event) => {
       const target = event.target instanceof Element ? event.target : null;
       if (!target) return;
+      const productCapsule = target.closest(".guan-dc-product-capsule");
+      if (productCapsule) {
+        event.preventDefault();
+        try {
+          api.setActiveProduct(productCapsule.dataset.productId || "");
+        } catch (error) {
+          alert(error instanceof Error ? error.message : String(error));
+        }
+        return;
+      }
       const trigger = target.closest(".guan-dc-file-trigger");
       if (trigger) {
         event.preventDefault();
@@ -1924,13 +2165,17 @@ async function loadExcelFile(file, root) {
   if (!file) return;
   const extension = file.name.split(".").pop()?.toLowerCase();
   if (!["xlsx", "xls", "csv"].includes(extension)) {
-    pendingExcelImport = { error: "请选择 .xlsx、.xls 或 .csv 文件。" };
+    pendingExcelImport = { fileName: file.name, error: "请选择 .xlsx、.xls 或 .csv 文件。" };
+    root.dataset.open = "false";
     renderPanel(root);
+    renderExcelImportDialog(root);
     return;
   }
   if (file.size > MAX_IMPORT_FILE_BYTES) {
-    pendingExcelImport = { error: "文件超过 100 MB。请先拆分或精简文件后再导入。" };
+    pendingExcelImport = { fileName: file.name, error: "文件超过 100 MB。请先拆分或精简文件后再导入。" };
+    root.dataset.open = "false";
     renderPanel(root);
+    renderExcelImportDialog(root);
     return;
   }
   const token = createId("excel");
@@ -1940,12 +2185,20 @@ async function loadExcelFile(file, root) {
     fileName: file.name,
     kind: extension,
     busy: true,
+    progress: 4,
+    progressMessage: "正在读取文件…",
     slotCounts: { ...DEFAULT_SLOT_COUNTS },
   };
+  root.dataset.open = "false";
   renderPanel(root);
+  renderExcelImportDialog(root);
   try {
     if (!globalThis.XLSX) throw new Error("本地 Excel 解析库没有加载。请刷新页面后重试。");
     const buffer = await file.arrayBuffer();
+    if (pendingExcelImport?.token !== token) return;
+    pendingExcelImport.progress = 18;
+    pendingExcelImport.progressMessage = "文件读取完成，正在解析工作表…";
+    renderExcelImportDialog(root);
     // CSV files do not carry an encoding declaration.  SheetJS otherwise
     // falls back to the legacy codepage and UTF-8 Chinese headers become
     // mojibake in the preview/imported product fields.  Explicitly select
@@ -1955,36 +2208,35 @@ async function loadExcelFile(file, root) {
       cellDates: true,
       ...(extension === "csv" ? { codepage: 65001 } : {}),
     });
+    if (pendingExcelImport?.token !== token) return;
+    pendingExcelImport.progress = 42;
+    pendingExcelImport.progressMessage = "正在检查工作表结构…";
+    renderExcelImportDialog(root);
     const sheetNames = [...workbook.SheetNames];
     if (!sheetNames.length) throw new Error("文件中没有工作表");
-    const namedDataSheet = sheetNames.find((name) => normalizeHeader(name) === "data");
-    const namedDataCandidate = namedDataSheet && workbook.Sheets[namedDataSheet]?.["!ref"]
-      ? (() => {
-          try {
-            return { sheetName: namedDataSheet, parsed: parseExcelSheet(workbook, namedDataSheet) };
-          } catch {
-            return null;
-          }
-        })()
-      : null;
     // Prompt routes normally live in the final worksheet. Scan from the end,
     // first preferring prompt-like names, then validating every remaining sheet
     // by its actual Prompt/Order/route matrix so names are not a hard requirement.
-    const promptCandidate = findPromptSheetCandidate(workbook, sheetNames, namedDataCandidate?.sheetName || "");
-    const productCandidate = namedDataCandidate || findProductSheetCandidate(
-      workbook,
-      sheetNames,
-      promptCandidate?.sheetName || "",
-    );
+    const promptCandidate = findPromptSheetCandidate(workbook, sheetNames);
     // The prompt sheet is the operator's product source. Data and the other
     // analysis sheets are reference-only competitor research, so default the
     // preview to the prompt products whenever one is found.
-    const selectedCandidate = promptCandidate || productCandidate;
-    if (!selectedCandidate) throw new Error("文件中没有可识别的 Data 产品表或提示词模板工作表");
+    if (pendingExcelImport?.token !== token) return;
+    pendingExcelImport.progress = 68;
+    pendingExcelImport.progressMessage = "正在识别提示词工作表中的产品…";
+    renderExcelImportDialog(root);
+    if (!promptCandidate) {
+      throw new Error("未找到可识别的提示词工作表。Data 和前面的分析工作表只作为竞品参考，不能作为待生成商品导入。");
+    }
+    const selectedCandidate = promptCandidate;
     const sheetName = selectedCandidate.sheetName;
     const parsed = selectedCandidate.parsed;
     const promptSheetName = promptCandidate?.sheetName || "";
     const promptSheetParsed = promptCandidate?.parsed || null;
+    const promptTemplates = promptTemplatesFromParsed(promptSheetParsed);
+    if (!promptTemplates.length) {
+      throw new Error(`工作表「${sheetName}」没有识别到可导入的提示词产品行。请确认一行对应一个产品，并包含 Main Prompt、Detail Prompt 或 Rich Prompt 列。`);
+    }
     const promptSheetInfo = promptSheetParsed ? {
       sheetName: promptSheetName,
       sectionRowNumber: promptSheetParsed.sectionRowNumber,
@@ -1994,6 +2246,10 @@ async function loadExcelFile(file, root) {
     } : null;
     let fileSha256;
     if (globalThis.crypto?.subtle) {
+      if (pendingExcelImport?.token !== token) return;
+      pendingExcelImport.progress = 88;
+      pendingExcelImport.progressMessage = "正在生成本地文件指纹…";
+      renderExcelImportDialog(root);
       const digest = await crypto.subtle.digest("SHA-256", buffer);
       fileSha256 = [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
     }
@@ -2001,18 +2257,24 @@ async function loadExcelFile(file, root) {
     pendingExcelImport = {
       token, file, fileName: file.name, kind: extension, fileSha256,
       workbook, sheetNames, sheetName, parsed, promptSheetInfo, promptSheetParsed, busy: false,
+      promptTemplates,
+      selectedPromptIndexes: promptTemplates.map((_, index) => index),
+      progress: 100,
+      progressMessage: "分析完成",
       slotCounts: { ...DEFAULT_SLOT_COUNTS },
     };
+    renderExcelImportDialog(root);
   } catch (error) {
     if (pendingExcelImport?.token !== token) return;
     pendingExcelImport = {
       token,
       fileName: file.name,
+      progress: 100,
+      progressMessage: "分析失败",
       error: error instanceof Error ? error.message : String(error),
     };
+    renderExcelImportDialog(root);
   }
-  root.dataset.open = "true";
-  renderPanel(root);
 }
 
 function downloadJson(state) {
