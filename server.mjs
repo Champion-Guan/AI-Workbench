@@ -6,6 +6,8 @@ import { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import { extname, join, normalize } from "node:path";
 import { fileURLToPath } from "node:url";
+import { ProxyAgent } from "undici";
+import { startBuiltInImageProxy } from "./proxy-service.mjs";
 
 const projectRoot = fileURLToPath(new URL("./", import.meta.url));
 const archiveRoot = join(projectRoot, "archive");
@@ -1893,6 +1895,70 @@ const imageRelayUpstreams = {
 };
 const imageRelayEndpoints = new Set(["models", "images/generations", "images/edits", "responses"]);
 const localHosts = new Set([`127.0.0.1:${port}`, `localhost:${port}`]);
+const explicitImageRelayProxySetting = process.env.IMAGE_RELAY_PROXY_URL?.trim() || "";
+let imageRelayProxySetting = explicitImageRelayProxySetting || "http://127.0.0.1:7890";
+const imageRelayProxyAgents = new Map();
+
+function configureImageRelayProxyUrl(proxyUrl) {
+  if (!explicitImageRelayProxySetting || process.env.IMAGE_RELAY_PROXY_MODE === "sidecar") {
+    imageRelayProxySetting = proxyUrl;
+  }
+}
+
+function getImageRelayProxyUrl() {
+  if (!imageRelayProxySetting || /^(?:off|none|disabled)$/i.test(imageRelayProxySetting)) return null;
+  try {
+    const url = new URL(imageRelayProxySetting);
+    // Clash Party's mixed port is an HTTP proxy. SOCKS-only endpoints are not
+    // used implicitly because silently treating a SOCKS port as HTTP produces
+    // confusing failures and could retry through an unintended service.
+    if (url.protocol !== "http:") return null;
+    return url;
+  } catch {
+    return null;
+  }
+}
+
+function readRequestBody(request, maxBytes) {
+  return new Promise((resolve, reject) => {
+    const chunks = [];
+    let total = 0;
+    let settled = false;
+    const finish = (error, value) => {
+      if (settled) return;
+      settled = true;
+      error ? reject(error) : resolve(value);
+    };
+    request.on("data", (chunk) => {
+      if (settled) return;
+      total += chunk.length;
+      if (total > maxBytes) {
+        request.destroy();
+        finish(new Error("请求体超过本地中转层允许的大小"));
+        return;
+      }
+      chunks.push(chunk);
+    });
+    request.once("end", () => finish(null, Buffer.concat(chunks)));
+    request.once("aborted", () => finish(new Error("客户端在上传请求体时中断连接")));
+    request.once("error", (error) => finish(error));
+  });
+}
+
+function getImageRelayProxyAgent(proxyUrl) {
+  const key = proxyUrl.href;
+  let agent = imageRelayProxyAgents.get(key);
+  if (!agent) {
+    agent = new ProxyAgent(key);
+    imageRelayProxyAgents.set(key, agent);
+  }
+  return agent;
+}
+
+async function closeImageRelayProxyAgents() {
+  await Promise.all([...imageRelayProxyAgents.values()].map((agent) => agent.close()));
+  imageRelayProxyAgents.clear();
+}
 
 function safeFile(root, relative) {
   const target = join(root, normalize(relative.replace(/^\/+/, "")));
@@ -1945,6 +2011,26 @@ async function send(response, path, method) {
   createReadStream(path).pipe(response);
 }
 
+function shouldRetryImageRelayThroughProxy(provider, upstream) {
+  if (!upstream) return true;
+  // The tixyw gateway explicitly marks requests rejected by its regional
+  // policy. A 403 from another compatible provider is also safe to retry:
+  // authentication failures are returned as 401 by these APIs and do not
+  // create a billed image task.
+  return upstream.status === 403 || upstream.status === 407;
+}
+
+function fetchRelayHeaders(upstream, requestId, transport) {
+  return {
+    "content-type": upstream.headers.get("content-type") || "application/json",
+    "cache-control": "no-store",
+    connection: "close",
+    "x-image-relay-request-id": requestId,
+    "x-image-relay-transport": transport,
+    ...(upstream.headers.get("content-length") ? { "content-length": upstream.headers.get("content-length") } : {}),
+  };
+}
+
 async function relayImageApi(request, response, pathname) {
   const origin = request.headers.origin;
   const host = request.headers.host;
@@ -1967,11 +2053,30 @@ async function relayImageApi(request, response, pathname) {
     response.end();
     return;
   }
+
+  const maxBodyBytes = 100 * 1024 * 1024;
   const contentLength = Number(request.headers["content-length"] || 0);
-  if (contentLength > 100 * 1024 * 1024) {
+  if (contentLength > maxBodyBytes) {
     response.writeHead(413, { "cache-control": "no-store" });
     response.end();
     return;
+  }
+
+  let requestBody;
+  if (request.method !== "GET") {
+    try {
+      requestBody = await readRequestBody(request, maxBodyBytes);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "无法读取图片请求体";
+      const body = JSON.stringify({ error: { code: "local_relay_request_body_error", message } });
+      response.writeHead(message.includes("超过") ? 413 : 400, {
+        "content-type": "application/json; charset=utf-8",
+        "content-length": Buffer.byteLength(body),
+        "cache-control": "no-store",
+      });
+      response.end(body);
+      return;
+    }
   }
 
   const headers = {
@@ -1981,36 +2086,88 @@ async function relayImageApi(request, response, pathname) {
   if (request.headers.authorization) headers.authorization = request.headers.authorization;
   if (request.headers["content-type"]) headers["content-type"] = request.headers["content-type"];
   if (request.headers["content-length"]) headers["content-length"] = request.headers["content-length"];
+  if (requestBody && !headers["content-length"]) headers["content-length"] = String(requestBody.length);
 
   const upstreamUrl = `https://${imageRelayUpstreams[provider]}/v1/${endpoint}`;
+  const requestId = randomUUID().replaceAll("-", "");
+  const clientAbortController = new AbortController();
+  const directAbortController = new AbortController();
+  const directTimeout = setTimeout(() => directAbortController.abort(), 30 * 60 * 1000);
+  response.once("close", () => {
+    if (!response.writableEnded) {
+      clientAbortController.abort();
+      directAbortController.abort();
+    }
+  });
+
+  let directResponse = null;
+  let directBody = null;
+  let directError = null;
   try {
-    const abortController = new AbortController();
-    response.once("close", () => {
-      if (!response.writableEnded) abortController.abort();
-    });
-    const upstream = await fetch(upstreamUrl, {
-      method: request.method,
-      headers,
-      body: request.method === "GET" ? undefined : request,
-      ...(request.method === "GET" ? {} : { duplex: "half" }),
-      redirect: "manual",
-      signal: AbortSignal.any([abortController.signal, AbortSignal.timeout(30 * 60 * 1000)]),
-    });
-    response.writeHead(upstream.status, {
-      "content-type": upstream.headers.get("content-type") || "application/json",
-      "cache-control": "no-store",
-      "connection": "close",
-      "x-image-relay-request-id": randomUUID().replaceAll("-", ""),
-      ...(upstream.headers.get("content-length") ? { "content-length": upstream.headers.get("content-length") } : {}),
-    });
-    if (!upstream.body) return response.end();
-    await pipeline(Readable.fromWeb(upstream.body), response);
+    try {
+      directResponse = await fetch(upstreamUrl, {
+        method: request.method,
+        headers,
+        body: request.method === "GET" ? undefined : requestBody,
+        redirect: "manual",
+        signal: AbortSignal.any([directAbortController.signal, clientAbortController.signal]),
+      });
+    } catch (error) {
+      directError = error;
+    }
+
+    const shouldProxy = !clientAbortController.signal.aborted && (
+      Boolean(directError) || shouldRetryImageRelayThroughProxy(provider, directResponse)
+    );
+    if (directResponse && shouldProxy) {
+      // Preserve the direct response in case the local proxy is unavailable.
+      // Region-policy responses are small JSON/HTML bodies, while successful
+      // image responses are streamed without buffering.
+      directBody = Buffer.from(await directResponse.arrayBuffer());
+    }
+
+    if (shouldProxy) {
+      const proxyUrl = getImageRelayProxyUrl();
+      if (proxyUrl) {
+        try {
+          const proxyResponse = await fetch(upstreamUrl, {
+            method: request.method,
+            headers,
+            body: request.method === "GET" ? undefined : requestBody,
+            redirect: "manual",
+            dispatcher: getImageRelayProxyAgent(proxyUrl),
+            signal: clientAbortController.signal,
+          });
+          response.writeHead(proxyResponse.status, fetchRelayHeaders(proxyResponse, requestId, "proxy"));
+          if (!proxyResponse.body) return response.end();
+          await pipeline(Readable.fromWeb(proxyResponse.body), response);
+          return;
+        } catch {
+          // Fall through to the direct error below. This keeps direct access
+          // fully functional when Clash Party is not running.
+          console.warn("Guan 图片代理回退失败，已保留直连结果");
+        }
+      }
+    }
+
+    if (directResponse) {
+      if (directBody) {
+        response.writeHead(directResponse.status, fetchRelayHeaders(directResponse, requestId, "direct"));
+        response.end(directBody);
+        return;
+      }
+      response.writeHead(directResponse.status, fetchRelayHeaders(directResponse, requestId, "direct"));
+      if (!directResponse.body) return response.end();
+      await pipeline(Readable.fromWeb(directResponse.body), response);
+      return;
+    }
+
+    throw directError || new Error("本地图片中转请求失败");
   } catch {
     if (response.headersSent) {
       response.destroy();
       return;
     }
-    const requestId = randomUUID().replaceAll("-", "");
     const body = JSON.stringify({
       error: {
         code: "local_relay_result_unknown",
@@ -2026,6 +2183,8 @@ async function relayImageApi(request, response, pathname) {
       "x-image-relay-request-id": requestId,
     });
     response.end(body);
+  } finally {
+    clearTimeout(directTimeout);
   }
 }
 
@@ -2089,6 +2248,33 @@ const server = createServer(async (request, response) => {
   if (pathname !== "/" || !await existingFile(pageFile)) return notFound(response);
   return send(response, pageFile, method);
 });
+
+let builtInImageProxy;
+const stopBuiltInImageProxy = async () => {
+  if (builtInImageProxy) await builtInImageProxy.stop();
+  await closeImageRelayProxyAgents();
+};
+const shutdown = async () => {
+  await stopBuiltInImageProxy();
+  server.close(() => process.exit(0));
+  setTimeout(() => process.exit(0), 2000).unref();
+};
+process.once("SIGINT", shutdown);
+process.once("SIGTERM", shutdown);
+
+try {
+  builtInImageProxy = await startBuiltInImageProxy({
+    projectRoot,
+    onProxyReady: configureImageRelayProxyUrl,
+  });
+  if (builtInImageProxy) {
+    console.log("Guan 图片代理已内置启动（直连优先，失败后使用本地代理）");
+  }
+} catch (error) {
+  // The detail page remains usable without a sidecar. A missing binary or
+  // malformed private subscription is reported without echoing its contents.
+  console.warn("Guan 图片代理未启动，请检查 Mihomo 二进制和私有订阅配置");
+}
 
 server.listen(port, "127.0.0.1", () => {
   console.log("Guan A+ 详情页工作台运行在 http://127.0.0.1:" + port);
