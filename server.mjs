@@ -779,10 +779,19 @@ const localOfflineGuardsScript = `<script id="local-offline-guards-script">
       backdrop.className = "local-remove-bg-confirm-backdrop";
       const card = document.createElement("section");
       card.className = "local-remove-bg-confirm-card";
-      const icon = document.createElement("div");
-      icon.className = "local-remove-bg-confirm-icon";
-      icon.setAttribute("aria-hidden", "true");
-      icon.textContent = "✦";
+      const preview = document.createElement("div");
+      preview.className = "local-remove-bg-confirm-preview";
+      preview.setAttribute("aria-label", "待移除背景的图片预览");
+      const previewImage = document.createElement("img");
+      previewImage.src = uploadState.urls[index] || "";
+      previewImage.alt = file.name;
+      previewImage.addEventListener("error", () => {
+        preview.dataset.error = "true";
+        previewImage.removeAttribute("src");
+        previewImage.alt = "";
+        preview.textContent = "";
+      }, { once: true });
+      preview.append(previewImage);
       const copy = document.createElement("div");
       copy.className = "local-remove-bg-confirm-copy";
       const title = document.createElement("h2");
@@ -800,7 +809,7 @@ const localOfflineGuardsScript = `<script id="local-offline-guards-script">
       confirm.className = "primary";
       confirm.textContent = "确认移除";
       actions.append(cancel, confirm);
-      card.append(icon, copy, actions);
+      card.append(preview, copy, actions);
       dialog.append(backdrop, card);
       document.body.append(dialog);
 
@@ -1557,15 +1566,31 @@ const mvpNavigationStyle = `<style id="mvp-navigation">
   .local-remove-bg-confirm[data-state="closing"] .local-remove-bg-confirm-card {
     animation: local-remove-bg-confirm-out .15s cubic-bezier(.4, 0, .2, 1) both !important;
   }
-  .local-remove-bg-confirm-icon {
+  .local-remove-bg-confirm-preview {
+    position: relative !important;
     display: grid !important;
-    width: 38px !important;
-    height: 38px !important;
+    width: 76px !important;
+    height: 76px !important;
     place-items: center !important;
-    border-radius: 12px !important;
-    background: rgba(37, 99, 235, .1) !important;
-    color: #2563eb !important;
-    font-size: 21px !important;
+    overflow: hidden !important;
+    border: 1px solid var(--local-remove-bg-border) !important;
+    border-radius: 16px !important;
+    background: #f4f5f7 !important;
+    color: var(--local-remove-bg-muted) !important;
+    font-size: 12px !important;
+    font-weight: 600 !important;
+  }
+  .local-remove-bg-confirm-preview img {
+    display: block !important;
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: contain !important;
+    background: #f4f5f7 !important;
+  }
+  .local-remove-bg-confirm-preview[data-error]::before {
+    content: "图片预览不可用";
+    padding: 8px !important;
+    text-align: center !important;
   }
   .local-remove-bg-confirm-copy h2 {
     margin: 1px 0 6px !important;
@@ -1619,9 +1644,9 @@ const mvpNavigationStyle = `<style id="mvp-navigation">
     --local-remove-bg-muted: #a1a1aa;
     --local-remove-bg-border: rgba(255, 255, 255, .14);
   }
-  html[data-workbench-theme="dark"] .local-remove-bg-confirm-icon {
-    background: rgba(96, 165, 250, .16) !important;
-    color: #93c5fd !important;
+  html[data-workbench-theme="dark"] .local-remove-bg-confirm-preview,
+  html[data-workbench-theme="dark"] .local-remove-bg-confirm-preview img {
+    background: #2b2d31 !important;
   }
   @keyframes local-remove-bg-confirm-in {
     from { opacity: 0; transform: translateY(8px) scale(.97); }
