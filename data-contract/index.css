@@ -73,7 +73,7 @@ html[data-workbench-theme="dark"] #guan-data-contract-root {
   min-width: 88px;
   height: 36px;
   padding: 0 10px;
-  border: 1px solid var(--dc-border);
+  border: 0 !important;
   border-radius: 999px;
   background: var(--dc-bg);
   color: var(--dc-text);
@@ -83,8 +83,8 @@ html[data-workbench-theme="dark"] #guan-data-contract-root {
 }
 
 .guan-dc-product-capsule:hover {
-  border-color: rgba(20, 24, 32, .26);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, .1);
+  border-color: transparent;
+  box-shadow: none;
 }
 
 .guan-dc-product-capsule:active {
@@ -92,10 +92,10 @@ html[data-workbench-theme="dark"] #guan-data-contract-root {
 }
 
 .guan-dc-product-capsule.is-active {
-  border-color: #111214;
+  border-color: transparent;
   background: #111214;
   color: #ffffff;
-  box-shadow: 0 5px 13px rgba(0, 0, 0, .18);
+  box-shadow: none;
 }
 
 .guan-dc-product-capsule svg {
