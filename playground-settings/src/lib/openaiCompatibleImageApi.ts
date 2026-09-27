@@ -93,6 +93,17 @@ function createRequestHeaders(profile: ApiProfile): Record<string, string> {
   }
 }
 
+function addLocalRelayTimeoutHeader(headers: Record<string, string>, apiUrl: string, profile: ApiProfile) {
+  if (!apiUrl.startsWith('/local-image-api/')) return headers
+  const timeoutSeconds = Number(profile.timeout)
+  if (!Number.isFinite(timeoutSeconds) || timeoutSeconds <= 0) return headers
+  // The relay needs the same request timeout that the settings panel applies
+  // to the browser request. Keep this header local to our same-origin relay;
+  // it is stripped before the request is forwarded to the provider.
+  headers['X-Image-Relay-Timeout-Ms'] = String(Math.max(1_000, Math.round(timeoutSeconds * 1_000)))
+  return headers
+}
+
 function isRecordValue(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value)
 }
@@ -492,8 +503,9 @@ async function callImagesApiSingle(opts: CallApiOptions, profile: ApiProfile): P
   const mime = MIME_MAP[params.output_format] || 'image/png'
   const proxyConfig = readClientDevProxyConfig()
   const useApiProxy = shouldUseApiProxy(profile.apiProxy, proxyConfig)
-  const requestHeaders = createRequestHeaders(profile)
   const paths = createOpenAICompatiblePaths()
+  const apiUrl = buildApiUrl(profile.baseUrl, isEdit ? paths.editPath : paths.generationPath, proxyConfig, useApiProxy)
+  const requestHeaders = addLocalRelayTimeoutHeader(createRequestHeaders(profile), apiUrl, profile)
 
   const controller = new AbortController()
   const timeoutId = setTimeout(() => controller.abort(), profile.timeout * 1000)
@@ -563,7 +575,7 @@ async function callImagesApiSingle(opts: CallApiOptions, profile: ApiProfile): P
         formData.append('mask', maskBlob, 'mask.png')
       }
 
-      response = await fetch(buildApiUrl(profile.baseUrl, paths.editPath, proxyConfig, useApiProxy), {
+      response = await fetch(apiUrl, {
         method: 'POST',
         headers: requestHeaders,
         cache: 'no-store',
@@ -604,7 +616,7 @@ async function callImagesApiSingle(opts: CallApiOptions, profile: ApiProfile): P
         body.partial_images = getStreamPartialImages(profile)
       }
 
-      response = await fetch(buildApiUrl(profile.baseUrl, paths.generationPath, proxyConfig, useApiProxy), {
+      response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
           ...requestHeaders,
@@ -641,7 +653,7 @@ async function callImagesApiSingle(opts: CallApiOptions, profile: ApiProfile): P
       throw error
     }
   } catch (error) {
-    const localRelay = buildApiUrl(profile.baseUrl, paths.generationPath, proxyConfig, useApiProxy).startsWith('/local-image-api/')
+    const localRelay = apiUrl.startsWith('/local-image-api/')
     if (!opts.signal?.aborted && localRelay && (error instanceof TypeError || (error instanceof Error && error.name === 'AbortError'))) {
       throw new ImageResultUncertainError('本地图片请求连接中断或等待超时，无法确认中转站是否已生成并扣费。将按失败处理并自动切换下一站。')
     }
@@ -1040,7 +1052,8 @@ async function callResponsesImageApiSingle(opts: CallApiOptions, profile: ApiPro
   const mime = MIME_MAP[params.output_format] || 'image/png'
   const proxyConfig = readClientDevProxyConfig()
   const useApiProxy = shouldUseApiProxy(profile.apiProxy, proxyConfig)
-  const requestHeaders = createRequestHeaders(profile)
+  const apiUrl = buildApiUrl(profile.baseUrl, 'responses', proxyConfig, useApiProxy)
+  const requestHeaders = addLocalRelayTimeoutHeader(createRequestHeaders(profile), apiUrl, profile)
   const controller = new AbortController()
   const timeoutId = setTimeout(() => controller.abort(), profile.timeout * 1000)
 
@@ -1065,7 +1078,7 @@ async function callResponsesImageApiSingle(opts: CallApiOptions, profile: ApiPro
       body.stream = true
     }
 
-    const response = await fetch(buildApiUrl(profile.baseUrl, 'responses', proxyConfig, useApiProxy), {
+    const response = await fetch(apiUrl, {
       method: 'POST',
       headers: {
         ...requestHeaders,

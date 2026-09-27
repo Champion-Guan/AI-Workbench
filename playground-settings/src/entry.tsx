@@ -5,7 +5,6 @@ import { applyImageProfileBalanceChange, initStore, useStore } from './store'
 import { createDefaultOpenAIProfile, getActiveApiProfile, normalizeSettings, validateApiProfile } from './lib/apiProfiles'
 import { callImageApi } from './lib/api'
 import { normalizeParamsForSettings } from './lib/paramCompatibility'
-import { createTransparentOutputMeta, getTransparentRequestParams, removeKeyedBackgroundFromDataUrl } from './lib/transparentImage'
 import './settings.css'
 
 const mount = document.createElement('div')
@@ -48,21 +47,17 @@ async function generateBackgroundRemoval(inputImageDataUrl: string) {
 
   const state = useStore.getState()
   const settings = normalizeSettings(state.settings)
-  // Background removal must consume the generated pixels inside this app. A
-  // number of OpenAI-compatible gateways return a short-lived image URL by
-  // default; the browser then tries to download that URL directly and fails
-  // when the gateway only works through the local relay/proxy. Force a
-  // Base64 response for this one request and disable streaming so the result
-  // never leaves the relay path. GPT-Image-2 compatible gateways commonly do
-  // not accept the native `background=transparent` edit field, so use the
-  // existing solid-key local post-process instead of sending that field.
+  // Match the working GPT Image Playground edit request: a normal Images API
+  // edit with the user's configured response format, no native transparent
+  // background flag, and the short prompt "移除背景".  In particular, do not
+  // force `response_format=b64_json` here: some compatible gateways accept the
+  // same edit request as the original playground but reject that optional
+  // field. GPT Image models already return Base64 image data by default.
   const backgroundRemovalSettings = {
     ...settings,
     profiles: settings.profiles.map((profile) => ({
       ...profile,
-      responseFormatB64Json: true,
       streamImages: false,
-      transparentBackgroundMethod: 'local' as const,
     })),
   }
   const activeProfile = getActiveApiProfile(backgroundRemovalSettings)
@@ -74,36 +69,27 @@ async function generateBackgroundRemoval(inputImageDataUrl: string) {
     n: 1,
     output_format: 'png' as const,
     output_compression: null,
-    transparent_output: true,
+    transparent_output: false,
   }
   const normalizedParams = normalizeParamsForSettings(baseParams, backgroundRemovalSettings, { hasInputImages: true })
-  const requestParams = getTransparentRequestParams({
+  const requestParams = {
     ...normalizedParams,
-    output_format: 'png',
+    output_format: 'png' as const,
     output_compression: null,
-    transparent_output: true,
+    transparent_output: false,
     n: 1,
-  })
-  const prompt = [
-    'Remove the background from the provided product image.',
-    'Preserve the exact product identity, shape, proportions, materials, colors, logos, text, and fine details without redesigning or replacing it.',
-    'Keep the complete product visible, centered, and sharply separated from the background.',
-    'Return one PNG with a truly transparent background and no shadow, reflection, props, or extra objects.',
-  ].join(' ')
-  const useLocalTransparentPostProcess = activeProfile.transparentBackgroundMethod === 'local'
+  }
+  const prompt = '移除背景'
   const result = await callImageApi({
     settings: backgroundRemovalSettings,
     onProfileBalanceChange: applyImageProfileBalanceChange,
-    prompt: useLocalTransparentPostProcess ? createTransparentOutputMeta(prompt).effectivePrompt : prompt,
+    prompt,
     params: requestParams,
-    nativeTransparentBackground: !useLocalTransparentPostProcess,
+    nativeTransparentBackground: false,
     inputImageDataUrls: [inputImageDataUrl],
   })
   let dataUrl = result.images[0]
   if (!dataUrl) throw new Error('接口未返回处理后的图片')
-  if (useLocalTransparentPostProcess) {
-    dataUrl = await removeKeyedBackgroundFromDataUrl(dataUrl, undefined, 'png')
-  }
   return {
     dataUrl,
     profileName: result.apiProfileId

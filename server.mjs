@@ -2129,7 +2129,7 @@ async function send(response, path, method) {
      * The original button injector only creates the trigger; the React bundle
      * owns the modal, focus scope, nested dialogs and persistence.
      */
-      response.end(refreshedFavicon.replace("</head>", `${workbenchLogoStyle}${mvpNavigationStyle}${localThemeAndUiStyle}${localDocumentTitleScript}${localRootNavigationScript}${localSettingsPanelScript}${originalPlaygroundSettingsButtonScript}${localThemeToggleScript}${localFixedFieldsScript}${localResolutionButtonsScript}${localAspectRatioButtonsScript}${localOfflineGuardsScript}${localGenerationButtonScript}${localResponsivePreviewScript}${localProxySetupScript}<link rel="stylesheet" href="/playground-settings/assets/index.css?v=fallback-auto-toggle-20260927-v4"><script type="module" src="/playground-settings/assets/index.js?v=fallback-auto-toggle-20260927-v4"></script><script src="/_pixpix-assets/local-vendor/xlsx.full.min.js?sheetjs-local-0.18.5"></script><script src="/_pixpix-assets/local-vendor/fflate.umd.js?fflate-local-0.8.3"></script><script type="module" src="/data-contract/index.js?contract-v35-20260927"></script></head>`));
+      response.end(refreshedFavicon.replace("</head>", `${workbenchLogoStyle}${mvpNavigationStyle}${localThemeAndUiStyle}${localDocumentTitleScript}${localRootNavigationScript}${localSettingsPanelScript}${originalPlaygroundSettingsButtonScript}${localThemeToggleScript}${localFixedFieldsScript}${localResolutionButtonsScript}${localAspectRatioButtonsScript}${localOfflineGuardsScript}${localGenerationButtonScript}${localResponsivePreviewScript}${localProxySetupScript}<link rel="stylesheet" href="/playground-settings/assets/index.css?v=background-removal-timeout-20260928-v1"><script type="module" src="/playground-settings/assets/index.js?v=background-removal-timeout-20260928-v1"></script><script src="/_pixpix-assets/local-vendor/xlsx.full.min.js?sheetjs-local-0.18.5"></script><script src="/_pixpix-assets/local-vendor/fflate.umd.js?fflate-local-0.8.3"></script><script type="module" src="/data-contract/index.js?contract-v35-20260927"></script></head>`));
     return;
   }
   createReadStream(path).pipe(response);
@@ -2144,14 +2144,17 @@ function shouldRetryImageRelayThroughProxy(provider, upstream) {
   return upstream.status === 403 || upstream.status === 407;
 }
 
-function fetchRelayHeaders(upstream, requestId, transport) {
+function fetchRelayHeaders(upstream, requestId, transport, bodyLength) {
+  const contentLength = Number.isFinite(bodyLength)
+    ? String(bodyLength)
+    : upstream.headers.get("content-length");
   return {
     "content-type": upstream.headers.get("content-type") || "application/json",
     "cache-control": "no-store",
     connection: "close",
     "x-image-relay-request-id": requestId,
     "x-image-relay-transport": transport,
-    ...(upstream.headers.get("content-length") ? { "content-length": upstream.headers.get("content-length") } : {}),
+    ...(contentLength ? { "content-length": contentLength } : {}),
   };
 }
 
@@ -2216,7 +2219,16 @@ async function relayImageApi(request, response, pathname) {
   const requestId = randomUUID().replaceAll("-", "");
   const clientAbortController = new AbortController();
   const relayAbortController = new AbortController();
-  const relayTimeout = setTimeout(() => relayAbortController.abort(), 30 * 60 * 1000);
+  // The settings panel owns the request timeout. The browser sends it to the
+  // same-origin relay so an image generation can wait as long as configured;
+  // the environment value is only a backwards-compatible fallback for older
+  // clients that do not send the header.
+  const configuredTimeoutMs = Number(request.headers["x-image-relay-timeout-ms"]);
+  const fallbackTimeoutMs = Number(process.env.IMAGE_RELAY_UPSTREAM_TIMEOUT_MS || 30 * 60 * 1000);
+  const relayTimeoutMs = Number.isFinite(configuredTimeoutMs) && configuredTimeoutMs > 0
+    ? Math.max(1_000, configuredTimeoutMs)
+    : Math.max(30_000, Number.isFinite(fallbackTimeoutMs) ? fallbackTimeoutMs : 30 * 60 * 1000);
+  const relayTimeout = setTimeout(() => relayAbortController.abort(), relayTimeoutMs);
   response.once("close", () => {
     if (!response.writableEnded) {
       clientAbortController.abort();
@@ -2233,10 +2245,11 @@ async function relayImageApi(request, response, pathname) {
   const proxyUrl = getImageRelayProxyUrl();
   const preferredTransport = getImageRelayTransportPreference(provider);
   let proxyAttempted = false;
+  let responseBodyError = null;
 
   const fetchAttempt = async (transport) => {
     const connectController = new AbortController();
-    const connectTimeout = setTimeout(() => connectController.abort(), transport === "proxy" ? 20_000 : 12_000);
+    const upstreamTimeout = setTimeout(() => connectController.abort(), relayTimeoutMs);
     try {
       return await fetch(upstreamUrl, {
         method: request.method,
@@ -2251,17 +2264,30 @@ async function relayImageApi(request, response, pathname) {
     } catch (error) {
       return { error };
     } finally {
-      // This timeout covers connection/headers only. Once fetch resolves, the
-      // image response may legitimately stream for several minutes.
-      clearTimeout(connectTimeout);
+      // fetch() resolves only once response headers arrive. Keep the timer
+      // active for the full upstream generation window; the relay lifetime
+      // controller still bounds the body transfer as well.
+      clearTimeout(upstreamTimeout);
     }
   };
 
   const sendUpstream = async (upstream, transport, body = null) => {
     setImageRelayTransportPreference(provider, transport);
-    response.writeHead(upstream.status, fetchRelayHeaders(upstream, requestId, transport));
-    if (body) {
-      response.end(body);
+    // Image edits are consumed as one complete JSON response by the browser.
+    // Buffering this endpoint in the local relay prevents a large Base64 body
+    // from being cut off while a proxy connection is being switched or closed.
+    let payload = body;
+    if (payload === null && endpoint === "images/edits") {
+      try {
+        payload = Buffer.from(await upstream.arrayBuffer());
+      } catch (error) {
+        responseBodyError = error;
+        throw error;
+      }
+    }
+    response.writeHead(upstream.status, fetchRelayHeaders(upstream, requestId, transport, payload === null ? undefined : payload.length));
+    if (payload !== null) {
+      response.end(payload);
       return;
     }
     if (!upstream.body) {
@@ -2347,10 +2373,11 @@ async function relayImageApi(request, response, pathname) {
         : proxyError
           ? "proxy-network-error"
           : "proxy-not-attempted";
+    const bodyState = responseBodyError ? "response-body-error" : "response-body-ok";
     const body = JSON.stringify({
       error: {
         code: "local_relay_result_unknown",
-        message: `图片请求未收到完整结果（${directState}，${proxyState}）；上游可能已生成并扣费。将按失败处理并自动切换下一站。`,
+        message: `图片请求未收到完整结果（${directState}，${proxyState}，${bodyState}）；上游可能已生成并扣费。将按失败处理并自动切换下一站。`,
         request_id: requestId,
       },
     });
