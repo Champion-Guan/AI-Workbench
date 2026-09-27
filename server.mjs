@@ -690,9 +690,47 @@ const localOfflineGuardsScript = `<script id="local-offline-guards-script">
       preview: null,
       input: null,
       removeBackground: new Set(),
+      backgroundBusy: new Set(),
+      backgroundErrors: new Map(),
+      replacements: new Map(),
     };
 
     const fileKey = (file) => [file.name, file.size, file.lastModified].join(":");
+
+    const fileToDataUrl = (file) => new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result || ""));
+      reader.onerror = () => reject(new Error("读取图片失败"));
+      reader.readAsDataURL(file);
+    });
+
+    const dataUrlToFile = (dataUrl, name) => {
+      const comma = dataUrl.indexOf(",");
+      if (comma < 0) throw new Error("接口返回的图片格式无效");
+      const meta = dataUrl.slice(0, comma);
+      const payload = dataUrl.slice(comma + 1);
+      const mime = (meta.match(/^data:([^;]+)/i)?.[1] || "image/png").toLowerCase();
+      const binary = /;base64/i.test(meta)
+        ? atob(payload.replace(/\\s/g, ""))
+        : decodeURIComponent(payload);
+      const bytes = new Uint8Array(binary.length);
+      for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index);
+      return new File([bytes], name, { type: mime, lastModified: Date.now() });
+    };
+
+    const replacementName = (file) => {
+      const base = file.name.replace(/\\.[^.]+$/, "") || "image";
+      return base + "-no-background.png";
+    };
+
+    const showBackgroundRemovalNotice = (message, type = "error") => {
+      const notice = document.createElement("div");
+      notice.className = "local-offline-upload-notice";
+      notice.dataset.type = type;
+      notice.textContent = message;
+      document.body.append(notice);
+      window.setTimeout(() => notice.remove(), 3600);
+    };
 
     const publishImageState = () => {
       window.__localWorkbenchImageFiles = uploadState.files.slice();
@@ -768,18 +806,8 @@ const localOfflineGuardsScript = `<script id="local-offline-guards-script">
 
       const cancelDialog = () => closeRemoveBackgroundDialog();
       const confirmRemoval = () => {
-        uploadState.removeBackground.add(fileKey(file));
-        if (button?.isConnected) {
-          button.setAttribute("aria-pressed", "true");
-          button.textContent = "已选择移除背景";
-          item.dataset.removeBackground = "true";
-        } else {
-          renderLocalPreviews(uploadState.parent);
-        }
-        window.dispatchEvent(new CustomEvent("local-workbench-remove-background", {
-          detail: { file, index, selected: true },
-        }));
         closeRemoveBackgroundDialog();
+        void startBackgroundRemoval({ file, index });
       };
 
       backdrop.addEventListener("click", cancelDialog);
@@ -797,11 +825,83 @@ const localOfflineGuardsScript = `<script id="local-offline-guards-script">
       }, 20);
     };
 
+    const undoReplacement = (index, file) => {
+      const replacementKey = fileKey(file);
+      const replacement = uploadState.replacements.get(replacementKey);
+      if (!replacement || uploadState.files[index] !== file) return;
+      const currentUrl = uploadState.urls[index];
+      if (currentUrl && currentUrl !== replacement.originalUrl) URL.revokeObjectURL(currentUrl);
+      uploadState.files[index] = replacement.originalFile;
+      uploadState.urls[index] = replacement.originalUrl;
+      uploadState.replacements.delete(replacementKey);
+      uploadState.backgroundErrors.delete(fileKey(replacement.originalFile));
+      syncInputFiles();
+      renderLocalPreviews(uploadState.parent);
+      publishImageState();
+      showBackgroundRemovalNotice("已撤销移除背景，已恢复原图", "success");
+    };
+
+    const startBackgroundRemoval = async ({ file, index }) => {
+      const originalKey = fileKey(file);
+      if (uploadState.files[index] !== file || uploadState.backgroundBusy.has(originalKey)) return;
+      uploadState.backgroundBusy.add(originalKey);
+      uploadState.backgroundErrors.delete(originalKey);
+      renderLocalPreviews(uploadState.parent);
+
+      try {
+        const bridge = window.__localWorkbenchGeneration;
+        if (typeof bridge?.generateBackgroundRemoval !== "function") {
+          throw new Error("生图配置尚未加载，请稍后重试");
+        }
+        const inputDataUrl = await fileToDataUrl(file);
+        const result = await bridge.generateBackgroundRemoval(inputDataUrl);
+        if (!result?.dataUrl?.startsWith("data:")) throw new Error("接口未返回有效图片");
+        if (uploadState.files[index] !== file) return;
+
+        const replacementFile = dataUrlToFile(result.dataUrl, replacementName(file));
+        const replacementUrl = URL.createObjectURL(replacementFile);
+        uploadState.replacements.set(fileKey(replacementFile), {
+          originalFile: file,
+          originalUrl: uploadState.urls[index],
+        });
+        uploadState.files[index] = replacementFile;
+        uploadState.urls[index] = replacementUrl;
+        uploadState.removeBackground.delete(originalKey);
+        uploadState.backgroundErrors.delete(originalKey);
+        syncInputFiles();
+        renderLocalPreviews(uploadState.parent);
+        publishImageState();
+        showBackgroundRemovalNotice(
+          "移除背景成功" + (result.profileName ? "（" + result.profileName + "）" : "") + "，已替换原图",
+          "success",
+        );
+      } catch (error) {
+        if (uploadState.files[index] === file) {
+          uploadState.backgroundErrors.set(originalKey, error instanceof Error ? error.message : String(error));
+          renderLocalPreviews(uploadState.parent);
+        }
+        showBackgroundRemovalNotice(
+          "移除背景失败，已保留原图：" + (error instanceof Error ? error.message : String(error)),
+          "error",
+        );
+      } finally {
+        uploadState.backgroundBusy.delete(originalKey);
+        renderLocalPreviews(uploadState.parent);
+      }
+    };
+
     const removeImage = (index) => {
       const removedFile = uploadState.files[index];
       const removedUrl = uploadState.urls[index];
+      const replacement = removedFile ? uploadState.replacements.get(fileKey(removedFile)) : null;
       if (removedUrl) URL.revokeObjectURL(removedUrl);
+      if (replacement?.originalUrl) URL.revokeObjectURL(replacement.originalUrl);
       if (removedFile) uploadState.removeBackground.delete(fileKey(removedFile));
+      if (removedFile) {
+        uploadState.backgroundBusy.delete(fileKey(removedFile));
+        uploadState.backgroundErrors.delete(fileKey(removedFile));
+        uploadState.replacements.delete(fileKey(removedFile));
+      }
       uploadState.files.splice(index, 1);
       uploadState.urls.splice(index, 1);
       syncInputFiles();
@@ -817,7 +917,15 @@ const localOfflineGuardsScript = `<script id="local-offline-guards-script">
         return;
       }
       const renderKey = uploadState.files
-        .map(fileKey)
+        .map((file) => {
+          const key = fileKey(file);
+          return [
+            key,
+            uploadState.backgroundBusy.has(key) ? "busy" : "idle",
+            uploadState.backgroundErrors.has(key) ? "error" : "ok",
+            uploadState.replacements.has(key) ? "replacement" : "original",
+          ].join(":");
+        })
         .join("|");
       if (!uploadState.preview || !uploadState.preview.isConnected || uploadState.preview.parentElement !== parent) {
         uploadState.preview?.remove();
@@ -838,20 +946,43 @@ const localOfflineGuardsScript = `<script id="local-offline-guards-script">
         const image = document.createElement("img");
         image.src = uploadState.urls[index];
         image.alt = file.name;
-        const backgroundSelected = uploadState.removeBackground.has(fileKey(file));
+        const currentKey = fileKey(file);
+        const busy = uploadState.backgroundBusy.has(currentKey);
+        const error = uploadState.backgroundErrors.get(currentKey);
+        const replacement = uploadState.replacements.has(currentKey);
         const removeBackgroundButton = document.createElement("button");
         removeBackgroundButton.type = "button";
         removeBackgroundButton.className = "local-offline-upload-remove-background";
-        removeBackgroundButton.setAttribute("aria-label", "移除背景 " + file.name);
-        removeBackgroundButton.setAttribute("aria-pressed", String(backgroundSelected));
-        removeBackgroundButton.title = "移除背景";
-        removeBackgroundButton.textContent = backgroundSelected ? "已选择移除背景" : "移除背景";
+        removeBackgroundButton.setAttribute("aria-label", replacement ? "撤销替换 " + file.name : "移除背景 " + file.name);
+        removeBackgroundButton.setAttribute("aria-pressed", String(replacement));
+        removeBackgroundButton.setAttribute("aria-busy", String(busy));
+        removeBackgroundButton.title = replacement ? "撤销替换，恢复原图" : error || "移除背景";
+        removeBackgroundButton.textContent = busy
+          ? "移除背景中…"
+          : replacement
+            ? "撤销替换"
+            : error
+              ? "重试移除背景"
+              : "移除背景";
+        removeBackgroundButton.disabled = busy;
         removeBackgroundButton.addEventListener("click", (event) => {
           event.preventDefault();
           event.stopPropagation();
+          if (busy) return;
+          if (replacement) {
+            undoReplacement(index, file);
+            return;
+          }
           openRemoveBackgroundDialog({ file, index, button: removeBackgroundButton, item });
         });
-        item.dataset.removeBackground = String(backgroundSelected);
+        item.dataset.removeBackground = String(!replacement);
+        item.dataset.backgroundBusy = String(busy);
+        item.dataset.backgroundReplaced = String(replacement);
+        if (error) item.dataset.backgroundError = error;
+        const status = document.createElement("span");
+        status.className = "local-offline-upload-status";
+        status.textContent = busy ? "正在使用生图配置处理…" : error ? "失败，原图已保留" : replacement ? "已替换 · 可撤销" : "";
+        status.hidden = !status.textContent;
         const removeButton = document.createElement("button");
         removeButton.type = "button";
         removeButton.className = "local-offline-upload-delete";
@@ -863,7 +994,7 @@ const localOfflineGuardsScript = `<script id="local-offline-guards-script">
           event.stopPropagation();
           removeImage(index);
         });
-        item.append(image, removeBackgroundButton, removeButton);
+        item.append(image, status, removeBackgroundButton, removeButton);
         return item;
       }));
     };
@@ -1318,8 +1449,64 @@ const mvpNavigationStyle = `<style id="mvp-navigation">
     background: #fff !important;
     color: #17181b !important;
   }
+  .local-offline-upload-remove-background:disabled {
+    opacity: .96 !important;
+    cursor: progress !important;
+  }
   .local-offline-upload-remove-background:active {
     transform: scale(.97) !important;
+  }
+  .local-offline-upload-status {
+    position: absolute !important;
+    top: 6px !important;
+    left: 6px !important;
+    right: 6px !important;
+    z-index: 2 !important;
+    display: inline-flex !important;
+    min-height: 22px !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 3px 7px !important;
+    overflow: hidden !important;
+    border-radius: 7px !important;
+    background: rgb(20 20 22 / 72%) !important;
+    color: #fff !important;
+    font-size: 10px !important;
+    font-weight: 600 !important;
+    line-height: 15px !important;
+    white-space: nowrap !important;
+    text-overflow: ellipsis !important;
+    pointer-events: none !important;
+    -webkit-backdrop-filter: blur(5px) !important;
+    backdrop-filter: blur(5px) !important;
+  }
+  .local-offline-upload-item[data-background-error] .local-offline-upload-status {
+    background: rgb(185 28 28 / 78%) !important;
+  }
+  .local-offline-upload-notice {
+    position: fixed !important;
+    left: 50% !important;
+    bottom: 28px !important;
+    z-index: 1300 !important;
+    max-width: min(560px, calc(100vw - 40px)) !important;
+    padding: 10px 14px !important;
+    border: 1px solid rgb(255 255 255 / 18%) !important;
+    border-radius: 12px !important;
+    background: rgb(22 23 26 / 92%) !important;
+    color: #fff !important;
+    font: 13px/1.45 ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+    text-align: center !important;
+    box-shadow: 0 12px 36px rgb(0 0 0 / 22%) !important;
+    transform: translateX(-50%) !important;
+    animation: local-offline-upload-notice-in .2s cubic-bezier(.16, 1, .3, 1) both !important;
+    pointer-events: none !important;
+  }
+  .local-offline-upload-notice[data-type="success"] {
+    background: rgb(21 128 61 / 94%) !important;
+  }
+  @keyframes local-offline-upload-notice-in {
+    from { opacity: 0; transform: translate(-50%, 8px); }
+    to { opacity: 1; transform: translate(-50%, 0); }
   }
   .local-offline-upload-item img {
     display: block !important;
@@ -1727,7 +1914,7 @@ async function send(response, path, method) {
      * The original button injector only creates the trigger; the React bundle
      * owns the modal, focus scope, nested dialogs and persistence.
      */
-      response.end(refreshedFavicon.replace("</head>", `${workbenchLogoStyle}${mvpNavigationStyle}${localThemeAndUiStyle}${localDocumentTitleScript}${localRootNavigationScript}${localSettingsPanelScript}${originalPlaygroundSettingsButtonScript}${localThemeToggleScript}${localFixedFieldsScript}${localResolutionButtonsScript}${localAspectRatioButtonsScript}${localOfflineGuardsScript}${localGenerationButtonScript}${localResponsivePreviewScript}<link rel="stylesheet" href="/playground-settings/assets/index.css?v=fallback-pointer-drag-20260926-v15"><script type="module" src="/playground-settings/assets/index.js?v=fallback-pointer-drag-20260926-v15"></script><script src="/_pixpix-assets/local-vendor/xlsx.full.min.js?sheetjs-local-0.18.5"></script><script src="/_pixpix-assets/local-vendor/fflate.umd.js?fflate-local-0.8.3"></script><script type="module" src="/data-contract/index.js?contract-v34-20260927"></script></head>`));
+      response.end(refreshedFavicon.replace("</head>", `${workbenchLogoStyle}${mvpNavigationStyle}${localThemeAndUiStyle}${localDocumentTitleScript}${localRootNavigationScript}${localSettingsPanelScript}${originalPlaygroundSettingsButtonScript}${localThemeToggleScript}${localFixedFieldsScript}${localResolutionButtonsScript}${localAspectRatioButtonsScript}${localOfflineGuardsScript}${localGenerationButtonScript}${localResponsivePreviewScript}<link rel="stylesheet" href="/playground-settings/assets/index.css?v=remove-background-generate-20260927-v1"><script type="module" src="/playground-settings/assets/index.js?v=remove-background-generate-20260927-v1"></script><script src="/_pixpix-assets/local-vendor/xlsx.full.min.js?sheetjs-local-0.18.5"></script><script src="/_pixpix-assets/local-vendor/fflate.umd.js?fflate-local-0.8.3"></script><script type="module" src="/data-contract/index.js?contract-v34-20260927"></script></head>`));
     return;
   }
   createReadStream(path).pipe(response);
