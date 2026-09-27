@@ -48,7 +48,21 @@ async function generateBackgroundRemoval(inputImageDataUrl: string) {
 
   const state = useStore.getState()
   const settings = normalizeSettings(state.settings)
-  const activeProfile = getActiveApiProfile(settings)
+  // Background removal must consume the generated pixels inside this app. A
+  // number of OpenAI-compatible gateways return a short-lived image URL by
+  // default; the browser then tries to download that URL directly and fails
+  // when the gateway only works through the local relay/proxy. Force a
+  // Base64 response for this one request and disable streaming so the result
+  // never leaves the relay path.
+  const backgroundRemovalSettings = {
+    ...settings,
+    profiles: settings.profiles.map((profile) => ({
+      ...profile,
+      responseFormatB64Json: true,
+      streamImages: false,
+    })),
+  }
+  const activeProfile = getActiveApiProfile(backgroundRemovalSettings)
   const profileError = validateApiProfile(activeProfile)
   if (profileError) throw new Error(`请先完善生图配置：${profileError}`)
 
@@ -59,7 +73,7 @@ async function generateBackgroundRemoval(inputImageDataUrl: string) {
     output_compression: null,
     transparent_output: true,
   }
-  const normalizedParams = normalizeParamsForSettings(baseParams, settings, { hasInputImages: true })
+  const normalizedParams = normalizeParamsForSettings(baseParams, backgroundRemovalSettings, { hasInputImages: true })
   const requestParams = getTransparentRequestParams({
     ...normalizedParams,
     output_format: 'png',
@@ -75,7 +89,7 @@ async function generateBackgroundRemoval(inputImageDataUrl: string) {
   ].join(' ')
   const useLocalTransparentPostProcess = activeProfile.transparentBackgroundMethod === 'local'
   const result = await callImageApi({
-    settings,
+    settings: backgroundRemovalSettings,
     onProfileBalanceChange: applyImageProfileBalanceChange,
     prompt: useLocalTransparentPostProcess ? createTransparentOutputMeta(prompt).effectivePrompt : prompt,
     params: requestParams,
