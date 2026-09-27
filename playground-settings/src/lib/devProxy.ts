@@ -72,7 +72,14 @@ export function buildApiUrl(
       'https://api2.jojocode.com/v1': 'jojocode',
       'https://api-cn.hi-code.cc/v1': 'hi-code',
     }
-    const relay = relayHosts[trimmedBaseUrl.replace(/\/+$/, '')]
+    // The settings UI intentionally accepts both `https://host` and
+    // `https://host/v1`. Normalize before selecting the local relay so the
+    // local-only CSP path behaves exactly like the regular API URL builder.
+    const normalizedRelayBaseUrl = normalizeBaseUrl(trimmedBaseUrl.replace(/\/+$/, '')).replace(/\/+$/, '')
+    const relayBaseUrl = normalizedRelayBaseUrl.endsWith('/v1')
+      ? normalizedRelayBaseUrl
+      : `${normalizedRelayBaseUrl}/v1`
+    const relay = relayHosts[relayBaseUrl]
     if (relay) return `/local-image-api/${relay}/${endpointPath}`
   }
 
