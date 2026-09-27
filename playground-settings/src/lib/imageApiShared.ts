@@ -32,6 +32,12 @@ export interface CallApiOptions {
   onFalRequestEnqueued?: (request: { requestId: string; endpoint: string }) => void
   onCustomTaskEnqueued?: (task: { taskId: string }) => void
   onPartialImage?: (partial: { image: string; partialImageIndex?: number; requestIndex?: number }) => void
+  /** 成功出图后更新服务商余额；余额不足时同时停用该 fallback 配置。 */
+  onProfileBalanceChange?: (change: {
+    profileId: string
+    cost: number
+    insufficient: boolean
+  }) => void | Promise<void>
 }
 
 export interface CallApiResult {

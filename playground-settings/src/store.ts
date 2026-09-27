@@ -269,6 +269,49 @@ function mergePersistedState(persistedState: unknown, currentState: AppState): A
   }
 }
 
+export function applyImageProfileBalanceChange(change: { profileId: string; cost: number; insufficient: boolean }) {
+  const state = useStore.getState()
+  const settings = normalizeSettings(state.settings)
+  const profile = settings.profiles.find((item) => item.id === change.profileId)
+  if (!profile || typeof profile.balance !== 'number' || !Number.isFinite(profile.balance)) return
+
+  const nextBalance = change.insufficient
+    ? Math.max(0, profile.balance)
+    : Math.max(0, Math.round((profile.balance - Math.max(0, change.cost) + 1e-9) * 100) / 100)
+  const autoDisableForBalance = change.insufficient || (
+    typeof profile.price === 'number' && profile.price > 0 && nextBalance + 1e-9 < profile.price
+  )
+  const fallback = settings.imageApiFallback
+  const nextFallback = fallback
+    ? (() => {
+        const entries = fallback.entries.map((entry) => entry.profileId === change.profileId && autoDisableForBalance
+          ? { ...entry, enabled: false }
+          : entry)
+        return { ...fallback, entries, enabled: entries.some((entry) => entry.enabled) }
+      })()
+    : fallback
+  const activeProfile = settings.profiles.find((item) => item.id === settings.activeProfileId)
+  const nextUsableProfile = autoDisableForBalance && activeProfile?.id === change.profileId
+    ? settings.profiles.find((item) => {
+        if (item.id === change.profileId || !item.baseUrl.trim() || !item.apiKey.trim()) return false
+        const price = typeof item.price === 'number' && Number.isFinite(item.price) && item.price >= 0 ? item.price : null
+        const balance = typeof item.balance === 'number' && Number.isFinite(item.balance) && item.balance >= 0 ? item.balance : null
+        return price === null || balance === null || balance + 1e-9 >= price
+      })
+    : null
+
+  state.setSettings({
+    profiles: settings.profiles.map((item) => item.id === change.profileId ? { ...item, balance: nextBalance } : item),
+    ...(nextFallback ? { imageApiFallback: nextFallback } : {}),
+    ...(nextUsableProfile ? { activeProfileId: nextUsableProfile.id } : {}),
+  })
+  if (autoDisableForBalance) {
+    state.showToast(change.insufficient
+      ? `配置「${profile.name}」余额不足，已自动停用并跳过`
+      : `配置「${profile.name}」余额已不足一张图片，已自动停用并跳过`, 'error')
+  }
+}
+
 // ===== Store 类型 =====
 
 interface AppState {
@@ -2905,6 +2948,7 @@ async function executeAgentRound(
     }) => {
       const result = await callImageApi({
         settings: imageRequestSettings,
+        onProfileBalanceChange: applyImageProfileBalanceChange,
         prompt: replaceImageMentionsForApi(opts.prompt, opts.referenceImageDataUrls.length),
         params: opts.taskParams,
         inputImageDataUrls: opts.referenceImageDataUrls,
@@ -3626,6 +3670,7 @@ async function executeTask(taskId: string) {
 
     const result = await callImageApi({
       settings: requestSettings,
+      onProfileBalanceChange: applyImageProfileBalanceChange,
       prompt: replaceImageMentionsForApi(requestPrompt, inputDataUrls.length),
       onProviderAttempt: (attempt) => recordTaskApiAttempt(taskId, attempt),
       params: task.params,

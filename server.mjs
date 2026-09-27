@@ -1902,6 +1902,88 @@ const mvpNavigationStyle = `<style id="mvp-navigation">
   }
 </style>`;
 
+const localProxySetupScript = `<script id="local-proxy-setup-script">
+  (() => {
+    const SESSION_KEY = "guan-workbench:proxy-setup-dismissed";
+    let modal = null;
+
+    const addStyles = () => {
+      if (document.getElementById("local-proxy-setup-style")) return;
+      const style = document.createElement("style");
+      style.id = "local-proxy-setup-style";
+      style.textContent = [
+        ".local-proxy-setup{position:fixed;inset:0;z-index:3200;display:grid;place-items:center;padding:20px;background:rgba(15,17,22,.32);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);font-family:ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}",
+        ".local-proxy-setup-card{width:min(520px,calc(100vw - 32px));border:1px solid rgba(0,0,0,.08);border-radius:24px;background:#fff;color:#17181a;box-shadow:0 30px 100px rgba(0,0,0,.24);padding:26px}",
+        ".local-proxy-setup-card h2{margin:0 0 8px;font-size:22px;line-height:1.3}.local-proxy-setup-card p{margin:0;color:#686d76;font-size:13px;line-height:1.6}",
+        ".local-proxy-setup-field{display:grid;gap:7px;margin-top:18px}.local-proxy-setup-field label{font-size:13px;font-weight:650}.local-proxy-setup-field input{width:100%;box-sizing:border-box;border:1px solid #d9dce2;border-radius:12px;padding:11px 12px;font:13px inherit;outline:none;background:#fff}.local-proxy-setup-field input:focus{border-color:#3478f6;box-shadow:0 0 0 3px rgba(52,120,246,.14)}",
+        ".local-proxy-setup-actions{display:flex;justify-content:flex-end;gap:9px;margin-top:22px}.local-proxy-setup-actions button{border:1px solid #d9dce2;border-radius:12px;padding:10px 15px;background:#fff;color:#24262a;font:13px inherit;cursor:pointer}.local-proxy-setup-actions button.primary{border-color:#111;background:#111;color:#fff}.local-proxy-setup-actions button:disabled{cursor:wait;opacity:.55}",
+        ".local-proxy-setup-error{min-height:20px;margin-top:12px;color:#c53030;font-size:12px;line-height:1.5}.local-proxy-setup-hint{margin-top:15px!important;font-size:12px!important;color:#8a9099!important}",
+        "html[data-workbench-theme='dark'] .local-proxy-setup-card{border-color:rgba(255,255,255,.1);background:#1e2024;color:#f4f4f5}html[data-workbench-theme='dark'] .local-proxy-setup-field input,html[data-workbench-theme='dark'] .local-proxy-setup-actions button{border-color:rgba(255,255,255,.14);background:#26292e;color:#f4f4f5}",
+      ].join("");
+      document.head.append(style);
+    };
+
+    const close = () => { modal?.remove(); modal = null; };
+    const open = (status) => {
+      if (modal) return;
+      addStyles();
+      modal = document.createElement("div");
+      modal.className = "local-proxy-setup";
+      modal.setAttribute("role", "dialog");
+      modal.setAttribute("aria-modal", "true");
+      modal.innerHTML = '<section class="local-proxy-setup-card"><h2>设置网络代理</h2><p>本项目会先尝试直连。若服务商无法直连，再使用这里配置的临时代理节点。代理配置只在本次服务运行期间使用，关闭服务后自动清除。</p><div class="local-proxy-setup-field"><label>上传 Mihomo / Clash 配置文件</label><input data-proxy-file type="file" accept=".yaml,.yml,.txt,text/plain,application/yaml" /></div><div class="local-proxy-setup-field"><label>或填写远端订阅地址</label><input data-proxy-url type="url" placeholder="https://example.com/your-subscription" autocomplete="off" /></div><p class="local-proxy-setup-hint">没有代理也可以先跳过，直连仍然可用。首次配置成功后不会再次提示。</p><div class="local-proxy-setup-error" role="alert"></div><div class="local-proxy-setup-actions"><button type="button" data-proxy-skip>稍后配置</button><button type="button" class="primary" data-proxy-save>保存并启动代理</button></div></section>';
+      document.body.append(modal);
+      const error = modal.querySelector('.local-proxy-setup-error');
+      const fileInput = modal.querySelector('[data-proxy-file]');
+      const urlInput = modal.querySelector('[data-proxy-url]');
+      const save = modal.querySelector('[data-proxy-save]');
+      modal.querySelector('[data-proxy-skip]')?.addEventListener('click', () => {
+        try { sessionStorage.setItem(SESSION_KEY, 'true'); } catch {}
+        close();
+      });
+      save?.addEventListener('click', async () => {
+        if (!(save instanceof HTMLButtonElement)) return;
+        save.disabled = true;
+        if (error) error.textContent = '';
+        try {
+          const file = fileInput instanceof HTMLInputElement ? fileInput.files?.[0] : null;
+          const subscriptionUrl = urlInput instanceof HTMLInputElement ? urlInput.value.trim() : '';
+          const configText = file ? await file.text() : '';
+          if (!configText.trim() && !subscriptionUrl) throw new Error('请先选择配置文件或填写订阅地址');
+          const response = await fetch('/local-proxy/config', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ configText, subscriptionUrl }),
+          });
+          const payload = await response.json().catch(() => ({}));
+          if (!response.ok) throw new Error(payload.error || '代理启动失败');
+          try { sessionStorage.setItem(SESSION_KEY, 'true'); } catch {}
+          close();
+        } catch (requestError) {
+          if (error) error.textContent = requestError instanceof Error ? requestError.message : String(requestError);
+          save.disabled = false;
+        }
+      });
+      modal.addEventListener('click', (event) => { if (event.target === modal) close(); });
+      modal.querySelector('[data-proxy-file]')?.focus();
+    };
+
+    const check = async () => {
+      try {
+        const response = await fetch('/local-proxy/status', { cache: 'no-store' });
+        const status = await response.json();
+        let dismissed = false;
+        try { dismissed = sessionStorage.getItem(SESSION_KEY) === 'true'; } catch {}
+        if (status?.firstRun && !dismissed) open(status);
+      } catch {
+        // A static file opened outside the local service does not need the wizard.
+      }
+    };
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => void check(), { once: true });
+    else void check();
+  })();
+</script>`;
+
 const contentTypes = {
   ".avif": "image/avif", ".css": "text/css; charset=utf-8", ".gif": "image/gif", ".html": "text/html; charset=utf-8", ".ico": "image/x-icon", ".jpeg": "image/jpeg", ".jpg": "image/jpeg", ".js": "text/javascript; charset=utf-8", ".json": "application/json; charset=utf-8", ".mjs": "text/javascript; charset=utf-8", ".mp4": "video/mp4", ".png": "image/png", ".svg": "image/svg+xml", ".ttf": "font/ttf", ".webm": "video/webm", ".webp": "image/webp", ".woff": "font/woff", ".woff2": "font/woff2",
 };
@@ -1917,6 +1999,12 @@ const localHosts = new Set([`127.0.0.1:${port}`, `localhost:${port}`]);
 const explicitImageRelayProxySetting = process.env.IMAGE_RELAY_PROXY_URL?.trim() || "";
 let imageRelayProxySetting = explicitImageRelayProxySetting || "http://127.0.0.1:7890";
 const imageRelayProxyAgents = new Map();
+// Transport preference is deliberately kept in memory. It learns only from
+// successful requests during this service run, so no provider credentials or
+// private proxy details are written to the repository or browser storage.
+const imageRelayTransportPreferences = new Map();
+let runtimeImageProxySource = null;
+let runtimeImageProxyLastError = "";
 
 function configureImageRelayProxyUrl(proxyUrl) {
   if (!explicitImageRelayProxySetting || process.env.IMAGE_RELAY_PROXY_MODE === "sidecar") {
@@ -1935,6 +2023,23 @@ function getImageRelayProxyUrl() {
     return url;
   } catch {
     return null;
+  }
+}
+
+function isLocalAppRequest(request) {
+  const host = request.headers.host;
+  const origin = request.headers.origin;
+  return localHosts.has(host) && (!origin || origin === `http://${host}`);
+}
+
+function getImageRelayTransportPreference(provider) {
+  const value = imageRelayTransportPreferences.get(provider);
+  return value === "proxy" || value === "direct" ? value : null;
+}
+
+function setImageRelayTransportPreference(provider, transport) {
+  if (transport === "proxy" || transport === "direct") {
+    imageRelayTransportPreferences.set(provider, transport);
   }
 }
 
@@ -2024,7 +2129,7 @@ async function send(response, path, method) {
      * The original button injector only creates the trigger; the React bundle
      * owns the modal, focus scope, nested dialogs and persistence.
      */
-      response.end(refreshedFavicon.replace("</head>", `${workbenchLogoStyle}${mvpNavigationStyle}${localThemeAndUiStyle}${localDocumentTitleScript}${localRootNavigationScript}${localSettingsPanelScript}${originalPlaygroundSettingsButtonScript}${localThemeToggleScript}${localFixedFieldsScript}${localResolutionButtonsScript}${localAspectRatioButtonsScript}${localOfflineGuardsScript}${localGenerationButtonScript}${localResponsivePreviewScript}<link rel="stylesheet" href="/playground-settings/assets/index.css?v=fallback-auto-toggle-20260927-v1"><script type="module" src="/playground-settings/assets/index.js?v=fallback-auto-toggle-20260927-v1"></script><script src="/_pixpix-assets/local-vendor/xlsx.full.min.js?sheetjs-local-0.18.5"></script><script src="/_pixpix-assets/local-vendor/fflate.umd.js?fflate-local-0.8.3"></script><script type="module" src="/data-contract/index.js?contract-v34-20260927"></script></head>`));
+      response.end(refreshedFavicon.replace("</head>", `${workbenchLogoStyle}${mvpNavigationStyle}${localThemeAndUiStyle}${localDocumentTitleScript}${localRootNavigationScript}${localSettingsPanelScript}${originalPlaygroundSettingsButtonScript}${localThemeToggleScript}${localFixedFieldsScript}${localResolutionButtonsScript}${localAspectRatioButtonsScript}${localOfflineGuardsScript}${localGenerationButtonScript}${localResponsivePreviewScript}${localProxySetupScript}<link rel="stylesheet" href="/playground-settings/assets/index.css?v=fallback-auto-toggle-20260927-v2"><script type="module" src="/playground-settings/assets/index.js?v=fallback-auto-toggle-20260927-v2"></script><script src="/_pixpix-assets/local-vendor/xlsx.full.min.js?sheetjs-local-0.18.5"></script><script src="/_pixpix-assets/local-vendor/fflate.umd.js?fflate-local-0.8.3"></script><script type="module" src="/data-contract/index.js?contract-v35-20260927"></script></head>`));
     return;
   }
   createReadStream(path).pipe(response);
@@ -2110,87 +2215,142 @@ async function relayImageApi(request, response, pathname) {
   const upstreamUrl = `https://${imageRelayUpstreams[provider]}/v1/${endpoint}`;
   const requestId = randomUUID().replaceAll("-", "");
   const clientAbortController = new AbortController();
-  const directAbortController = new AbortController();
-  const directTimeout = setTimeout(() => directAbortController.abort(), 30 * 60 * 1000);
+  const relayAbortController = new AbortController();
+  const relayTimeout = setTimeout(() => relayAbortController.abort(), 30 * 60 * 1000);
   response.once("close", () => {
     if (!response.writableEnded) {
       clientAbortController.abort();
-      directAbortController.abort();
+      relayAbortController.abort();
     }
   });
 
   let directResponse = null;
   let directBody = null;
   let directError = null;
-  try {
+  let proxyResponse = null;
+  let proxyBody = null;
+  let proxyError = null;
+  const proxyUrl = getImageRelayProxyUrl();
+  const preferredTransport = getImageRelayTransportPreference(provider);
+  let proxyAttempted = false;
+
+  const fetchAttempt = async (transport) => {
+    const connectController = new AbortController();
+    const connectTimeout = setTimeout(() => connectController.abort(), transport === "proxy" ? 20_000 : 12_000);
     try {
-      directResponse = await fetch(upstreamUrl, {
+      return await fetch(upstreamUrl, {
         method: request.method,
         headers,
         body: request.method === "GET" ? undefined : requestBody,
         redirect: "manual",
-        signal: AbortSignal.any([directAbortController.signal, clientAbortController.signal]),
+        ...(transport === "proxy" && proxyUrl
+          ? { dispatcher: getImageRelayProxyAgent(proxyUrl) }
+          : {}),
+        signal: AbortSignal.any([relayAbortController.signal, clientAbortController.signal, connectController.signal]),
       });
     } catch (error) {
-      directError = error;
+      return { error };
+    } finally {
+      // This timeout covers connection/headers only. Once fetch resolves, the
+      // image response may legitimately stream for several minutes.
+      clearTimeout(connectTimeout);
+    }
+  };
+
+  const sendUpstream = async (upstream, transport, body = null) => {
+    setImageRelayTransportPreference(provider, transport);
+    response.writeHead(upstream.status, fetchRelayHeaders(upstream, requestId, transport));
+    if (body) {
+      response.end(body);
+      return;
+    }
+    if (!upstream.body) {
+      response.end();
+      return;
+    }
+    await pipeline(Readable.fromWeb(upstream.body), response);
+  };
+
+  try {
+    const tryProxy = async () => {
+      if (!proxyUrl || clientAbortController.signal.aborted) return;
+      if (proxyAttempted) return;
+      proxyAttempted = true;
+      const result = await fetchAttempt("proxy");
+      if (result?.error) {
+        proxyError = result.error;
+        return;
+      }
+      proxyResponse = result;
+    };
+    const tryDirect = async () => {
+      if (clientAbortController.signal.aborted) return;
+      const result = await fetchAttempt("direct");
+      if (result?.error) {
+        directError = result.error;
+        return;
+      }
+      directResponse = result;
+    };
+
+    // Once a provider succeeds through the proxy, use that route first for
+    // subsequent requests. If it stops working, probe direct and relearn.
+    if (preferredTransport === "proxy" && proxyUrl) {
+      await tryProxy();
+      if (proxyResponse && !shouldRetryImageRelayThroughProxy(provider, proxyResponse)) {
+        await sendUpstream(proxyResponse, "proxy");
+        return;
+      }
+      if (proxyResponse) proxyBody = Buffer.from(await proxyResponse.arrayBuffer());
     }
 
-    const shouldProxy = !clientAbortController.signal.aborted && (
+    await tryDirect();
+    if (directResponse && !shouldRetryImageRelayThroughProxy(provider, directResponse)) {
+      await sendUpstream(directResponse, "direct");
+      return;
+    }
+    if (directResponse) directBody = Buffer.from(await directResponse.arrayBuffer());
+
+    const shouldTryProxy = Boolean(proxyUrl) && !proxyAttempted && !clientAbortController.signal.aborted && (
+      !proxyResponse || shouldRetryImageRelayThroughProxy(provider, proxyResponse) ||
       Boolean(directError) || shouldRetryImageRelayThroughProxy(provider, directResponse)
     );
-    if (directResponse && shouldProxy) {
-      // Preserve the direct response in case the local proxy is unavailable.
-      // Region-policy responses are small JSON/HTML bodies, while successful
-      // image responses are streamed without buffering.
-      directBody = Buffer.from(await directResponse.arrayBuffer());
-    }
-
-    if (shouldProxy) {
-      const proxyUrl = getImageRelayProxyUrl();
-      if (proxyUrl) {
-        try {
-          const proxyResponse = await fetch(upstreamUrl, {
-            method: request.method,
-            headers,
-            body: request.method === "GET" ? undefined : requestBody,
-            redirect: "manual",
-            dispatcher: getImageRelayProxyAgent(proxyUrl),
-            signal: clientAbortController.signal,
-          });
-          response.writeHead(proxyResponse.status, fetchRelayHeaders(proxyResponse, requestId, "proxy"));
-          if (!proxyResponse.body) return response.end();
-          await pipeline(Readable.fromWeb(proxyResponse.body), response);
-          return;
-        } catch {
-          // Fall through to the direct error below. This keeps direct access
-          // fully functional when Clash Party is not running.
-          console.warn("Guan 图片代理回退失败，已保留直连结果");
-        }
+    if (shouldTryProxy) {
+      await tryProxy();
+      if (proxyResponse && !shouldRetryImageRelayThroughProxy(provider, proxyResponse)) {
+        await sendUpstream(proxyResponse, "proxy");
+        return;
       }
+      if (proxyResponse && !proxyBody) proxyBody = Buffer.from(await proxyResponse.arrayBuffer());
     }
 
     if (directResponse) {
-      if (directBody) {
-        response.writeHead(directResponse.status, fetchRelayHeaders(directResponse, requestId, "direct"));
-        response.end(directBody);
-        return;
-      }
-      response.writeHead(directResponse.status, fetchRelayHeaders(directResponse, requestId, "direct"));
-      if (!directResponse.body) return response.end();
-      await pipeline(Readable.fromWeb(directResponse.body), response);
+      await sendUpstream(directResponse, "direct", directBody);
+      return;
+    }
+    if (proxyResponse) {
+      await sendUpstream(proxyResponse, "proxy", proxyBody);
       return;
     }
 
-    throw directError || new Error("本地图片中转请求失败");
+    throw directError || proxyError || new Error("本地图片中转请求失败");
   } catch {
     if (response.headersSent) {
       response.destroy();
       return;
     }
+    const directState = directResponse ? `direct-${directResponse.status}` : directError ? "direct-network-error" : "direct-not-attempted";
+    const proxyState = !proxyUrl
+      ? "proxy-not-configured"
+      : proxyResponse
+        ? `proxy-${proxyResponse.status}`
+        : proxyError
+          ? "proxy-network-error"
+          : "proxy-not-attempted";
     const body = JSON.stringify({
       error: {
         code: "local_relay_result_unknown",
-        message: "与中转站连接中断，未收到完整结果；上游可能已生成并扣费。将按失败处理并自动切换下一站。",
+        message: `图片请求未收到完整结果（${directState}，${proxyState}）；上游可能已生成并扣费。将按失败处理并自动切换下一站。`,
         request_id: requestId,
       },
     });
@@ -2203,7 +2363,7 @@ async function relayImageApi(request, response, pathname) {
     });
     response.end(body);
   } finally {
-    clearTimeout(directTimeout);
+    clearTimeout(relayTimeout);
   }
 }
 
@@ -2224,9 +2384,134 @@ async function localMedia(response, pathname, method) {
   return notFound(response);
 }
 
+function getLocalProxyStatus() {
+  const envConfigured = Boolean(
+    process.env.IMAGE_RELAY_MIHOMO_CONFIG_FILE?.trim() ||
+    process.env.IMAGE_RELAY_SUBSCRIPTION_FILE?.trim() ||
+    process.env.IMAGE_RELAY_SUBSCRIPTION_URL?.trim() ||
+    (process.env.IMAGE_RELAY_SUBSTORE_API_URL?.trim() && process.env.IMAGE_RELAY_SUBSCRIPTION_NAME?.trim()),
+  );
+  const explicitConfigured = Boolean(explicitImageRelayProxySetting);
+  const configured = Boolean(builtInImageProxy || runtimeImageProxySource || envConfigured || explicitConfigured);
+  return {
+    configured,
+    running: Boolean(builtInImageProxy),
+    firstRun: !configured,
+    source: runtimeImageProxySource || (builtInImageProxy ? "environment" : explicitConfigured ? "proxy-url" : envConfigured ? "environment" : null),
+    proxyAvailable: Boolean(getImageRelayProxyUrl()),
+    lastError: runtimeImageProxyLastError || null,
+  };
+}
+
+async function handleLocalProxyConfig(request, response) {
+  if (!isLocalAppRequest(request)) {
+    response.writeHead(403, { "cache-control": "no-store" });
+    response.end();
+    return;
+  }
+  if (request.method === "GET") {
+    const body = JSON.stringify(getLocalProxyStatus());
+    response.writeHead(200, {
+      "content-type": "application/json; charset=utf-8",
+      "content-length": Buffer.byteLength(body),
+      "cache-control": "no-store",
+    });
+    response.end(body);
+    return;
+  }
+  if (request.method !== "POST") {
+    response.writeHead(405, { allow: "GET, POST", "cache-control": "no-store" });
+    response.end();
+    return;
+  }
+
+  let payload;
+  try {
+    const body = await readRequestBody(request, 12 * 1024 * 1024);
+    payload = JSON.parse(body.toString("utf8"));
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "配置内容无效";
+    const body = JSON.stringify({ error: message });
+    response.writeHead(400, {
+      "content-type": "application/json; charset=utf-8",
+      "content-length": Buffer.byteLength(body),
+      "cache-control": "no-store",
+    });
+    response.end(body);
+    return;
+  }
+
+  const configText = typeof payload?.configText === "string" ? payload.configText : "";
+  const subscriptionUrl = typeof payload?.subscriptionUrl === "string" ? payload.subscriptionUrl.trim() : "";
+  const sourceOverride = configText.trim()
+    ? { kind: "text", value: configText }
+    : subscriptionUrl
+      ? { kind: "url", value: subscriptionUrl }
+      : null;
+  if (!sourceOverride) {
+    const body = JSON.stringify({ error: "请上传代理配置文件或填写订阅地址" });
+    response.writeHead(400, {
+      "content-type": "application/json; charset=utf-8",
+      "content-length": Buffer.byteLength(body),
+      "cache-control": "no-store",
+    });
+    response.end(body);
+    return;
+  }
+
+  try {
+    await startRuntimeBuiltInImageProxy(sourceOverride, sourceOverride.kind === "text" ? "uploaded" : "subscription");
+    const body = JSON.stringify(getLocalProxyStatus());
+    response.writeHead(200, {
+      "content-type": "application/json; charset=utf-8",
+      "content-length": Buffer.byteLength(body),
+      "cache-control": "no-store",
+    });
+    response.end(body);
+  } catch {
+    runtimeImageProxyLastError = "代理启动失败";
+    // Do not echo subscription URLs, node credentials, or Mihomo command lines.
+    const body = JSON.stringify({ error: "代理启动失败，请检查配置格式、节点可用性和 Mihomo 运行环境" });
+    response.writeHead(400, {
+      "content-type": "application/json; charset=utf-8",
+      "content-length": Buffer.byteLength(body),
+      "cache-control": "no-store",
+    });
+    response.end(body);
+  }
+}
+
+let builtInImageProxy;
+
+async function stopBuiltInImageProxy() {
+  if (builtInImageProxy) await builtInImageProxy.stop();
+  builtInImageProxy = null;
+  runtimeImageProxySource = null;
+  await closeImageRelayProxyAgents();
+}
+
+async function startRuntimeBuiltInImageProxy(sourceOverride, sourceKind) {
+  await stopBuiltInImageProxy();
+  runtimeImageProxyLastError = "";
+  const proxy = await startBuiltInImageProxy({
+    projectRoot,
+    sourceOverride,
+    onProxyReady: (proxyUrl) => {
+      imageRelayProxySetting = proxyUrl;
+    },
+  });
+  if (!proxy) throw new Error("没有找到代理配置内容");
+  builtInImageProxy = proxy;
+  runtimeImageProxySource = sourceKind || "environment";
+  return proxy;
+}
+
 const server = createServer(async (request, response) => {
   const method = request.method || "GET";
   const pathname = new URL(request.url || "/", "http://127.0.0.1").pathname.replace(/\/$/, "") || "/";
+  if (pathname === "/local-proxy/status" || pathname === "/local-proxy/config") {
+    return handleLocalProxyConfig(request, response);
+  }
   if (pathname.startsWith("/local-image-api/")) {
     if (!["GET", "POST"].includes(method)) {
       response.writeHead(405, { allow: "GET, POST", "cache-control": "no-store" });
@@ -2268,11 +2553,6 @@ const server = createServer(async (request, response) => {
   return send(response, pageFile, method);
 });
 
-let builtInImageProxy;
-const stopBuiltInImageProxy = async () => {
-  if (builtInImageProxy) await builtInImageProxy.stop();
-  await closeImageRelayProxyAgents();
-};
 const shutdown = async () => {
   await stopBuiltInImageProxy();
   server.close(() => process.exit(0));
@@ -2287,11 +2567,13 @@ try {
     onProxyReady: configureImageRelayProxyUrl,
   });
   if (builtInImageProxy) {
+    runtimeImageProxySource = "environment";
     console.log("Guan 图片代理已内置启动（直连优先，失败后使用本地代理）");
   }
 } catch (error) {
   // The detail page remains usable without a sidecar. A missing binary or
   // malformed private subscription is reported without echoing its contents.
+  runtimeImageProxyLastError = "代理启动失败";
   console.warn("Guan 图片代理未启动，请检查 Mihomo 二进制和私有订阅配置");
 }
 

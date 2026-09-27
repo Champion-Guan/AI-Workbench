@@ -204,7 +204,11 @@ function buildMihomoConfig(source, port) {
     ...nodes.map(nodeYaml),
     "proxy-groups:",
     "  - name: IMAGE-RELAY",
-    "    type: select",
+    "    type: url-test",
+    "    url: https://www.gstatic.com/generate_204",
+    "    interval: 300",
+    "    tolerance: 80",
+    "    lazy: false",
     "    proxies:",
     ...names.map((name) => `      - ${yamlString(name)}`),
     "rules:",
@@ -213,7 +217,23 @@ function buildMihomoConfig(source, port) {
   ].join("\n");
 }
 
-async function readTextSource() {
+async function readTextSource(sourceOverride) {
+  if (sourceOverride && typeof sourceOverride === "object") {
+    if (sourceOverride.kind === "text") {
+      const text = String(sourceOverride.value || "");
+      if (Buffer.byteLength(text) > MAX_SOURCE_BYTES) throw new Error("上传的代理配置超过本地代理允许的大小");
+      return text;
+    }
+    if (sourceOverride.kind === "url") {
+      const url = String(sourceOverride.value || "").trim();
+      if (!/^https?:\/\//i.test(url)) throw new Error("代理订阅地址必须使用 http 或 https");
+      const response = await fetch(url, { signal: AbortSignal.timeout(30_000) });
+      if (!response.ok) throw new Error(`订阅地址返回 HTTP ${response.status}`);
+      const bytes = Buffer.from(await response.arrayBuffer());
+      if (bytes.length > MAX_SOURCE_BYTES) throw new Error("订阅配置超过本地代理允许的大小");
+      return bytes.toString("utf8");
+    }
+  }
   const file = process.env.IMAGE_RELAY_MIHOMO_CONFIG_FILE?.trim();
   if (file) return readFile(file, "utf8");
 
@@ -353,8 +373,8 @@ function waitForPort(port, timeoutMs, child) {
   });
 }
 
-export async function startBuiltInImageProxy({ projectRoot, onProxyReady } = {}) {
-  const source = await readTextSource();
+export async function startBuiltInImageProxy({ projectRoot, onProxyReady, sourceOverride } = {}) {
+  const source = await readTextSource(sourceOverride);
   if (!source) return null;
   const binary = await resolveMihomoBinary(projectRoot);
   if (!binary) throw new Error("未找到 Mihomo。请设置 IMAGE_RELAY_MIHOMO_BIN，或将二进制放入 proxy-runtime/mihomo。");

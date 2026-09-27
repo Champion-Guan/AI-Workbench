@@ -1,7 +1,7 @@
 import { createRoot } from 'react-dom/client'
 import SettingsModal from './components/SettingsModal'
 import ConfirmDialog from './components/ConfirmDialog'
-import { initStore, useStore } from './store'
+import { applyImageProfileBalanceChange, initStore, useStore } from './store'
 import { createDefaultOpenAIProfile, getActiveApiProfile, normalizeSettings, validateApiProfile } from './lib/apiProfiles'
 import { callImageApi } from './lib/api'
 import { normalizeParamsForSettings } from './lib/paramCompatibility'
@@ -76,6 +76,7 @@ async function generateBackgroundRemoval(inputImageDataUrl: string) {
   const useLocalTransparentPostProcess = activeProfile.transparentBackgroundMethod === 'local'
   const result = await callImageApi({
     settings,
+    onProfileBalanceChange: applyImageProfileBalanceChange,
     prompt: useLocalTransparentPostProcess ? createTransparentOutputMeta(prompt).effectivePrompt : prompt,
     params: requestParams,
     nativeTransparentBackground: !useLocalTransparentPostProcess,

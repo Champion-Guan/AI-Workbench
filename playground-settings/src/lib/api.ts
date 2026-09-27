@@ -20,6 +20,57 @@ function getErrorProperty(err: unknown, key: 'rawImageUrls' | 'rawResponsePayloa
   return err && typeof err === 'object' ? (err as Record<string, unknown>)[key] : undefined
 }
 
+function getOptionalAmount(value: unknown): number | undefined {
+  return typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : undefined
+}
+
+function getProfileCharge(profile: ApiProfile, imageCount: number) {
+  const price = getOptionalAmount(profile.price)
+  const balance = getOptionalAmount(profile.balance)
+  if (price === undefined || balance === undefined) return null
+  const count = Math.max(1, Math.trunc(imageCount || 1))
+  return { price, balance, cost: price * count }
+}
+
+const profileBalanceReservations = new Map<string, number>()
+
+async function reserveProfileCharge(opts: CallApiOptions, profile: ApiProfile, imageCount: number) {
+  const charge = getProfileCharge(profile, imageCount)
+  if (!charge || charge.cost <= 0) return null
+  const reserved = profileBalanceReservations.get(profile.id) ?? 0
+  if (charge.balance + 1e-9 < charge.cost) {
+    await opts.onProfileBalanceChange?.({ profileId: profile.id, cost: 0, insufficient: true })
+    throw new Error(`${profile.name} 余额不足（需要 ¥${charge.cost.toFixed(2)}，剩余 ¥${charge.balance.toFixed(2)}），已自动跳过该配置`)
+  }
+  if (charge.balance - reserved + 1e-9 < charge.cost) {
+    const remaining = Math.max(0, charge.balance - reserved)
+    throw new Error(`${profile.name} 余额已由其他并发请求预留（可用 ¥${remaining.toFixed(2)}），本次自动跳过该配置`)
+  }
+  profileBalanceReservations.set(profile.id, reserved + charge.cost)
+  let released = false
+  const release = () => {
+    if (released) return
+    released = true
+    const current = profileBalanceReservations.get(profile.id) ?? 0
+    const next = Math.max(0, current - charge.cost)
+    if (next <= 1e-9) profileBalanceReservations.delete(profile.id)
+    else profileBalanceReservations.set(profile.id, next)
+  }
+  return { release, cost: charge.cost }
+}
+
+async function settleProfileCharge(opts: CallApiOptions, profile: ApiProfile, reservation: { release: () => void; cost: number } | null, imageCount: number) {
+  if (!reservation) return
+  const charge = getProfileCharge(profile, imageCount)
+  reservation.release()
+  if (!charge || charge.price <= 0) return
+  await opts.onProfileBalanceChange?.({
+    profileId: profile.id,
+    cost: Math.min(charge.cost, reservation.cost),
+    insufficient: false,
+  })
+}
+
 function getProfileRequestModel(profile: ApiProfile, size: string): string {
   if (profile.model !== 'gpt-image-2.5' || new URL(profile.baseUrl || 'https://localhost').hostname.toLowerCase() !== 'api-cn.hi-code.cc') return profile.model
   const match = size.trim().match(/^(\d+)\s*[xX×]\s*(\d+)$/)
@@ -85,14 +136,19 @@ export async function callImageApi(opts: CallApiOptions): Promise<CallApiResult>
     }
     opts.onProviderAttempt?.({ ...attempt, status: 'running' })
 
+    let reservation: Awaited<ReturnType<typeof reserveProfileCharge>> = null
     try {
+      reservation = await reserveProfileCharge(opts, requestProfile, opts.params.n)
       const result = await callImageApiForProfile(opts, requestProfile)
       if (!result.images.length) throw new Error(`${requestProfile.name} 未返回图片数据`)
+      await settleProfileCharge(opts, requestProfile, reservation, result.images.length)
+      reservation = null
       opts.onProviderAttempt?.({ ...attempt, status: 'success' })
       const modelResult = requestProfile.model === profile.model ? result : { ...result, apiModel: requestProfile.model }
       if (!fallbackProfiles && profile.id === activeProfile.id && requestProfile.model === profile.model) return modelResult
       return { ...modelResult, apiProfileId: profile.id }
     } catch (err) {
+      reservation?.release()
       opts.onProviderAttempt?.({
         ...attempt,
         status: opts.signal?.aborted ? 'cancelled' : 'error',

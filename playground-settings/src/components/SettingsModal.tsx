@@ -1691,7 +1691,7 @@ export default function SettingsModal() {
                   </label>
                 </div>
                 <div data-selectable-text className="mt-1.5 text-xs text-gray-500 dark:text-gray-500">
-                  仅用于记录中转站价格和余额，不影响 API 请求；留空即可跳过。
+                  填写后会在图片成功返回时按张扣减余额；余额不足会自动停用该配置并跳过。留空即可跳过计费。
                 </div>
               </div>
 
