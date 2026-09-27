@@ -1128,7 +1128,7 @@ window.GuanWorkbenchData = api;
 
 const css = document.createElement("link");
 css.rel = "stylesheet";
-css.href = "/data-contract/index.css?contract-v33-20260927";
+css.href = "/data-contract/index.css?contract-v34-20260927";
 document.head.appendChild(css);
 
 function escapeHtml(value) {
@@ -1938,13 +1938,17 @@ function parsePromptSheet(workbook, sheetName) {
       if (promptColumnLabel(column.label) && value !== null && String(value).trim() !== "") hasPrompt = true;
     });
     const orderValue = values.Order;
+    const orderNumber = Number(orderValue);
     const hasNumericOrder = orderValue !== null
       && String(orderValue).trim() !== ""
-      && Number.isFinite(Number(orderValue));
-    // Section titles such as "8. Mandatory pre-delivery checks" can appear
-    // under the Order column. They are documentation, not product routes.
-    // Keep a row only when it has a real numeric order or prompt content.
-    if (hasPrompt || hasNumericOrder) rows.push({ sourceRowNumber: rowIndex + 1, values });
+      && Number.isInteger(orderNumber)
+      && orderNumber > 0;
+    // A prompt sheet also contains a validation section after the product
+    // matrix. Some workbook copies repeat the section guidance across every
+    // prompt column, so checking only for non-empty prompt cells would import
+    // those guidance rows as products. A real product row has a positive
+    // integer Order and at least one actual prompt field.
+    if (hasNumericOrder && hasPrompt) rows.push({ sourceRowNumber: rowIndex + 1, values });
   }
   return {
     kind: "prompt-template",
