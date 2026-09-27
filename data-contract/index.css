@@ -54,6 +54,7 @@ html[data-workbench-theme="dark"] #guan-data-contract-root {
   overflow-x: auto;
   padding: 2px 1px;
   scrollbar-width: none;
+  transform: translateX(-14px);
 }
 
 .guan-dc-product-nav::-webkit-scrollbar {
@@ -976,6 +977,7 @@ html[data-workbench-theme="dark"] .guan-dc-file-chevron {
   .guan-dc-product-nav {
     max-width: 34vw;
     gap: 4px;
+    transform: translateX(-8px);
   }
 
   .guan-dc-product-capsule {
