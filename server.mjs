@@ -1,4 +1,4 @@
-import { createReadStream } from "node:fs";
+import { createReadStream, readFileSync } from "node:fs";
 import { readFile, stat } from "node:fs/promises";
 import { createServer } from "node:http";
 import { randomUUID } from "node:crypto";
@@ -10,6 +10,25 @@ import { ProxyAgent } from "undici";
 import { startBuiltInImageProxy } from "./proxy-service.mjs";
 
 const projectRoot = fileURLToPath(new URL("./", import.meta.url));
+
+function loadLocalEnvFile(path) {
+  try {
+    const source = readFileSync(path, "utf8");
+    for (const line of source.split(/\r?\n/)) {
+      const match = line.match(/^\s*(?:export\s+)?([A-Za-z_][A-Za-z\d_]*)\s*=\s*(.*)\s*$/);
+      if (!match || match[1] in process.env) continue;
+      let value = match[2];
+      if ((value.startsWith("\"") && value.endsWith("\"")) || (value.startsWith("'") && value.endsWith("'"))) {
+        value = value.slice(1, -1);
+      }
+      process.env[match[1]] = value;
+    }
+  } catch {
+    // .env.local is optional and intentionally ignored by Git.
+  }
+}
+
+loadLocalEnvFile(join(projectRoot, ".env.local"));
 const archiveRoot = join(projectRoot, "archive");
 const pageFile = join(archiveRoot, "index.html");
 const assetRoot = join(archiveRoot, "assets");

@@ -54,3 +54,5 @@ npm run dev
 代理监听端口默认为 `17890`，可用 `IMAGE_RELAY_PROXY_PORT` 修改。若设置了 `IMAGE_RELAY_PROXY_URL`，项目会使用该代理；未设置且没有内置代理配置时，会兼容使用本机 `127.0.0.1:7890`，但不会依赖 Clash Party 才能运行。
 
 自动下载可用 `IMAGE_RELAY_MIHOMO_AUTO_DOWNLOAD=false` 关闭，也可用 `IMAGE_RELAY_MIHOMO_VERSION` 固定 Mihomo 版本。节点订阅和完整配置只通过环境变量或外部私有文件提供，`.env.local` 已被 Git 忽略。
+
+最简单的迁移方式是复制 `.env.local.example` 为 `.env.local`，填入新电脑可访问的私有订阅地址或本机 Sub-Store 配置，再执行 `npm install && npm run dev`。项目会自动读取 `.env.local`，不需要修改源码。
