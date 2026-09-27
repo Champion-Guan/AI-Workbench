@@ -53,13 +53,16 @@ async function generateBackgroundRemoval(inputImageDataUrl: string) {
   // default; the browser then tries to download that URL directly and fails
   // when the gateway only works through the local relay/proxy. Force a
   // Base64 response for this one request and disable streaming so the result
-  // never leaves the relay path.
+  // never leaves the relay path. GPT-Image-2 compatible gateways commonly do
+  // not accept the native `background=transparent` edit field, so use the
+  // existing solid-key local post-process instead of sending that field.
   const backgroundRemovalSettings = {
     ...settings,
     profiles: settings.profiles.map((profile) => ({
       ...profile,
       responseFormatB64Json: true,
       streamImages: false,
+      transparentBackgroundMethod: 'local' as const,
     })),
   }
   const activeProfile = getActiveApiProfile(backgroundRemovalSettings)
