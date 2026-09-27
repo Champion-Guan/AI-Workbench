@@ -20,7 +20,7 @@ export function getDefaultImageApiFallback(profiles: ApiProfile[]): ImageApiFall
     return profile ? [{ profileId: profile.id, enabled: true }] : []
   })
   return {
-    enabled: ordered.length >= 2,
+    enabled: ordered.length > 0,
     entries: [...ordered, ...profiles
       .filter((profile) => profile.provider === 'openai' && !ordered.some((entry) => entry.profileId === profile.id))
       .map((profile) => ({ profileId: profile.id, enabled: false }))],
@@ -52,7 +52,10 @@ export function normalizeImageApiFallback(input: unknown, profiles: ApiProfile[]
   if (matchesLegacyOrder) {
     return getDefaultImageApiFallback(profiles)
   }
-  return { enabled: record.enabled !== false, entries }
+  // The master switch mirrors the provider selections. A fallback chain is
+  // useful as soon as at least one station is selected, and it must turn off
+  // when every station is unselected.
+  return { enabled: entries.some((entry) => entry.enabled), entries }
 }
 
 export function moveImageFallbackEntry(

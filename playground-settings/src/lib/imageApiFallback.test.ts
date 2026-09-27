@@ -148,12 +148,13 @@ describe('four-provider fallback', () => {
     expect(result.apiProfileId).toBe('Jojocode')
   })
 
-  it('does not silently call the active profile when all providers are disabled', async () => {
-    const fetchMock = vi.spyOn(globalThis, 'fetch')
+  it('falls back to the active profile when all providers are disabled', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(failure('offline'))
     await expect(callImageApi({ ...options, settings: {
       ...settings, imageApiFallback: { enabled: true, entries: [] },
-    } })).rejects.toThrow('没有启用的中转站')
-    expect(fetchMock).not.toHaveBeenCalled()
+    } })).rejects.toThrow('offline')
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(fetchMock.mock.calls[0][0]).toContain('api2.jojocode.com')
   })
 
   it('uses only the active profile when automatic fallback is off', async () => {

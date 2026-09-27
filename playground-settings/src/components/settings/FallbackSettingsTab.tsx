@@ -87,7 +87,8 @@ export default function FallbackSettingsTab({ draft, profiles, commitSettings }:
     return entry.enabled && profile && !isImageProviderExhausted(profile) ? [profile] : []
   })
   const save = (next: ImageApiFallbackSettings) => {
-    commitSettings({ ...draft, imageApiFallback: next })
+    const enabled = next.entries.some((entry) => entry.enabled)
+    commitSettings({ ...draft, imageApiFallback: { ...next, enabled } })
     setNotice('已自动保存，下次提交生效')
   }
   const move = (profileId: string, targetId: string) => {
@@ -411,7 +412,10 @@ export default function FallbackSettingsTab({ draft, profiles, commitSettings }:
         </p>
       </div>
       <div className="rounded-xl border border-gray-200 dark:border-white/10 p-4 space-y-2">
-        <Checkbox checked={config.enabled} onChange={(enabled) => save({ ...config, enabled })} label="启用 Fallback 自动切换" />
+        <Checkbox checked={config.enabled} onChange={(enabled) => save({
+          ...config,
+          entries: config.entries.map((entry) => ({ ...entry, enabled })),
+        })} label="启用 Fallback 自动切换" />
         <p className="text-xs leading-relaxed text-gray-500 dark:text-gray-400">
           关闭后仅请求「API 配置」当前选中的站点，不使用下方顺序和勾选状态。
         </p>

@@ -40,14 +40,19 @@ describe('user-configurable fallback settings', () => {
     ])
   })
 
-  it('preserves order, switches, and master setting through persistence normalization', () => {
+  it('derives the master setting from provider selections through persistence normalization', () => {
     const config = { enabled: false, entries: [...profiles].reverse().map((profile, index) => ({ profileId: profile.id, enabled: index % 2 === 0 })) }
     const settings = normalizeSettings({ profiles, imageApiFallback: config })
-    expect(normalizeSettings(JSON.parse(JSON.stringify(settings))).imageApiFallback).toEqual(config)
+    expect(normalizeSettings(JSON.parse(JSON.stringify(settings))).imageApiFallback).toEqual({
+      ...config,
+      enabled: true,
+    })
   })
 
   it('allows intentionally disabling every provider', () => {
-    expect(normalizeImageApiFallback({ enabled: true, entries: [] }, profiles)?.entries.every((entry) => !entry.enabled)).toBe(true)
+    const normalized = normalizeImageApiFallback({ enabled: true, entries: [] }, profiles)
+    expect(normalized?.entries.every((entry) => !entry.enabled)).toBe(true)
+    expect(normalized?.enabled).toBe(false)
     expect(normalizeImageApiFallback(undefined, profiles)).toBeUndefined()
     expect(normalizeImageApiFallback({ entries: 'invalid' }, profiles)).toBeUndefined()
   })

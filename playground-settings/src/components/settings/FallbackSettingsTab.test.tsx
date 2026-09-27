@@ -20,10 +20,10 @@ describe('fallback settings panel', () => {
     expect(html.indexOf('启用 zzone')).toBeLessThan(html.indexOf('启用 Hi-Code'))
   })
 
-  it('warns when the enabled chain has no available providers', () => {
+  it('automatically disables fallback when no providers are selected', () => {
     const draft = normalizeSettings({ profiles, imageApiFallback: { enabled: true, entries: [] } })
     const html = renderToStaticMarkup(<FallbackSettingsTab draft={draft} profiles={profiles} commitSettings={() => {}} />)
-    expect(html).toContain('role="alert"')
-    expect(html).toContain('没有启用的中转站')
+    expect(html).toContain('自动切换已关闭，仅使用当前 API 配置。')
+    expect(html).not.toContain('没有启用的中转站')
   })
 })
