@@ -688,9 +688,37 @@ html[data-workbench-theme="dark"] #guan-data-contract-root {
 .guan-dc-import-products {
   display: grid;
   gap: 8px;
+  flex: 1 1 auto;
   min-height: 0;
   padding: 0 24px 16px;
-  overflow-y: auto;
+  overflow-x: hidden;
+  overflow-y: scroll;
+  overscroll-behavior-y: contain;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(113, 117, 122, .48) transparent;
+}
+
+.guan-dc-import-products::-webkit-scrollbar {
+  width: 8px;
+}
+
+.guan-dc-import-products::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 999px;
+}
+
+.guan-dc-import-products::-webkit-scrollbar-thumb {
+  min-height: 34px;
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background: rgba(113, 117, 122, .48);
+  background-clip: padding-box;
+}
+
+.guan-dc-import-products::-webkit-scrollbar-thumb:hover {
+  background: rgba(80, 84, 90, .72);
+  background-clip: padding-box;
 }
 
 .guan-dc-import-product {

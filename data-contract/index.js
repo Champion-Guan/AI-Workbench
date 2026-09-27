@@ -1128,7 +1128,7 @@ window.GuanWorkbenchData = api;
 
 const css = document.createElement("link");
 css.rel = "stylesheet";
-css.href = "/data-contract/index.css?contract-v32-20260927";
+css.href = "/data-contract/index.css?contract-v33-20260927";
 document.head.appendChild(css);
 
 function escapeHtml(value) {
@@ -1234,7 +1234,7 @@ function renderExcelImportDialog(root) {
       if (target.matches("[data-prompt-select-all]")) {
         const templates = Array.isArray(current.promptTemplates) ? current.promptTemplates : [];
         current.selectedPromptIndexes = target.checked ? templates.map((_, index) => index) : [];
-        renderExcelImportDialog(root);
+        updateExcelImportSelection(dialog, current);
         return;
       }
       if (target.matches("[data-prompt-index]")) {
@@ -1243,9 +1243,23 @@ function renderExcelImportDialog(root) {
         if (target.checked) selected.add(index);
         else selected.delete(index);
         current.selectedPromptIndexes = [...selected].sort((a, b) => a - b);
-        renderExcelImportDialog(root);
+        updateExcelImportSelection(dialog, current);
       }
     });
+    dialog.addEventListener("wheel", (event) => {
+      const target = event.target instanceof Element ? event.target : null;
+      const list = target?.closest(".guan-dc-import-products");
+      if (!list) return;
+      const maxScroll = list.scrollHeight - list.clientHeight;
+      if (maxScroll <= 0) return;
+      const nextScrollTop = Math.max(0, Math.min(maxScroll, list.scrollTop + event.deltaY));
+      if (nextScrollTop === list.scrollTop) return;
+      // The host workbench locks body scrolling while its Radix modal is open.
+      // Move the product list explicitly so wheel/trackpad scrolling remains
+      // reliable inside this nested local import dialog.
+      event.preventDefault();
+      list.scrollTop = nextScrollTop;
+    }, { passive: false });
     dialog.addEventListener("keydown", (event) => {
       if (event.key === "Escape") {
         event.preventDefault();
@@ -1308,7 +1322,7 @@ function renderExcelImportDialog(root) {
         </div>
         <div class="guan-dc-import-select-all">
           <label><input type="checkbox" data-prompt-select-all ${allSelected ? "checked" : ""}> 全选产品</label>
-          <span>已选择 ${selectedCount} / ${templates.length}</span>
+          <span data-selected-count>已选择 ${selectedCount} / ${templates.length}</span>
         </div>
         <div class="guan-dc-import-products">${productRows || `<div class="guan-dc-excel-import-empty">没有找到可导入的提示词产品。</div>`}</div>
         <footer class="guan-dc-excel-import-actions">
@@ -1318,6 +1332,31 @@ function renderExcelImportDialog(root) {
       `}
     </section>
   `;
+}
+
+function updateExcelImportSelection(dialog, pending) {
+  const templates = Array.isArray(pending.promptTemplates) ? pending.promptTemplates : [];
+  const selected = new Set(Array.isArray(pending.selectedPromptIndexes) ? pending.selectedPromptIndexes : []);
+  const selectedCount = templates.filter((_, index) => selected.has(index)).length;
+  const allSelected = templates.length > 0 && selectedCount === templates.length;
+  const selectAll = dialog.querySelector("[data-prompt-select-all]");
+  if (selectAll) {
+    selectAll.checked = allSelected;
+    selectAll.indeterminate = selectedCount > 0 && !allSelected;
+  }
+  dialog.querySelectorAll("[data-prompt-index]").forEach((input) => {
+    const index = Number(input.dataset.promptIndex);
+    const isSelected = selected.has(index);
+    input.checked = isSelected;
+    input.closest(".guan-dc-import-product")?.classList.toggle("is-selected", isSelected);
+  });
+  const count = dialog.querySelector("[data-selected-count]");
+  if (count) count.textContent = `已选择 ${selectedCount} / ${templates.length}`;
+  const confirm = dialog.querySelector("[data-excel-import-confirm]");
+  if (confirm) {
+    confirm.disabled = selectedCount === 0;
+    confirm.textContent = selectedCount ? `导入 ${selectedCount} 个产品` : "导入";
+  }
 }
 
 function openExcelDeleteDialog({ fileName, onConfirm }) {
