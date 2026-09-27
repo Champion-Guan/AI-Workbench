@@ -22,10 +22,11 @@
 
 当前实现说明：
 
-- 合同对象与关联元数据存放在浏览器 `localStorage`，页面刷新后保留。
+- 合同对象与关联元数据存放在浏览器 `localStorage`，页面刷新后保留；大于阈值的合同使用本地 fflate 压缩后再写入，仍不上传互联网。
 - 工作区顶部提供已上传 Excel 的选择框和新增上传按钮；文件在浏览器本地解析，先选择工作表并预览，再确认写入合同。左下角“数据”面板只用于查看产品、槽位和任务明细。
 - 运营界面不展示 JSON 导入/导出入口；JSON 仅作为内部合同 API 的开发验证格式保留。
-- 导入时每个非空数据行对应一个 `Product`，保留 Excel 原始行号、全部原始字段、工作表名和文件 SHA-256；空白行不创建产品。
+- 导入时每个非空数据行对应一个 `Product`，保留 Excel 原始行号、全部原始字段、工作表名和文件 SHA-256；空白行不创建产品。为避免大表重复占用本地空间，完整字段保存在 `Product.attributes`，`ImportRecord` 不再复制同一份行值。
+- 如果工作簿最后包含“视觉内容与AI提示词”或其他可识别的 Prompt 工作表，系统会从最后一个工作表向前尝试识别提示词矩阵，再按路线模板导入 `ProductSet.source.promptTemplates`，不会把提示词路线误当成商品。初始化某个产品任务时，主图、副图、详情图和视频槽位会按对应列使用这些英文提示词；没有匹配路线时使用第一条模板并保留模板来源标记。
 - 每个产品默认建立 1 个主图、10 个副图和 6 个详情图 `ProductSlot`，可在确认导入前调整。
 - `Asset` 当前持久化文件元数据和 `storageKey`，不保存图片二进制；接入生成器/素材存储后再写真实文件。
 - 当前核心引用链是 `ProductSet → Product → ProductSlot → GenerationTask → Asset`。TaskGroup 暂时仅以 `taskGroupId` 分组标识保留，不单独落表。
@@ -133,6 +134,13 @@ interface ProductSet {
     fileName: string;
     fileSha256?: string;
     sheetName?: string;
+    promptSheetName?: string;
+    promptTemplates?: Array<{
+      order: number;
+      route: string;
+      prompts: Record<string, string>;
+      sourceRowNumber?: number;
+    }>;
     importedAt: string;
   };
   productIds: string[];          // 保持 Excel 行顺序

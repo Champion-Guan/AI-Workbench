@@ -11,6 +11,7 @@ const MAX_IMPORT_COLUMNS = 200;
 // import remains local while still preventing accidental multi-hundred-MiB
 // files from exhausting the browser tab.
 const MAX_IMPORT_FILE_BYTES = 100 * 1024 * 1024;
+const COMPRESSED_STORAGE_PREFIX = "guan-workbench-compressed-v1:";
 let pendingExcelImport = null;
 let activeExcelDeleteDialog = null;
 
@@ -25,6 +26,40 @@ function createId(prefix) {
 
 function clone(value) {
   return JSON.parse(JSON.stringify(value));
+}
+
+function bytesToBase64(bytes) {
+  let binary = "";
+  const chunkSize = 0x8000;
+  for (let offset = 0; offset < bytes.length; offset += chunkSize) {
+    binary += String.fromCharCode(...bytes.subarray(offset, offset + chunkSize));
+  }
+  return btoa(binary);
+}
+
+function base64ToBytes(value) {
+  const binary = atob(value);
+  const bytes = new Uint8Array(binary.length);
+  for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index);
+  return bytes;
+}
+
+function encodeStoredState(state) {
+  const json = JSON.stringify(state);
+  const compressor = globalThis.fflate;
+  if (json.length < 50000 || !compressor?.compressSync || !compressor?.strToU8) return json;
+  const compressed = compressor.compressSync(compressor.strToU8(json), { level: 6 });
+  return `${COMPRESSED_STORAGE_PREFIX}${bytesToBase64(compressed)}`;
+}
+
+function decodeStoredState(stored) {
+  if (!stored.startsWith(COMPRESSED_STORAGE_PREFIX)) return JSON.parse(stored);
+  const compressor = globalThis.fflate;
+  if (!compressor?.decompressSync || !compressor?.strFromU8) {
+    throw new Error("本地合同数据已压缩，但压缩解码器没有加载。请刷新页面后重试。");
+  }
+  const encoded = stored.slice(COMPRESSED_STORAGE_PREFIX.length);
+  return JSON.parse(compressor.strFromU8(compressor.decompressSync(base64ToBytes(encoded))));
 }
 
 function createEmptyState() {
@@ -153,8 +188,6 @@ function normalizeState(value) {
     slot.required = slot.required !== false;
     slot.ratio ||= "1:1";
     slot.resolution = ["1k", "2k", "4k"].includes(slot.resolution) ? slot.resolution : "2k";
-    slot.createdAt ||= timestamp();
-    slot.updatedAt ||= slot.createdAt;
   }
   for (const task of normalized.tasks) {
     task.id ||= createId("task");
@@ -392,7 +425,7 @@ function readState() {
   if (!stored) return createEmptyState();
   let parsed;
   try {
-    parsed = JSON.parse(stored);
+    parsed = decodeStoredState(stored);
   } catch {
     const recoveryKey = quarantineStoredData(stored, "invalid-json");
     throw new Error(`本地合同数据无法解析，原文${recoveryKey ? `已备份到 ${recoveryKey}` : "仍保留在原存储位置"}。为保护原数据，本次操作已停止。`);
@@ -411,7 +444,7 @@ function readState() {
   }
   if (JSON.stringify(normalized) !== JSON.stringify(parsed)) {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(normalized));
+      localStorage.setItem(STORAGE_KEY, encodeStoredState(normalized));
     } catch {
       throw new Error("本地数据需要升级格式，但浏览器存储空间不足，旧数据未被覆盖。请先释放本地存储空间后重试。");
     }
@@ -422,7 +455,7 @@ function readState() {
 function publish(state) {
   validateState(state);
   state.workspace.updatedAt = timestamp();
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  localStorage.setItem(STORAGE_KEY, encodeStoredState(state));
   window.dispatchEvent(new CustomEvent(CHANGE_EVENT, { detail: clone(state) }));
   return state;
 }
@@ -486,6 +519,9 @@ function makePrompt(taskInput, productId, slotId) {
       preserveBrandText: taskInput.preserveBrandText !== false,
       negativePrompt: String(taskInput.negativePrompt || "").trim() || undefined,
     },
+    ...(taskInput.variables && typeof taskInput.variables === "object"
+      ? { variables: clone(taskInput.variables) }
+      : {}),
     createdAt: timestamp(),
     updatedAt: timestamp(),
   };
@@ -520,6 +556,16 @@ function createProductSetInternal(state, input = {}) {
       fileName: String(input.fileName || "未命名产品表.xlsx"),
       fileSha256: input.fileSha256 || undefined,
       sheetName: input.sheetName || undefined,
+      promptSheetName: input.promptSheetName || undefined,
+      ...(input.headerMap && typeof input.headerMap === "object"
+        ? { headerMap: clone(input.headerMap) }
+        : {}),
+      ...(Array.isArray(input.promptTemplates) && input.promptTemplates.length
+        ? {
+            promptTemplates: clone(input.promptTemplates),
+            promptTemplateCount: input.promptTemplates.length,
+          }
+        : {}),
       slotCounts: input.slotCounts && typeof input.slotCounts === "object" ? clone(input.slotCounts) : undefined,
       importedAt: now,
     },
@@ -560,10 +606,11 @@ function createProductSetInternal(state, input = {}) {
       rawValues: row,
       order: index + 1,
       slotTemplates,
+      compactImportRecord: true,
     });
     set.productIds.push(product.id);
   });
-  set.status = rows.length ? "ready" : "draft";
+  set.status = rows.length || (Array.isArray(input.promptTemplates) && input.promptTemplates.length) ? "ready" : "draft";
   set.updatedAt = now;
   return set;
 }
@@ -583,8 +630,10 @@ function createProductInternal(state, input = {}) {
     productSetId: productSet.id,
     sourceRowNumber,
     sourceRowKey: String(input.sourceRowKey || `${productSet.id}:row:${sourceRowNumber}`),
-    headerMap: input.headerMap && typeof input.headerMap === "object" ? clone(input.headerMap) : {},
-    rawValues,
+    headerMap: input.compactImportRecord ? {} : (input.headerMap && typeof input.headerMap === "object" ? clone(input.headerMap) : {}),
+    // The complete row is already retained on Product.attributes. Keeping a
+    // second copy here makes large real-world workbooks exceed localStorage.
+    rawValues: input.compactImportRecord ? {} : rawValues,
     importedAt: now,
   });
   const product = {
@@ -640,8 +689,6 @@ function createSlotInternal(state, productId, input = {}) {
     required: input.required !== false,
     ratio: input.ratio || "1:1",
     resolution: ["1k", "2k", "4k"].includes(input.resolution) ? input.resolution : "2k",
-    createdAt: now,
-    updatedAt: now,
   };
   state.slots.push(slot);
   product.updatedAt = now;
@@ -942,6 +989,40 @@ const api = {
     return clone(publish(state));
   },
   importRows: (input = {}) => clone(mutate((state) => createProductSetInternal(state, input))),
+  importPromptTemplates: (input = {}) => clone(mutate((state) => {
+    const templates = Array.isArray(input.promptTemplates) ? clone(input.promptTemplates) : [];
+    if (!templates.length) throw new Error("没有可导入的提示词模板");
+    let set = state.productSets.find((candidate) => (
+      input.fileSha256 && candidate.source?.fileSha256 === input.fileSha256
+    ) || (
+      !input.fileSha256
+      && candidate.source?.fileName === String(input.fileName || "未命名产品表.xlsx")
+      && candidate.source?.kind === (input.kind || "xlsx")
+    ));
+    if (!set) {
+      set = createProductSetInternal(state, {
+        fileName: input.fileName,
+        kind: input.kind,
+        fileSha256: input.fileSha256,
+        sheetName: input.sheetName,
+        promptSheetName: input.promptSheetName,
+        promptTemplates: templates,
+        rows: [],
+      });
+    } else {
+      set.source.promptSheetName = input.promptSheetName || set.source.promptSheetName;
+      set.source.promptTemplates = templates;
+      set.source.promptTemplateCount = templates.length;
+      set.updatedAt = timestamp();
+      state.workspace.activeProductSetId = set.id;
+    }
+    return {
+      productSetId: set.id,
+      promptTemplateCount: templates.length,
+      fileName: set.source.fileName,
+      promptSheetName: set.source.promptSheetName || "",
+    };
+  })),
   getProductTree: (productId) => {
     const state = readState();
     const product = requireById(state.products, productId, "Product");
@@ -970,7 +1051,7 @@ window.GuanWorkbenchData = api;
 
 const css = document.createElement("link");
 css.rel = "stylesheet";
-css.href = "/data-contract/index.css?contract-v21-20260926";
+css.href = "/data-contract/index.css?contract-v24-20260927";
 document.head.appendChild(css);
 
 function escapeHtml(value) {
@@ -1246,6 +1327,7 @@ function renderPanel(root) {
                   <b>${escapeHtml(set.source.fileName)}</b>
                   ${set.source.sheetName ? `<small>${escapeHtml(set.source.sheetName)}</small>` : ""}
                   ${set.id === activeProductSetId ? `<small class="guan-dc-active-label">当前使用</small>` : ""}
+                  ${set.source.promptTemplateCount ? `<small class="guan-dc-prompt-template-label">已导入 ${set.source.promptTemplateCount} 条提示词模板</small>` : ""}
                 </div>
                 <small>${setProducts.length} 个产品</small>
               </header>
@@ -1335,8 +1417,8 @@ function renderExcelPreview(pending) {
       ${isPromptTemplate ? `
         <div class="guan-dc-prompt-detected">
           <strong>已识别“最终英文提示词”区域</strong>
-          <p>这里是一行一个产品路线的提示词模板，不是一行一个商品。Main Prompt、Detail Prompt 01-10、Rich Prompt 01-06 会按列分别展示。</p>
-          <p>如需建立产品和图片槽位，请切换到 <b>Data</b> 工作表；当前提示词表不会被误导入成产品。</p>
+          <p>这里是一行一个产品路线的提示词模板，不是一行一个商品。Main Prompt、Detail Prompt 01-10、Rich Prompt 01-06 会按列分别保存。</p>
+          <p>点击下方按钮会只导入提示词模板，不会把这 5 条路线误导入成商品；如果同一文件还包含 <b>Data</b>，切换到 Data 后确认导入会自动同时保存这些模板。</p>
         </div>
       ` : `
         <div class="guan-dc-slot-counts">
@@ -1347,14 +1429,14 @@ function renderExcelPreview(pending) {
         </div>
         ${pending.promptSheetInfo ? `
           <div class="guan-dc-prompt-hint">
-            已检测到提示词工作表“${escapeHtml(pending.promptSheetInfo.sheetName)}”：最终英文提示词从第 ${pending.promptSheetInfo.headerRowNumber} 行表头开始，共 ${pending.promptSheetInfo.rowCount} 条产品路线。可在上方切换查看。
+            已检测到提示词工作表“${escapeHtml(pending.promptSheetInfo.sheetName)}”：最终英文提示词从第 ${pending.promptSheetInfo.headerRowNumber} 行表头开始，共 ${pending.promptSheetInfo.rowCount} 条产品路线。确认导入 Data 时会自动一起保存这些提示词模板，也可以切换工作表单独导入模板。
           </div>
         ` : ""}
       `}
       ${parsed.headers.length > visibleHeaders.length ? `<p class="guan-dc-preview-note">预览仅显示前 8 列，导入时会保留全部 ${parsed.headers.length} 列。</p>` : ""}
       ${table}
       <p class="guan-dc-preview-note">显示前 ${Math.min(6, parsed.rows.length)} 行。完全空白行会跳过，Excel 原始行号和字段会保留。</p>
-      <button type="button" class="guan-dc-confirm-import" data-dc-action="confirm-excel" ${parsed.rows.length && !isPromptTemplate ? "" : "disabled"}>${isPromptTemplate ? "提示词工作表不能直接导入产品" : `确认导入 ${parsed.rows.length} 个产品`}</button>
+      <button type="button" class="guan-dc-confirm-import" data-dc-action="confirm-excel" ${parsed.rows.length ? "" : "disabled"}>${isPromptTemplate ? `导入 ${parsed.rows.length} 条提示词模板` : `确认导入 ${parsed.rows.length} 个产品`}</button>
     </section>
   `;
 }
@@ -1421,6 +1503,7 @@ function promptColumnLabel(value) {
   if (detail) return `Detail Prompt ${String(Number(detail[1])).padStart(2, "0")}`;
   const rich = normalized.match(/^richprompt0*(\d{1,2})$/);
   if (rich) return `Rich Prompt ${String(Number(rich[1])).padStart(2, "0")}`;
+  if (normalized === "videoprompt" || normalized.startsWith("videoprompt")) return "Video Prompt";
   return "";
 }
 
@@ -1527,6 +1610,86 @@ function parsePromptSheet(workbook, sheetName) {
     promptColumns: promptDescriptors.map((descriptor) => descriptor.label),
     promptColumnCount: promptDescriptors.length,
   };
+}
+
+function findPromptSheetCandidate(workbook, sheetNames, excludedSheetName = "") {
+  const candidates = [...sheetNames]
+    .reverse()
+    .filter((name) => name !== excludedSheetName && workbook.Sheets[name]?.["!ref"]);
+  const prioritized = [
+    ...candidates.filter((name) => sheetNameLooksLikePrompt(name)),
+    ...candidates.filter((name) => !sheetNameLooksLikePrompt(name)),
+  ];
+  for (const sheetName of prioritized) {
+    try {
+      return { sheetName, parsed: parsePromptSheet(workbook, sheetName) };
+    } catch {
+      // A normal analysis sheet can contain a few words such as “prompt”.
+      // Keep scanning until a real prompt matrix is found.
+    }
+  }
+  return null;
+}
+
+function promptTemplatesFromParsed(parsed) {
+  if (!parsed || parsed.kind !== "prompt-template") return [];
+  return parsed.rows.map((row, index) => {
+    const values = row.values || {};
+    const prompts = {};
+    for (const label of parsed.promptColumns || []) {
+      const value = values[label];
+      if (value !== null && value !== undefined && String(value).trim() !== "") {
+        prompts[label] = String(value).trim();
+      }
+    }
+    return {
+      id: `excel-prompt-${Number(values.Order) || index + 1}`,
+      order: Number(values.Order) || index + 1,
+      route: String(values["Product route / core advantage"] || "").trim(),
+      prompts,
+      sourceRowNumber: row.sourceRowNumber,
+    };
+  }).filter((template) => Object.keys(template.prompts).length > 0);
+}
+
+function promptTemplateScore(product, template) {
+  const attributeText = Object.values(product?.attributes || {})
+    .filter((value) => value !== null && value !== undefined)
+    .map((value) => String(value).toLowerCase())
+    .join(" | ");
+  if (!attributeText || !template?.route) return 0;
+  const routeParts = String(template.route)
+    .split("|")
+    .map((part) => part.trim().toLowerCase())
+    .filter(Boolean);
+  let score = 0;
+  for (const [index, part] of routeParts.entries()) {
+    if (attributeText.includes(part)) score += index === 0 ? 8 : 3;
+  }
+  return score;
+}
+
+function promptTemplateForProduct(product, productSet) {
+  const templates = Array.isArray(productSet?.source?.promptTemplates)
+    ? productSet.source.promptTemplates
+    : [];
+  if (!templates.length) return null;
+  return templates
+    .map((template, index) => ({ template, index, score: promptTemplateScore(product, template) }))
+    .sort((left, right) => right.score - left.score || left.index - right.index)[0]?.template || null;
+}
+
+function promptTextForSlot(template, slot) {
+  if (!template?.prompts || !slot) return "";
+  if (slot.purpose === "product-main") return template.prompts["Main Prompt"] || "";
+  if (slot.purpose === "product-secondary") {
+    return template.prompts[`Detail Prompt ${String(slot.sequence).padStart(2, "0")}`] || "";
+  }
+  if (slot.purpose === "product-detail" || slot.purpose === "product-a-plus") {
+    return template.prompts[`Rich Prompt ${String(slot.sequence).padStart(2, "0")}`] || "";
+  }
+  if (slot.purpose === "product-video") return template.prompts["Video Prompt"] || "";
+  return "";
 }
 
 function headerFieldKind(value) {
@@ -1641,6 +1804,18 @@ function parseExcelSheet(workbook, sheetName) {
   };
 }
 
+function findProductSheetCandidate(workbook, sheetNames, excludedSheetName = "") {
+  for (const sheetName of sheetNames) {
+    if (sheetName === excludedSheetName || !workbook.Sheets[sheetName]?.["!ref"]) continue;
+    try {
+      return { sheetName, parsed: parseExcelSheet(workbook, sheetName) };
+    } catch {
+      // Cover pages, instructions and prompt sheets are not product tables.
+    }
+  }
+  return null;
+}
+
 function buildSlotTemplates(counts) {
   const templates = [];
   const groups = [
@@ -1716,26 +1891,38 @@ async function loadExcelFile(file, root) {
     });
     const sheetNames = [...workbook.SheetNames];
     if (!sheetNames.length) throw new Error("文件中没有工作表");
-    const dataSheetName = sheetNames.find((name) => normalizeHeader(name) === "data");
-    const fallbackSheetName = sheetNames.find((name) => !sheetNameLooksLikePrompt(name) && workbook.Sheets[name]?.["!ref"]);
-    const sheetName = dataSheetName || fallbackSheetName || sheetNames[0];
-    const parsed = parseExcelSheet(workbook, sheetName);
-    const promptSheetName = sheetNames.find((name) => sheetNameLooksLikePrompt(name) && workbook.Sheets[name]?.["!ref"]);
-    let promptSheetInfo = null;
-    if (promptSheetName) {
-      try {
-        const promptParsed = parsePromptSheet(workbook, promptSheetName);
-        promptSheetInfo = {
-          sheetName: promptSheetName,
-          sectionRowNumber: promptParsed.sectionRowNumber,
-          headerRowNumber: promptParsed.headerRowNumber,
-          rowCount: promptParsed.rows.length,
-          promptColumns: promptParsed.promptColumns,
-        };
-      } catch {
-        promptSheetInfo = null;
-      }
-    }
+    const namedDataSheet = sheetNames.find((name) => normalizeHeader(name) === "data");
+    const namedDataCandidate = namedDataSheet && workbook.Sheets[namedDataSheet]?.["!ref"]
+      ? (() => {
+          try {
+            return { sheetName: namedDataSheet, parsed: parseExcelSheet(workbook, namedDataSheet) };
+          } catch {
+            return null;
+          }
+        })()
+      : null;
+    // Prompt routes normally live in the final worksheet. Scan from the end,
+    // first preferring prompt-like names, then validating every remaining sheet
+    // by its actual Prompt/Order/route matrix so names are not a hard requirement.
+    const promptCandidate = findPromptSheetCandidate(workbook, sheetNames, namedDataCandidate?.sheetName || "");
+    const productCandidate = namedDataCandidate || findProductSheetCandidate(
+      workbook,
+      sheetNames,
+      promptCandidate?.sheetName || "",
+    );
+    const selectedCandidate = productCandidate || promptCandidate;
+    if (!selectedCandidate) throw new Error("文件中没有可识别的 Data 产品表或提示词模板工作表");
+    const sheetName = selectedCandidate.sheetName;
+    const parsed = selectedCandidate.parsed;
+    const promptSheetName = promptCandidate?.sheetName || "";
+    const promptSheetParsed = promptCandidate?.parsed || null;
+    const promptSheetInfo = promptSheetParsed ? {
+      sheetName: promptSheetName,
+      sectionRowNumber: promptSheetParsed.sectionRowNumber,
+      headerRowNumber: promptSheetParsed.headerRowNumber,
+      rowCount: promptSheetParsed.rows.length,
+      promptColumns: promptSheetParsed.promptColumns,
+    } : null;
     let fileSha256;
     if (globalThis.crypto?.subtle) {
       const digest = await crypto.subtle.digest("SHA-256", buffer);
@@ -1744,7 +1931,7 @@ async function loadExcelFile(file, root) {
     if (pendingExcelImport?.token !== token) return;
     pendingExcelImport = {
       token, file, fileName: file.name, kind: extension, fileSha256,
-      workbook, sheetNames, sheetName, parsed, promptSheetInfo, busy: false,
+      workbook, sheetNames, sheetName, parsed, promptSheetInfo, promptSheetParsed, busy: false,
       slotCounts: { ...DEFAULT_SLOT_COUNTS },
     };
   } catch (error) {
@@ -1772,14 +1959,27 @@ function downloadJson(state) {
 function initTasksForProduct(productId) {
   const state = readState();
   const product = requireById(state.products, productId, "Product");
+  const productSet = requireById(state.productSets, product.productSetId, "ProductSet");
+  const promptTemplate = promptTemplateForProduct(product, productSet);
   const slots = getProductSlots(state, productId);
   const existing = new Set(state.tasks.filter((task) => task.productId === productId).map((task) => task.slotId));
   for (const slot of slots) {
     if (existing.has(slot.slotId)) continue;
+    const importedPrompt = promptTextForSlot(promptTemplate, slot);
+    const fallbackPrompt = `Create ${slot.displayName.toLowerCase()} while preserving the exact product identity.`;
+    const templateRoute = promptTemplate?.route || "";
     createTaskInternal(state, productId, slot.slotId, {
-      promptZh: `${slot.displayName}：展示产品并保持主体一致。`,
-      promptEn: `Create ${slot.displayName.toLowerCase()} while preserving the exact product identity.`,
-      finalPrompt: `Create ${slot.displayName.toLowerCase()} while preserving the exact product identity.`,
+      promptZh: templateRoute
+        ? `Excel 提示词模板：${templateRoute}`
+        : `${slot.displayName}：展示产品并保持主体一致。`,
+      promptEn: importedPrompt || fallbackPrompt,
+      finalPrompt: importedPrompt || fallbackPrompt,
+      variables: importedPrompt ? {
+        source: "excel-prompt-sheet",
+        templateOrder: promptTemplate.order,
+        templateRoute,
+        promptSheetName: productSet.source?.promptSheetName || "",
+      } : undefined,
       kind: slot.kind,
     });
   }
@@ -1811,7 +2011,14 @@ function bindPanelEvents(root) {
     try {
       const slotCounts = readSlotCounts(root);
       const sheetName = event.currentTarget.value;
-      pendingExcelImport = { ...pending, sheetName, slotCounts, parsed: parseExcelSheet(pending.workbook, sheetName) };
+      const nextParsed = parseExcelSheet(pending.workbook, sheetName);
+      pendingExcelImport = {
+        ...pending,
+        sheetName,
+        slotCounts,
+        parsed: nextParsed,
+        promptSheetParsed: nextParsed.kind === "prompt-template" ? nextParsed : pending.promptSheetParsed,
+      };
       renderPanel(root);
     } catch (error) {
       alert(error instanceof Error ? error.message : String(error));
@@ -1836,6 +2043,23 @@ function bindPanelEvents(root) {
     const pending = pendingExcelImport;
     if (!pending?.parsed?.rows?.length) return;
     try {
+      if (pending.parsed.kind === "prompt-template") {
+        const result = api.importPromptTemplates({
+          fileName: pending.fileName,
+          kind: pending.kind,
+          fileSha256: pending.fileSha256,
+          sheetName: pending.sheetName,
+          promptSheetName: pending.sheetName,
+          promptTemplates: promptTemplatesFromParsed(pending.parsed),
+        });
+        pendingExcelImport = null;
+        root.dataset.open = "true";
+        renderPanel(root);
+        window.setTimeout(() => {
+          root.querySelector(".guan-dc-prompt-template-label")?.scrollIntoView({ block: "nearest" });
+        }, 0);
+        return result;
+      }
       const slotCounts = readSlotCounts(root);
       const rows = pending.parsed.rows.map((row) => row.values);
       api.importRows({
@@ -1848,6 +2072,8 @@ function bindPanelEvents(root) {
         headerMap: pending.parsed.headerMap,
         slotCounts,
         slotTemplates: buildSlotTemplates(slotCounts),
+        promptSheetName: pending.promptSheetInfo?.sheetName,
+        promptTemplates: promptTemplatesFromParsed(pending.promptSheetParsed),
       });
       pendingExcelImport = null;
       root.dataset.open = "true";

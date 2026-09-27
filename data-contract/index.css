@@ -780,6 +780,15 @@ html[data-workbench-theme="dark"] .guan-dc-file-chevron {
   font-weight: 600;
 }
 
+.guan-dc-prompt-template-label {
+  color: #0f766e !important;
+  font-weight: 600;
+}
+
+html[data-workbench-theme="dark"] .guan-dc-prompt-template-label {
+  color: #5eead4 !important;
+}
+
 .guan-dc-set-head {
   display: flex;
   align-items: center;
