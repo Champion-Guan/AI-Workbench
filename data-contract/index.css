@@ -30,7 +30,7 @@ html[data-workbench-theme="dark"] #guan-data-contract-root {
 .guan-dc-header-controls {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: flex-start;
   gap: 8px;
   flex: 1 1 auto;
   min-width: 0;
@@ -52,9 +52,10 @@ html[data-workbench-theme="dark"] #guan-data-contract-root {
   min-width: 0;
   max-width: min(48vw, 700px);
   overflow-x: auto;
+  margin-right: auto;
   padding: 2px 1px;
   scrollbar-width: none;
-  transform: translateX(-14px);
+  transform: translateX(8px);
 }
 
 .guan-dc-product-nav::-webkit-scrollbar {
@@ -977,7 +978,7 @@ html[data-workbench-theme="dark"] .guan-dc-file-chevron {
   .guan-dc-product-nav {
     max-width: 34vw;
     gap: 4px;
-    transform: translateX(-8px);
+    transform: translateX(5px);
   }
 
   .guan-dc-product-capsule {
