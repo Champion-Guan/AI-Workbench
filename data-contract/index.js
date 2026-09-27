@@ -1128,7 +1128,7 @@ window.GuanWorkbenchData = api;
 
 const css = document.createElement("link");
 css.rel = "stylesheet";
-css.href = "/data-contract/index.css?contract-v30-20260927";
+css.href = "/data-contract/index.css?contract-v31-20260927";
 document.head.appendChild(css);
 
 function escapeHtml(value) {
@@ -1414,7 +1414,12 @@ function renderHeaderControls(root) {
     ]),
   });
   if (controls.dataset.stateKey === stateKey) return true;
+  const previousActiveSetId = controls.dataset.activeProductSetId || "";
+  const previousProductNav = controls.querySelector(".guan-dc-product-nav");
+  const previousProductNavScrollLeft = previousProductNav?.scrollLeft || 0;
+  const preserveProductNavScroll = previousActiveSetId === activeId;
   controls.dataset.stateKey = stateKey;
+  controls.dataset.activeProductSetId = activeId;
   controls.dataset.menuOpen = "false";
   controls.innerHTML = `
     <div class="guan-dc-product-nav" role="tablist" aria-label="当前工作表产品">
@@ -1461,6 +1466,8 @@ function renderHeaderControls(root) {
     </div>
     <input class="guan-dc-header-file-input" type="file" accept=".xlsx,.xls,.csv" tabindex="-1" aria-hidden="true">
   `;
+  const nextProductNav = controls.querySelector(".guan-dc-product-nav");
+  if (nextProductNav && preserveProductNavScroll) nextProductNav.scrollLeft = previousProductNavScrollLeft;
 
   const closeMenu = (animate = true) => {
     const menu = controls.querySelector(".guan-dc-file-menu");
