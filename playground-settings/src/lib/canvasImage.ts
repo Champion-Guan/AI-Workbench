@@ -10,6 +10,33 @@ export async function loadImage(dataUrl: string): Promise<HTMLImageElement> {
 }
 
 export async function dataUrlToBlob(dataUrl: string, fallbackType = 'image/png'): Promise<Blob> {
+  // Do not round-trip data URLs through fetch().  The workbench is served with
+  // a strict connect-src policy, so fetch('data:...') is rejected by the
+  // browser even though the image itself is valid.  Decode the payload
+  // locally instead; this is also faster and avoids creating a needless
+  // network request for bytes that are already in memory.
+  if (dataUrl.startsWith('data:')) {
+    const commaIndex = dataUrl.indexOf(',')
+    if (commaIndex < 0) throw new Error('图片数据格式无效')
+    const metadata = dataUrl.slice(5, commaIndex)
+    const payload = dataUrl.slice(commaIndex + 1)
+    const mime = metadata.split(';', 1)[0] || fallbackType
+    let bytes: Uint8Array
+    if (/;base64(?:;|$)/i.test(metadata)) {
+      const binary = atob(payload.replace(/\s/g, ''))
+      bytes = new Uint8Array(binary.length)
+      for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index)
+    } else {
+      const decoded = decodeURIComponent(payload)
+      bytes = new TextEncoder().encode(decoded)
+    }
+    // Copy into a concrete ArrayBuffer so DOM typings remain compatible with
+    // runtimes whose Uint8Array buffer may be SharedArrayBuffer-backed.
+    const blobBuffer = new ArrayBuffer(bytes.byteLength)
+    new Uint8Array(blobBuffer).set(bytes)
+    return new Blob([blobBuffer], { type: mime || fallbackType })
+  }
+
   const response = await fetch(dataUrl)
   const blob = await response.blob()
   return blob.type ? blob : new Blob([await blob.arrayBuffer()], { type: fallbackType })
