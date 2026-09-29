@@ -714,6 +714,7 @@ const localOfflineGuardsScript = `<script id="local-offline-guards-script">
       backgroundBusy: new Set(),
       backgroundErrors: new Map(),
       replacements: new Map(),
+      publishedSignature: null,
     };
 
     const fileKey = (file) => [file.name, file.size, file.lastModified].join(":");
@@ -755,6 +756,7 @@ const localOfflineGuardsScript = `<script id="local-offline-guards-script">
 
     const publishImageState = () => {
       window.__localWorkbenchImageFiles = uploadState.files.slice();
+      uploadState.publishedSignature = uploadState.files.map(fileKey).join("|");
       window.dispatchEvent(new CustomEvent("local-workbench-images-change", {
         detail: { count: uploadState.files.length },
       }));
@@ -1065,7 +1067,8 @@ const localOfflineGuardsScript = `<script id="local-offline-guards-script">
         }, true);
       }
       renderLocalPreviews(parent);
-      publishImageState();
+      const signature = uploadState.files.map(fileKey).join("|");
+      if (uploadState.publishedSignature !== signature) publishImageState();
       return true;
     };
 
@@ -2129,7 +2132,7 @@ async function send(response, path, method) {
      * The original button injector only creates the trigger; the React bundle
      * owns the modal, focus scope, nested dialogs and persistence.
      */
-      response.end(refreshedFavicon.replace("</head>", `${workbenchLogoStyle}${mvpNavigationStyle}${localThemeAndUiStyle}${localDocumentTitleScript}${localRootNavigationScript}${localSettingsPanelScript}${originalPlaygroundSettingsButtonScript}${localThemeToggleScript}${localFixedFieldsScript}${localResolutionButtonsScript}${localAspectRatioButtonsScript}${localOfflineGuardsScript}${localGenerationButtonScript}${localResponsivePreviewScript}${localProxySetupScript}<link rel="stylesheet" href="/playground-settings/assets/index.css?v=background-removal-timeout-20260928-v2"><script type="module" src="/playground-settings/assets/index.js?v=background-removal-timeout-20260928-v2"></script><script src="/_pixpix-assets/local-vendor/xlsx.full.min.js?sheetjs-local-0.18.5"></script><script src="/_pixpix-assets/local-vendor/fflate.umd.js?fflate-local-0.8.3"></script><script type="module" src="/data-contract/index.js?contract-v35-20260927"></script></head>`));
+      response.end(refreshedFavicon.replace("</head>", `${workbenchLogoStyle}${mvpNavigationStyle}${localThemeAndUiStyle}${localDocumentTitleScript}${localRootNavigationScript}${localSettingsPanelScript}${originalPlaygroundSettingsButtonScript}${localThemeToggleScript}${localFixedFieldsScript}${localResolutionButtonsScript}${localAspectRatioButtonsScript}${localOfflineGuardsScript}${localGenerationButtonScript}${localResponsivePreviewScript}${localProxySetupScript}<link rel="stylesheet" href="/playground-settings/assets/index.css?v=background-removal-timeout-20260928-v2"><script type="module" src="/playground-settings/assets/index.js?v=background-removal-timeout-20260928-v2"></script><script src="/_pixpix-assets/local-vendor/xlsx.full.min.js?sheetjs-local-0.18.5"></script><script src="/_pixpix-assets/local-vendor/fflate.umd.js?fflate-local-0.8.3"></script><script type="module" src="/data-contract/index.js?contract-v35-20260927"></script><link rel="stylesheet" href="/_pixpix-assets/local-canvas/canvas.css?canvas-v4"><script src="/_pixpix-assets/local-canvas/canvas.js?canvas-v4"></script></head>`));
     return;
   }
   createReadStream(path).pipe(response);

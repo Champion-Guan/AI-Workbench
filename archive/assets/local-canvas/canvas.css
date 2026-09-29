@@ -1,0 +1,570 @@
+.guan-canvas-root {
+  --canvas-bg: #f6f7f9;
+  --canvas-grid: rgba(24, 28, 36, .075);
+  --canvas-panel: rgba(255, 255, 255, .92);
+  --canvas-border: rgba(21, 25, 32, .12);
+  --canvas-text: #17191d;
+  --canvas-muted: #6f747e;
+  --canvas-accent: #246bfe;
+  --canvas-accent-soft: rgba(36, 107, 254, .12);
+  position: relative !important;
+  display: flex !important;
+  flex: 1 1 auto !important;
+  flex-direction: column !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  overflow: hidden !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: var(--canvas-bg) !important;
+  color: var(--canvas-text) !important;
+  isolation: isolate;
+}
+
+/* The archived preview sits in an intrinsic-size carousel wrapper. Once the
+ * canvas takes over, let that wrapper consume the left-column height so the
+ * viewport is a real workspace instead of collapsing to the toolbar. */
+.guan-canvas-layout-host {
+  align-items: stretch !important;
+  justify-content: stretch !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  flex: 1 1 auto !important;
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+}
+
+.guan-canvas-host {
+  align-self: stretch !important;
+  width: 100% !important;
+  max-width: none !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  flex: 1 1 auto !important;
+}
+
+.guan-canvas-header {
+  position: relative;
+  z-index: 5;
+  display: flex;
+  flex: 0 0 auto;
+  min-height: 60px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 18px 12px 22px;
+  border-bottom: 1px solid var(--canvas-border);
+  background: var(--canvas-panel);
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+}
+
+.guan-canvas-title {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 10px;
+}
+
+.guan-canvas-title-mark {
+  display: inline-flex;
+  width: 30px;
+  height: 30px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  background: var(--canvas-accent-soft);
+  color: var(--canvas-accent);
+  font-size: 17px;
+  font-weight: 800;
+}
+
+.guan-canvas-title-copy {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+.guan-canvas-title-copy strong {
+  overflow: hidden;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.15;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.guan-canvas-title-copy span {
+  color: var(--canvas-muted);
+  font-size: 11px;
+  line-height: 1.2;
+}
+
+.guan-canvas-toolbar,
+.guan-canvas-zoom {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.guan-canvas-toolbar {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.guan-canvas-button,
+.guan-canvas-icon-button {
+  display: inline-flex;
+  min-height: 32px;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 1px solid var(--canvas-border);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, .84);
+  color: var(--canvas-text);
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 650;
+  line-height: 1;
+  padding: 0 10px;
+  transition: border-color .16s ease, background-color .16s ease, color .16s ease, transform .16s ease;
+  user-select: none;
+}
+
+.guan-canvas-icon-button {
+  width: 32px;
+  padding: 0;
+}
+
+.guan-canvas-button:hover,
+.guan-canvas-icon-button:hover {
+  border-color: rgba(36, 107, 254, .45);
+  background: var(--canvas-accent-soft);
+  color: var(--canvas-accent);
+}
+
+.guan-canvas-button:active,
+.guan-canvas-icon-button:active {
+  transform: scale(.96);
+}
+
+.guan-canvas-button.primary {
+  border-color: var(--canvas-accent);
+  background: var(--canvas-accent);
+  color: #fff;
+}
+
+.guan-canvas-button.primary:hover {
+  border-color: #1358e8;
+  background: #1358e8;
+  color: #fff;
+}
+
+.guan-canvas-toolbar-divider {
+  width: 1px;
+  height: 20px;
+  margin: 0 2px;
+  background: var(--canvas-border);
+}
+
+.guan-canvas-zoom {
+  margin-left: 2px;
+  padding-left: 2px;
+}
+
+.guan-canvas-zoom-value {
+  min-width: 44px;
+  color: var(--canvas-muted);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+.guan-canvas-viewport {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  cursor: grab;
+  touch-action: none;
+  background-color: var(--canvas-bg);
+  background-image: radial-gradient(circle, var(--canvas-grid) 1px, transparent 1.1px);
+  background-position: 0 0;
+  background-size: 22px 22px;
+}
+
+.guan-canvas-viewport.is-panning,
+.guan-canvas-viewport.is-panning * {
+  cursor: grabbing !important;
+}
+
+.guan-canvas-world {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 3600px;
+  height: 2400px;
+  transform-origin: 0 0;
+  will-change: transform;
+}
+
+.guan-canvas-links {
+  position: absolute;
+  z-index: 0;
+  top: 0;
+  left: 0;
+  width: 3600px;
+  height: 2400px;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.guan-canvas-links path {
+  fill: none;
+  stroke: rgba(36, 107, 254, .46);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-dasharray: 7 7;
+  vector-effect: non-scaling-stroke;
+}
+
+.guan-canvas-node {
+  position: absolute;
+  z-index: 2;
+  width: 260px;
+  min-height: 116px;
+  overflow: hidden;
+  border: 1px solid var(--canvas-border);
+  border-radius: 15px;
+  background: var(--canvas-panel);
+  box-shadow: 0 13px 36px rgba(24, 29, 39, .12), 0 2px 5px rgba(24, 29, 39, .06);
+  cursor: grab;
+  transform: translate3d(0, 0, 0);
+  transform-origin: 0 0;
+  transition: border-color .16s ease, box-shadow .16s ease;
+  user-select: none;
+}
+
+.guan-canvas-node:hover,
+.guan-canvas-node.is-selected {
+  border-color: rgba(36, 107, 254, .68);
+  box-shadow: 0 17px 44px rgba(36, 107, 254, .16), 0 2px 6px rgba(24, 29, 39, .08);
+}
+
+.guan-canvas-node.is-dragging {
+  z-index: 10;
+  cursor: grabbing;
+  transition: none;
+  box-shadow: 0 22px 54px rgba(24, 29, 39, .22), 0 6px 12px rgba(24, 29, 39, .12);
+}
+
+.guan-canvas-node[data-kind="prompt"] {
+  width: 310px;
+  min-height: 224px;
+}
+
+.guan-canvas-node[data-kind="output"] {
+  width: 284px;
+  min-height: 170px;
+}
+
+.guan-canvas-node-head {
+  display: flex;
+  min-height: 39px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 9px 11px 8px 13px;
+  border-bottom: 1px solid var(--canvas-border);
+  background: rgba(255, 255, 255, .42);
+}
+
+.guan-canvas-node-title {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 7px;
+  color: var(--canvas-text);
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.guan-canvas-node-title span:last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.guan-canvas-node-type {
+  display: inline-flex;
+  width: 21px;
+  height: 21px;
+  flex: 0 0 21px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 7px;
+  background: var(--canvas-accent-soft);
+  color: var(--canvas-accent);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.guan-canvas-node-menu {
+  display: inline-flex;
+  width: 24px;
+  height: 24px;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--canvas-muted);
+  cursor: pointer;
+  font: inherit;
+  font-size: 17px;
+  line-height: 1;
+}
+
+.guan-canvas-node-menu:hover {
+  background: var(--canvas-accent-soft);
+  color: var(--canvas-accent);
+}
+
+.guan-canvas-node-body {
+  padding: 11px 12px 13px;
+}
+
+.guan-canvas-image-preview {
+  position: relative;
+  display: flex;
+  width: 100%;
+  height: 148px;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: 10px;
+  background: #eef0f4;
+}
+
+.guan-canvas-image-preview img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  pointer-events: none;
+}
+
+.guan-canvas-image-meta,
+.guan-canvas-output-meta {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 9px;
+  color: var(--canvas-muted);
+  font-size: 10px;
+}
+
+.guan-canvas-image-meta span:first-child,
+.guan-canvas-output-meta span:first-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.guan-canvas-chip {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  border-radius: 999px;
+  background: var(--canvas-accent-soft);
+  color: var(--canvas-accent);
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 7px;
+}
+
+.guan-canvas-node textarea {
+  display: block;
+  width: 100%;
+  min-height: 112px;
+  resize: vertical;
+  border: 1px solid var(--canvas-border);
+  border-radius: 10px;
+  outline: 0;
+  background: rgba(255, 255, 255, .78);
+  color: var(--canvas-text);
+  font: inherit;
+  font-size: 12px;
+  line-height: 1.5;
+  padding: 10px;
+  user-select: text;
+}
+
+.guan-canvas-node textarea:focus {
+  border-color: rgba(36, 107, 254, .7);
+  box-shadow: 0 0 0 3px var(--canvas-accent-soft);
+}
+
+.guan-canvas-prompt-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 7px;
+  margin-top: 9px;
+}
+
+.guan-canvas-prompt-actions .guan-canvas-button {
+  min-height: 29px;
+  font-size: 11px;
+  padding: 0 9px;
+}
+
+.guan-canvas-output-placeholder {
+  display: grid;
+  min-height: 104px;
+  place-items: center;
+  border: 1px dashed rgba(36, 107, 254, .34);
+  border-radius: 10px;
+  background: linear-gradient(135deg, rgba(36, 107, 254, .07), rgba(36, 107, 254, .015));
+  color: var(--canvas-muted);
+  font-size: 11px;
+  text-align: center;
+}
+
+.guan-canvas-empty {
+  position: absolute;
+  z-index: 1;
+  top: 50%;
+  left: 50%;
+  display: grid;
+  width: min(330px, calc(100% - 48px));
+  gap: 8px;
+  justify-items: center;
+  padding: 25px 22px;
+  border: 1px solid var(--canvas-border);
+  border-radius: 17px;
+  background: rgba(255, 255, 255, .76);
+  box-shadow: 0 16px 42px rgba(24, 29, 39, .08);
+  color: var(--canvas-muted);
+  pointer-events: auto;
+  text-align: center;
+  transform: translate(-50%, -50%);
+}
+
+.guan-canvas-empty strong {
+  color: var(--canvas-text);
+  font-size: 15px;
+}
+
+.guan-canvas-empty span {
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.guan-canvas-empty kbd {
+  border: 1px solid var(--canvas-border);
+  border-radius: 5px;
+  background: rgba(255, 255, 255, .8);
+  color: var(--canvas-muted);
+  font-size: 10px;
+  padding: 2px 5px;
+}
+
+.guan-canvas-hint {
+  position: absolute;
+  z-index: 4;
+  right: 16px;
+  bottom: 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid var(--canvas-border);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .78);
+  color: var(--canvas-muted);
+  font-size: 10px;
+  padding: 7px 11px;
+  pointer-events: none;
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+}
+
+.guan-canvas-toast {
+  position: absolute;
+  z-index: 20;
+  left: 50%;
+  bottom: 18px;
+  border: 1px solid rgba(21, 25, 32, .14);
+  border-radius: 999px;
+  background: rgba(23, 25, 29, .92);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, .2);
+  color: #fff;
+  font-size: 12px;
+  padding: 9px 14px;
+  pointer-events: none;
+  transform: translate(-50%, 12px);
+  opacity: 0;
+  transition: opacity .18s ease, transform .18s ease;
+}
+
+.guan-canvas-toast.is-visible {
+  transform: translate(-50%, 0);
+  opacity: 1;
+}
+
+html[data-workbench-theme="dark"] .guan-canvas-root,
+html.dark .guan-canvas-root {
+  --canvas-bg: #17191d;
+  --canvas-grid: rgba(255, 255, 255, .08);
+  --canvas-panel: rgba(30, 32, 37, .94);
+  --canvas-border: rgba(255, 255, 255, .12);
+  --canvas-text: #f2f3f5;
+  --canvas-muted: #9da2ad;
+  --canvas-accent: #78a5ff;
+  --canvas-accent-soft: rgba(120, 165, 255, .16);
+}
+
+html[data-workbench-theme="dark"] .guan-canvas-button,
+html[data-workbench-theme="dark"] .guan-canvas-icon-button,
+html.dark .guan-canvas-button,
+html.dark .guan-canvas-icon-button {
+  background: rgba(38, 41, 47, .92);
+  color: var(--canvas-text);
+}
+
+html[data-workbench-theme="dark"] .guan-canvas-node-head,
+html.dark .guan-canvas-node-head {
+  background: rgba(255, 255, 255, .025);
+}
+
+html[data-workbench-theme="dark"] .guan-canvas-node textarea,
+html.dark .guan-canvas-node textarea {
+  background: rgba(17, 18, 20, .74);
+}
+
+html[data-workbench-theme="dark"] .guan-canvas-empty,
+html.dark .guan-canvas-empty,
+html[data-workbench-theme="dark"] .guan-canvas-hint,
+html.dark .guan-canvas-hint {
+  background: rgba(30, 32, 37, .88);
+}
+
+@media (max-width: 900px) {
+  .guan-canvas-header {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 10px;
+    padding: 11px 14px;
+  }
+
+  .guan-canvas-toolbar {
+    width: 100%;
+    justify-content: flex-start;
+  }
+}
