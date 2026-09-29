@@ -27,14 +27,23 @@
  * canvas takes over, let that wrapper consume the left-column height so the
  * viewport is a real workspace instead of collapsing to the toolbar. */
 .guan-canvas-layout-host {
+  position: fixed !important;
+  z-index: 0 !important;
+  top: var(--guan-canvas-top, 84px) !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  left: 0 !important;
   align-items: stretch !important;
   justify-content: stretch !important;
   width: 100% !important;
-  height: 100% !important;
+  height: auto !important;
   min-height: 0 !important;
   flex: 1 1 auto !important;
   margin-top: 0 !important;
   margin-bottom: 0 !important;
+  padding: 0 !important;
+  gap: 0 !important;
+  overflow: hidden !important;
 }
 
 .guan-canvas-host {
@@ -44,6 +53,32 @@
   height: 100% !important;
   min-height: 0 !important;
   flex: 1 1 auto !important;
+}
+
+/* Product mode turns the canvas into a viewport-sized workspace below the
+ * fixed product/header navigation. The surrounding controls stay above it. */
+.guan-canvas-mode .guan-canvas-intro,
+.guan-canvas-mode .guan-canvas-carousel-nav {
+  display: none !important;
+}
+
+.guan-canvas-mode .guan-canvas-ui-layer {
+  position: relative !important;
+  z-index: 20 !important;
+}
+
+.guan-canvas-mode .guan-canvas-main {
+  position: relative !important;
+  z-index: 10 !important;
+  isolation: isolate !important;
+  overflow: visible !important;
+  padding: 0 !important;
+  gap: 0 !important;
+}
+
+.guan-canvas-mode .local-workbench-theme-button,
+.guan-canvas-mode [data-local-fixed="true"] {
+  z-index: 40 !important;
 }
 
 .guan-canvas-header {

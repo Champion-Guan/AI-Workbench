@@ -19,6 +19,14 @@
     originalPreview: null,
     canvasHost: null,
     canvasLayoutHost: null,
+    canvasLayoutParent: null,
+    canvasLayoutNextSibling: null,
+    canvasSidePanel: null,
+    canvasMain: null,
+    canvasIntro: null,
+    carouselNav: null,
+    chromeHeader: null,
+    uiLayers: [],
     view: { x: 34, y: 30, scale: 0.86 },
     loaded: false,
     pan: null,
@@ -616,6 +624,7 @@
     }, { passive: false });
     window.addEventListener("resize", () => {
       if (state.nodes.length === 0) setWorldTransform();
+      syncCanvasChrome();
     }, { passive: true });
     window.addEventListener("local-workbench-images-change", syncFiles);
     window.addEventListener("keydown", (event) => {
@@ -643,12 +652,91 @@
     state.toast = null;
     state.title = null;
     state.productId = "";
+    state.canvasIntro?.classList.remove("guan-canvas-intro");
+    state.carouselNav?.classList.remove("guan-canvas-carousel-nav");
+    state.chromeHeader?.classList.remove("guan-canvas-ui-layer");
+    state.uiLayers.forEach((element) => element.classList.remove("guan-canvas-ui-layer"));
+    state.canvasIntro = null;
+    state.carouselNav = null;
+    state.chromeHeader = null;
+    state.uiLayers = [];
     state.canvasHost?.classList.remove("guan-canvas-host");
     state.canvasLayoutHost?.classList.remove("guan-canvas-layout-host");
+    if (state.canvasLayoutHost && state.canvasLayoutParent && state.canvasLayoutHost.parentElement !== state.canvasLayoutParent) {
+      const nextSibling = state.canvasLayoutNextSibling;
+      if (nextSibling?.parentElement === state.canvasLayoutParent) {
+        state.canvasLayoutParent.insertBefore(state.canvasLayoutHost, nextSibling);
+      } else {
+        state.canvasLayoutParent.appendChild(state.canvasLayoutHost);
+      }
+    }
     state.canvasHost = null;
     state.canvasLayoutHost = null;
+    state.canvasLayoutParent = null;
+    state.canvasLayoutNextSibling = null;
+    state.canvasSidePanel = null;
+    state.canvasMain?.classList.remove("guan-canvas-main");
+    state.canvasMain = null;
+    document.body.classList.remove("guan-canvas-mode");
+    document.documentElement.style.removeProperty("--guan-canvas-top");
     state.nodes = [];
     state.nodeElements.clear();
+    state.originalPreview = null;
+  };
+
+  const canvasRow = () => {
+    let element = state.root;
+    for (let depth = 0; element && depth < 8; depth += 1, element = element.parentElement) {
+      if (String(element.className || "").includes("flex-row")) return element;
+    }
+    return null;
+  };
+
+  const syncCanvasChrome = () => {
+    if (!state.root) return;
+    document.body.classList.add("guan-canvas-mode");
+    const dialog = document.querySelector('[role="dialog"]');
+    const appShell = dialog?.children?.[2];
+    const header = appShell?.children?.[0] || null;
+    const headerRect = header?.getBoundingClientRect?.();
+    const top = Math.max(0, Math.round(headerRect?.bottom || 84));
+    const currentTop = document.documentElement.style.getPropertyValue("--guan-canvas-top");
+    if (currentTop !== `${top}px`) document.documentElement.style.setProperty("--guan-canvas-top", `${top}px`);
+
+    if (header && state.chromeHeader !== header) {
+      state.chromeHeader?.classList.remove("guan-canvas-ui-layer");
+      state.chromeHeader = header;
+      header.classList.add("guan-canvas-ui-layer");
+    }
+
+    const heading = Array.from(document.querySelectorAll("h1, h2, h3"))
+      .find((candidate) => candidate.textContent?.trim() === "A+ 详情页");
+    const intro = heading?.parentElement || null;
+    if (intro && state.canvasIntro !== intro) {
+      state.canvasIntro?.classList.remove("guan-canvas-intro");
+      state.canvasIntro = intro;
+      intro.classList.add("guan-canvas-intro");
+    }
+
+    const carouselNav = document.querySelector('[aria-label="轮播图导航"]');
+    if (carouselNav && state.carouselNav !== carouselNav) {
+      state.carouselNav?.classList.remove("guan-canvas-carousel-nav");
+      state.carouselNav = carouselNav;
+      carouselNav.classList.add("guan-canvas-carousel-nav");
+    }
+
+    const row = canvasRow();
+    const sidePanel = state.canvasSidePanel || row?.children?.[1] || null;
+    const fixedControls = Array.from(document.querySelectorAll(
+      '[data-local-fixed="true"], .local-workbench-theme-button, .local-workbench-settings-button',
+    ));
+    const nextLayers = [sidePanel, ...fixedControls].filter(Boolean);
+    state.uiLayers.forEach((element) => {
+      if (!nextLayers.includes(element)) element.classList.remove("guan-canvas-ui-layer");
+    });
+    nextLayers.forEach((element) => element.classList.add("guan-canvas-ui-layer"));
+    state.uiLayers = nextLayers;
+    state.canvasSidePanel?.classList.add("guan-canvas-ui-layer");
   };
 
   const refreshMode = () => {
@@ -666,12 +754,28 @@
       state.originalPreview ||= preview;
       state.canvasHost = preview.parentElement;
       state.canvasLayoutHost = state.canvasHost.parentElement;
+      state.canvasLayoutParent = state.canvasLayoutHost?.parentElement || null;
+      state.canvasLayoutNextSibling = state.canvasLayoutHost?.nextSibling || null;
+      state.canvasSidePanel = canvasRow()?.children?.[1] || null;
+      state.canvasMain = state.canvasSidePanel?.parentElement || null;
+      state.canvasMain?.classList.add("guan-canvas-main");
       state.canvasHost.classList.add("guan-canvas-host");
       state.canvasLayoutHost?.classList.add("guan-canvas-layout-host");
       state.productId = activeProduct.id;
       state.nodes = loadNodes();
       const root = buildRoot();
       preview.replaceWith(root);
+      state.canvasSidePanel = canvasRow()?.children?.[1] || state.canvasSidePanel;
+      if (state.canvasSidePanel?.parentElement && state.canvasMain !== state.canvasSidePanel.parentElement) {
+        state.canvasMain?.classList.remove("guan-canvas-main");
+        state.canvasMain = state.canvasSidePanel.parentElement;
+        state.canvasMain.classList.add("guan-canvas-main");
+      }
+      const dialog = document.querySelector('[role="dialog"]');
+      if (state.canvasLayoutHost && dialog && state.canvasLayoutHost.parentElement !== dialog) {
+        dialog.appendChild(state.canvasLayoutHost);
+      }
+      syncCanvasChrome();
       syncFiles();
       renderNodes();
       if (state.nodes.length) fitView();
@@ -684,12 +788,14 @@
       state.view = { x: 34, y: 30, scale: 0.86 };
       state.nodes = loadNodes();
       syncProductHeading();
+      syncCanvasChrome();
       syncFiles();
       renderNodes();
       if (state.nodes.length) fitView();
       else setWorldTransform();
     } else {
       syncProductHeading();
+      syncCanvasChrome();
     }
     return true;
   };
