@@ -594,3 +594,162 @@ html.dark .guan-canvas-hint {
     justify-content: flex-start;
   }
 }
+
+/* Reference-canvas controls: keep the workspace visually quiet and put the
+ * tools on floating docks over the grid instead of consuming a header row. */
+.guan-canvas-header {
+  display: none !important;
+}
+
+.guan-canvas-viewport {
+  position: relative !important;
+  isolation: isolate;
+}
+
+.guan-canvas-viewport[data-grid-mode="lines"],
+.guan-canvas-root[data-grid-mode="lines"] .guan-canvas-viewport {
+  background-image:
+    linear-gradient(to right, var(--canvas-grid) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--canvas-grid) 1px, transparent 1px) !important;
+  background-size: 22px 22px !important;
+}
+
+.guan-canvas-root[data-grid-mode="blank"] .guan-canvas-viewport {
+  background-image: none !important;
+}
+
+.guan-canvas-tool-dock-wrap {
+  position: absolute;
+  z-index: 50;
+  right: calc(var(--guan-canvas-side-offset, 0px) + 16px);
+  bottom: 16px;
+  left: 300px;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.guan-canvas-tool-dock,
+.guan-canvas-zoom-dock {
+  display: inline-flex;
+  min-height: 52px;
+  align-items: center;
+  gap: 2px;
+  border: 1px solid var(--canvas-border);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--canvas-panel) 92%, transparent);
+  box-shadow: 0 10px 28px rgba(24, 29, 39, .12), 0 2px 5px rgba(24, 29, 39, .06);
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+  pointer-events: auto;
+}
+
+.guan-canvas-tool-dock {
+  max-width: min(760px, 100%);
+  overflow-x: auto;
+  padding: 5px 7px;
+  scrollbar-width: none;
+}
+
+.guan-canvas-tool-dock::-webkit-scrollbar {
+  display: none;
+}
+
+.guan-canvas-dock-button {
+  display: inline-flex;
+  width: 38px;
+  height: 40px;
+  flex: 0 0 38px;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--canvas-muted);
+  cursor: pointer;
+  font: inherit;
+  font-size: 18px;
+  line-height: 1;
+  transition: background-color .16s ease, color .16s ease, transform .16s ease;
+  user-select: none;
+}
+
+.guan-canvas-dock-button:hover,
+.guan-canvas-dock-button.is-active {
+  background: var(--canvas-accent-soft);
+  color: var(--canvas-accent);
+}
+
+.guan-canvas-dock-button:active {
+  transform: scale(.92);
+}
+
+.guan-canvas-dock-divider {
+  width: 1px;
+  height: 26px;
+  flex: 0 0 1px;
+  margin: 0 4px;
+  background: var(--canvas-border);
+}
+
+.guan-canvas-zoom-dock {
+  position: absolute;
+  z-index: 50;
+  bottom: 16px;
+  left: 16px;
+  min-width: 236px;
+  padding: 5px 7px;
+}
+
+.guan-canvas-zoom-button {
+  font-size: 17px;
+}
+
+.guan-canvas-zoom-range {
+  width: 86px;
+  height: 20px;
+  margin: 0 5px;
+  accent-color: var(--canvas-accent);
+  cursor: pointer;
+}
+
+.guan-canvas-zoom-dock .guan-canvas-zoom-value {
+  min-width: 42px;
+  color: var(--canvas-muted);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+.guan-canvas-hint {
+  display: none !important;
+}
+
+.guan-canvas-toast {
+  bottom: 88px;
+}
+
+/* Keep the theme control in the original lower-left utility cluster while a
+ * product canvas is active. The settings control remains in the app header. */
+.guan-canvas-mode .local-workbench-theme-button {
+  position: fixed !important;
+  top: auto !important;
+  right: auto !important;
+  bottom: 18px !important;
+  left: 76px !important;
+  z-index: 80 !important;
+  margin: 0 !important;
+}
+
+@media (max-width: 900px) {
+  .guan-canvas-tool-dock-wrap {
+    right: 12px;
+    bottom: 12px;
+    left: 12px;
+  }
+
+  .guan-canvas-zoom-dock {
+    bottom: 76px;
+    left: 12px;
+  }
+}

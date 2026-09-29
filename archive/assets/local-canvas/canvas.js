@@ -11,6 +11,8 @@
     links: null,
     empty: null,
     zoomValue: null,
+    zoomDockValue: null,
+    zoomRange: null,
     toast: null,
     nodes: [],
     nodeElements: new Map(),
@@ -27,6 +29,8 @@
     chromeHeader: null,
     uiLayers: [],
     view: { x: 34, y: 30, scale: 0.86 },
+    gridMode: "dots",
+    panMode: false,
     loaded: false,
     pan: null,
     drag: null,
@@ -140,12 +144,14 @@
     const root = document.createElement("div");
     root.className = "guan-canvas-root";
     root.dataset.localCanvasV1 = "true";
+    root.dataset.gridMode = state.gridMode;
     root.setAttribute("role", "region");
     root.setAttribute("aria-label", "工作画布");
 
+    // Keep the product title in the DOM for accessibility and state syncing,
+    // but let the canvas itself follow the compact reference layout.
     const header = document.createElement("header");
     header.className = "guan-canvas-header";
-
     const title = document.createElement("div");
     title.className = "guan-canvas-title";
     const activeProduct = getActiveProduct();
@@ -154,26 +160,7 @@
     title.querySelector(".guan-canvas-title-copy span").textContent = activeProduct
       ? "独立产品画布 · 拖动节点，组合生图流程"
       : "拖动节点，组合你的生图流程";
-
-    const toolbar = document.createElement("div");
-    toolbar.className = "guan-canvas-toolbar";
-    toolbar.append(
-      createButton("＋ 图片", "add-image", "guan-canvas-button primary"),
-      createButton("＋ 提示词", "add-prompt"),
-      document.createElement("span"),
-      createButton("适应画布", "fit"),
-      createButton("清空", "clear"),
-    );
-    toolbar.children[2].className = "guan-canvas-toolbar-divider";
-    const zoom = document.createElement("span");
-    zoom.className = "guan-canvas-zoom";
-    zoom.append(
-      createButton("−", "zoom-out", "guan-canvas-icon-button"),
-      Object.assign(document.createElement("span"), { className: "guan-canvas-zoom-value", textContent: "86%" }),
-      createButton("＋", "zoom-in", "guan-canvas-icon-button"),
-    );
-    toolbar.append(zoom);
-    header.append(title, toolbar);
+    header.append(title);
 
     const viewport = document.createElement("div");
     viewport.className = "guan-canvas-viewport";
@@ -202,6 +189,57 @@
     hint.innerHTML = "拖动画布 · 滚轮缩放 · 节点可拖动";
     viewport.append(hint);
 
+    const makeDockButton = (icon, action, label, extraClass = "") => {
+      const button = createButton(icon, action, `guan-canvas-dock-button ${extraClass}`.trim());
+      button.setAttribute("aria-label", label);
+      button.title = label;
+      return button;
+    };
+
+    const toolDockWrap = document.createElement("div");
+    toolDockWrap.className = "guan-canvas-tool-dock-wrap";
+    const toolDock = document.createElement("div");
+    toolDock.className = "guan-canvas-tool-dock";
+    toolDock.append(
+      makeDockButton("✋", "toggle-pan", "平移画布"),
+      makeDockButton("↶", "undo", "撤销"),
+      makeDockButton("↷", "redo", "重做"),
+      Object.assign(document.createElement("span"), { className: "guan-canvas-dock-divider" }),
+      makeDockButton("T", "add-prompt", "添加提示词"),
+      makeDockButton("▧", "add-image", "添加图片"),
+      makeDockButton("◫", "unsupported", "添加视频"),
+      makeDockButton("♫", "unsupported", "添加音频"),
+      makeDockButton("⚙", "unsupported", "画布设置"),
+      makeDockButton("⌗", "unsupported", "组合节点"),
+      makeDockButton("↑", "upload", "导入画布"),
+      makeDockButton("◒", "toggle-grid", "网格样式"),
+      makeDockButton("⌫", "clear", "清空画布"),
+    );
+    toolDockWrap.append(toolDock);
+    viewport.append(toolDockWrap);
+
+    const zoomDock = document.createElement("div");
+    zoomDock.className = "guan-canvas-zoom-dock";
+    const zoomRange = document.createElement("input");
+    zoomRange.type = "range";
+    zoomRange.min = String(MIN_SCALE * 100);
+    zoomRange.max = String(MAX_SCALE * 100);
+    zoomRange.step = "1";
+    zoomRange.value = String(Math.round(state.view.scale * 100));
+    zoomRange.className = "guan-canvas-zoom-range";
+    zoomRange.setAttribute("aria-label", "画布缩放");
+    const zoomDockValue = document.createElement("span");
+    zoomDockValue.className = "guan-canvas-zoom-value";
+    zoomDockValue.textContent = `${Math.round(state.view.scale * 100)}%`;
+    zoomDock.append(
+      makeDockButton("◎", "reset-view", "重置视图", "guan-canvas-zoom-button"),
+      makeDockButton("⌗", "fit", "适应画布", "guan-canvas-zoom-button"),
+      zoomRange,
+      zoomDockValue,
+      makeDockButton("?", "shortcuts", "快捷键", "guan-canvas-zoom-button"),
+    );
+    viewport.append(zoomDock);
+
     const toast = document.createElement("div");
     toast.className = "guan-canvas-toast";
     toast.setAttribute("role", "status");
@@ -213,9 +251,16 @@
     state.world = world;
     state.links = links;
     state.empty = empty;
-    state.zoomValue = zoom.querySelector(".guan-canvas-zoom-value");
+    state.zoomValue = zoomDockValue;
+    state.zoomDockValue = zoomDockValue;
+    state.zoomRange = zoomRange;
     state.toast = toast;
     state.title = title;
+    zoomRange.addEventListener("input", () => {
+      const nextScale = clamp(Number(zoomRange.value) / 100, MIN_SCALE, MAX_SCALE);
+      const factor = nextScale / state.view.scale;
+      changeZoom(factor);
+    });
     bindRootEvents(root);
     return root;
   };
@@ -234,7 +279,10 @@
   const setWorldTransform = () => {
     if (!state.world) return;
     state.world.style.transform = `translate3d(${state.view.x}px, ${state.view.y}px, 0) scale(${state.view.scale})`;
-    if (state.zoomValue) state.zoomValue.textContent = `${Math.round(state.view.scale * 100)}%`;
+    const percent = Math.round(state.view.scale * 100);
+    if (state.zoomValue) state.zoomValue.textContent = `${percent}%`;
+    if (state.zoomDockValue) state.zoomDockValue.textContent = `${percent}%`;
+    if (state.zoomRange) state.zoomRange.value = String(percent);
   };
 
   const setNodeTransform = (element, node) => {
@@ -529,7 +577,7 @@
   };
 
   const startNodeDrag = (event, node, element) => {
-    if (event.button !== 0 || event.target.closest("button, textarea, input, select")) return;
+    if (state.panMode || event.button !== 0 || event.target.closest("button, textarea, input, select")) return;
     event.preventDefault();
     event.stopPropagation();
     element.setPointerCapture?.(event.pointerId);
@@ -573,11 +621,30 @@
       const button = event.target instanceof Element ? event.target.closest("button[data-action]") : null;
       if (!button) return;
       const action = button.dataset.action;
-      if (action === "add-image") triggerUpload();
+      if (action === "add-image" || action === "upload") triggerUpload();
       if (action === "add-prompt") addPromptNode();
       if (action === "fit") fitView();
+      if (action === "reset-view") {
+        state.view = { x: 34, y: 30, scale: .86 };
+        setWorldTransform();
+      }
       if (action === "zoom-in") changeZoom(1.12);
       if (action === "zoom-out") changeZoom(.89);
+      if (action === "toggle-pan") {
+        state.panMode = !state.panMode;
+        root.classList.toggle("is-pan-mode", state.panMode);
+        button.classList.toggle("is-active", state.panMode);
+        showToast(state.panMode ? "已切换平移工具" : "已切换选择工具");
+      }
+      if (action === "toggle-grid") {
+        const modes = ["dots", "lines", "blank"];
+        state.gridMode = modes[(modes.indexOf(state.gridMode) + 1) % modes.length];
+        root.dataset.gridMode = state.gridMode;
+        showToast(state.gridMode === "dots" ? "网格：点" : state.gridMode === "lines" ? "网格：线" : "网格：空白");
+      }
+      if (action === "shortcuts") showToast("空格 + 拖动平移，滚轮缩放，⌘/Ctrl + 0 适应画布");
+      if (action === "undo" || action === "redo") showToast("节点历史记录即将支持");
+      if (action === "unsupported") showToast("该工具将在后续版本开放");
       if (action === "clear") {
         if (!state.nodes.length || window.confirm("清空画布上的全部节点吗？已上传图片不会被删除。")) {
           state.nodes = [];
@@ -590,7 +657,8 @@
 
     const viewport = state.viewport;
     viewport.addEventListener("pointerdown", (event) => {
-      if (event.button !== 0 || event.target.closest(".guan-canvas-node")) return;
+      if (event.button !== 0
+        || event.target.closest(".guan-canvas-node, .guan-canvas-tool-dock, .guan-canvas-zoom-dock, button, input, textarea, select")) return;
       event.preventDefault();
       viewport.setPointerCapture?.(event.pointerId);
       viewport.classList.add("is-panning");
@@ -648,6 +716,8 @@
     state.links = null;
     state.empty = null;
     state.zoomValue = null;
+    state.zoomDockValue = null;
+    state.zoomRange = null;
     state.toast = null;
     state.title = null;
     state.productId = "";
@@ -674,6 +744,8 @@
     state.canvasLayoutParent = null;
     state.canvasLayoutNextSibling = null;
     state.canvasSidePanel = null;
+    state.panMode = false;
+    state.gridMode = "dots";
     document.body.classList.remove("guan-canvas-mode");
     document.documentElement.style.removeProperty("--guan-canvas-top");
     state.nodes = [];
@@ -724,6 +796,11 @@
 
     const row = canvasRow();
     const sidePanel = state.canvasSidePanel || row?.children?.[1] || null;
+    const sideRect = sidePanel?.getBoundingClientRect?.();
+    const sideOffset = sideRect && sideRect.width > 0 && sideRect.left < window.innerWidth
+      ? Math.max(0, window.innerWidth - sideRect.left)
+      : 0;
+    state.root.style.setProperty("--guan-canvas-side-offset", `${Math.round(sideOffset)}px`);
     const fixedControls = Array.from(document.querySelectorAll(
       '[data-local-fixed="true"], .local-workbench-theme-button, .local-workbench-settings-button',
     ));
