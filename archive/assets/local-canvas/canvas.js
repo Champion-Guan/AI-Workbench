@@ -22,7 +22,6 @@
     canvasLayoutParent: null,
     canvasLayoutNextSibling: null,
     canvasSidePanel: null,
-    canvasMain: null,
     canvasIntro: null,
     carouselNav: null,
     chromeHeader: null,
@@ -675,8 +674,6 @@
     state.canvasLayoutParent = null;
     state.canvasLayoutNextSibling = null;
     state.canvasSidePanel = null;
-    state.canvasMain?.classList.remove("guan-canvas-main");
-    state.canvasMain = null;
     document.body.classList.remove("guan-canvas-mode");
     document.documentElement.style.removeProperty("--guan-canvas-top");
     state.nodes = [];
@@ -757,8 +754,6 @@
       state.canvasLayoutParent = state.canvasLayoutHost?.parentElement || null;
       state.canvasLayoutNextSibling = state.canvasLayoutHost?.nextSibling || null;
       state.canvasSidePanel = canvasRow()?.children?.[1] || null;
-      state.canvasMain = state.canvasSidePanel?.parentElement || null;
-      state.canvasMain?.classList.add("guan-canvas-main");
       state.canvasHost.classList.add("guan-canvas-host");
       state.canvasLayoutHost?.classList.add("guan-canvas-layout-host");
       state.productId = activeProduct.id;
@@ -766,11 +761,6 @@
       const root = buildRoot();
       preview.replaceWith(root);
       state.canvasSidePanel = canvasRow()?.children?.[1] || state.canvasSidePanel;
-      if (state.canvasSidePanel?.parentElement && state.canvasMain !== state.canvasSidePanel.parentElement) {
-        state.canvasMain?.classList.remove("guan-canvas-main");
-        state.canvasMain = state.canvasSidePanel.parentElement;
-        state.canvasMain.classList.add("guan-canvas-main");
-      }
       const dialog = document.querySelector('[role="dialog"]');
       if (state.canvasLayoutHost && dialog && state.canvasLayoutHost.parentElement !== dialog) {
         dialog.appendChild(state.canvasLayoutHost);

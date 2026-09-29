@@ -67,15 +67,6 @@
   z-index: 20 !important;
 }
 
-.guan-canvas-mode .guan-canvas-main {
-  position: relative !important;
-  z-index: 10 !important;
-  isolation: isolate !important;
-  overflow: visible !important;
-  padding: 0 !important;
-  gap: 0 !important;
-}
-
 .guan-canvas-mode .local-workbench-theme-button,
 .guan-canvas-mode [data-local-fixed="true"] {
   z-index: 40 !important;
