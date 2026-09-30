@@ -181,6 +181,27 @@
     root.dataset.gridMode = state.gridMode;
     root.setAttribute("role", "region");
     root.setAttribute("aria-label", "工作画布");
+    // Mount the complete source-built app in a same-origin isolated surface.
+    // No dependency on the reference project's localhost:3000 service.
+    const frame = document.createElement("iframe");
+    frame.className = "guan-native-canvas-frame";
+    frame.title = "产品无限画布";
+    const productId = state.productId;
+    let route = "";
+    try { route = localStorage.getItem(`guan-native-canvas-route:${productId}`) || ""; } catch {}
+    frame.src = /^\/canvas\/[A-Za-z0-9_-]+$/.test(route) ? route : `/canvas/${encodeURIComponent(productId)}`;
+    root.append(frame);
+    state.root = root;
+    state.nativeFrame = frame;
+    frame.addEventListener("load", () => {
+      try {
+        const doc = frame.contentDocument;
+        const style = doc.createElement("style");
+        style.textContent = '.absolute.bottom-5.left-5{left:88px!important}';
+        doc.head.append(style);
+      } catch {}
+    });
+    return root;
 
     const sourceTop = document.createElement("div");
     sourceTop.className = "guan-canvas-source-topbar";
@@ -922,6 +943,7 @@
       state.root.replaceWith(state.originalPreview);
     }
     state.root = null;
+    state.nativeFrame = null;
     state.viewport = null;
     state.world = null;
     state.links = null;
@@ -1069,6 +1091,14 @@
     }
 
     if (state.productId !== activeProduct.id) {
+      if (state.nativeFrame) {
+        state.productId = activeProduct.id;
+        let route = "";
+        try { route = localStorage.getItem(`guan-native-canvas-route:${activeProduct.id}`) || ""; } catch {}
+        state.nativeFrame.src = /^\/canvas\/[A-Za-z0-9_-]+$/.test(route) ? route : `/canvas/${encodeURIComponent(activeProduct.id)}`;
+        syncCanvasChrome();
+        return true;
+      }
       state.productId = activeProduct.id;
       state.view = { x: 34, y: 30, scale: 0.86 };
       state.nodes = loadNodes();
@@ -1091,6 +1121,13 @@
     refreshMode();
   });
   observer.observe(document.documentElement, { childList: true, subtree: true });
+  window.setInterval(() => {
+    if (!state.nativeFrame || !state.productId) return;
+    try {
+      const route = state.nativeFrame.contentWindow.location.pathname;
+      if (/^\/canvas\/[A-Za-z0-9_-]+$/.test(route)) localStorage.setItem(`guan-native-canvas-route:${state.productId}`, route);
+    } catch {}
+  }, 500);
   window.addEventListener("guan-data-contract-change", () => window.requestAnimationFrame(refreshMode));
   window.addEventListener("guan-active-product-set-change", () => window.requestAnimationFrame(refreshMode));
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", refreshMode, { once: true });
