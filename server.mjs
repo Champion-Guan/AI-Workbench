@@ -288,13 +288,22 @@ const localSettingsPanelScript = `<script id="local-settings-panel-script">
         setCollapsed(panel.dataset.localSettingsCollapsed !== "true");
       });
       document.documentElement.dataset.localSettingsBooting = 'true';
-      setCollapsed(!hasUploadedExcel());
+      let sawUploadedExcel = hasUploadedExcel();
+      setCollapsed(!sawUploadedExcel);
       window.requestAnimationFrame(() => {
         delete document.documentElement.dataset.localSettingsBooting;
       });
       const stateObserver = new MutationObserver(() => {
-        if (!hasUploadedExcel() && panel.dataset.localSettingsCollapsed !== 'true') setCollapsed(true);
-        if (hasUploadedExcel() && panel.dataset.localSettingsCollapsed === 'true') setCollapsed(false);
+        const uploaded = hasUploadedExcel();
+        if (!uploaded && panel.dataset.localSettingsCollapsed !== 'true') setCollapsed(true);
+        // Auto-open only on the transition from the empty state to an uploaded
+        // workbook. Once the user collapses it, keep that choice instead of
+        // fighting the toggle on every React mutation.
+        if (uploaded && !sawUploadedExcel) {
+          sawUploadedExcel = true;
+          setCollapsed(false);
+        }
+        if (!uploaded) sawUploadedExcel = false;
       });
       stateObserver.observe(document.documentElement, { childList: true, subtree: true, characterData: true });
       return true;
@@ -2388,7 +2397,7 @@ async function send(response, path, method) {
      * The original button injector only creates the trigger; the React bundle
      * owns the modal, focus scope, nested dialogs and persistence.
      */
-      response.end(refreshedFavicon.replace("</head>", `${workbenchLogoStyle}${mvpNavigationStyle}${localThemeAndUiStyle}${localDocumentTitleScript}${localRootNavigationScript}${localSettingsPanelScript}${originalPlaygroundSettingsButtonScript}${localThemeToggleScript}${localFixedFieldsScript}${localResolutionButtonsScript}${localAspectRatioButtonsScript}${localOfflineGuardsScript}${localGenerationButtonScript}${localResponsivePreviewScript}${localProxySetupScript}<link rel="stylesheet" href="/playground-settings/assets/index.css?v=background-removal-timeout-20260928-v2"><script type="module" src="/playground-settings/assets/index.js?v=background-removal-timeout-20260928-v2"></script><script src="/_pixpix-assets/local-vendor/xlsx.full.min.js?sheetjs-local-0.18.5"></script><script src="/_pixpix-assets/local-vendor/fflate.umd.js?fflate-local-0.8.3"></script><script type="module" src="/data-contract/index.js?contract-v35-20260927"></script><link rel="stylesheet" href="/_pixpix-assets/local-canvas/canvas.css?canvas-v16"><script src="/_pixpix-assets/local-canvas/canvas.js?canvas-v16"></script></head>`));
+      response.end(refreshedFavicon.replace("</head>", `${workbenchLogoStyle}${mvpNavigationStyle}${localThemeAndUiStyle}${localDocumentTitleScript}${localRootNavigationScript}${localSettingsPanelScript}${originalPlaygroundSettingsButtonScript}${localThemeToggleScript}${localFixedFieldsScript}${localResolutionButtonsScript}${localAspectRatioButtonsScript}${localOfflineGuardsScript}${localGenerationButtonScript}${localResponsivePreviewScript}${localProxySetupScript}<link rel="stylesheet" href="/playground-settings/assets/index.css?v=background-removal-timeout-20260928-v2"><script type="module" src="/playground-settings/assets/index.js?v=background-removal-timeout-20260928-v2"></script><script src="/_pixpix-assets/local-vendor/xlsx.full.min.js?sheetjs-local-0.18.5"></script><script src="/_pixpix-assets/local-vendor/fflate.umd.js?fflate-local-0.8.3"></script><script type="module" src="/data-contract/index.js?contract-v35-20260927"></script><link rel="stylesheet" href="/_pixpix-assets/local-canvas/canvas.css?canvas-v17"><script src="/_pixpix-assets/local-canvas/canvas.js?canvas-v16"></script></head>`));
     return;
   }
   createReadStream(path).pipe(response);
