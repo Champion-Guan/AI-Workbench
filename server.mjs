@@ -128,6 +128,36 @@ const localDocumentTitleScript = `<script id="local-document-title">
 
 const localRootNavigationScript = `<script id="local-root-navigation">
   (() => {
+    const isExcelUploaded = () => {
+      const picker = document.querySelector('[role="dialog"] button[aria-label="选择已上传的 Excel 文件"]');
+      return Boolean(picker && picker.textContent && !/暂无已上传 Excel|暂无已上传Excel/i.test(picker.textContent));
+    };
+
+    const syncEmptyWorkspaceChrome = () => {
+      const dialog = document.querySelector('[role="dialog"]');
+      if (!dialog) return false;
+      const hasExcel = isExcelUploaded();
+      const toggle = dialog.querySelector('.local-settings-toggle');
+      if (toggle) toggle.hidden = !hasExcel;
+      for (const button of document.querySelectorAll('button')) {
+        if (button.textContent?.trim() === '数据') button.hidden = true;
+      }
+      let hint = dialog.querySelector('.local-upload-step-hint');
+      if (!hasExcel) {
+        if (!hint) {
+          hint = document.createElement('div');
+          hint.className = 'local-upload-step-hint';
+          hint.setAttribute('role', 'status');
+          hint.textContent = '第一步：先上传你的 Excel 文件';
+          dialog.append(hint);
+        }
+        hint.hidden = false;
+      } else if (hint) {
+        hint.hidden = true;
+      }
+      return true;
+    };
+
     const normalizeBrandLink = () => {
       for (const link of document.querySelectorAll('[role="dialog"] aside a')) {
         link.classList.add("local-brand-static");
@@ -171,6 +201,13 @@ const localRootNavigationScript = `<script id="local-root-navigation">
       attributeFilter: ["href"],
     });
     document.addEventListener("DOMContentLoaded", normalizeBrandLink, { once: true });
+
+    new MutationObserver(syncEmptyWorkspaceChrome).observe(document.documentElement, {
+      subtree: true,
+      childList: true,
+      characterData: true,
+    });
+    document.addEventListener("DOMContentLoaded", syncEmptyWorkspaceChrome, { once: true });
 
     // Cancel any hydrated navigation handler before React handles the logo.
     document.addEventListener("click", (event) => {
@@ -376,11 +413,10 @@ const localThemeAndUiStyle = `<style id="local-theme-and-ui-style">
     transition: background-color .16s ease, color .16s ease, transform .16s ease !important;
   }
   .local-workbench-theme-button {
-    position: fixed !important;
-    left: 76px !important;
-    bottom: 18px !important;
+    position: static !important;
     z-index: 40 !important;
-    margin: 0 !important;
+    margin-left: auto !important;
+    margin-right: 0 !important;
   }
   .local-workbench-settings-button {
     margin-left: 8px !important;
@@ -398,6 +434,25 @@ const localThemeAndUiStyle = `<style id="local-theme-and-ui-style">
     width: 22px !important;
     height: 22px !important;
     pointer-events: none !important;
+  }
+  .local-upload-step-hint {
+    position: fixed !important;
+    top: 104px !important;
+    right: 76px !important;
+    z-index: 35 !important;
+    padding: 10px 16px !important;
+    border: 1px solid #e6e6e8 !important;
+    border-radius: 12px !important;
+    background: rgba(255,255,255,.94) !important;
+    color: #5b5c65 !important;
+    font-size: 14px !important;
+    line-height: 20px !important;
+    box-shadow: 0 8px 24px rgba(20,20,30,.08) !important;
+    pointer-events: none !important;
+  }
+  .local-upload-step-hint[hidden],
+  .local-settings-toggle[hidden] {
+    display: none !important;
   }
   /*
    * The settings app is mounted inside the archived dialog. Keep its
@@ -2136,7 +2191,7 @@ async function send(response, path, method) {
      * The original button injector only creates the trigger; the React bundle
      * owns the modal, focus scope, nested dialogs and persistence.
      */
-      response.end(refreshedFavicon.replace("</head>", `${workbenchLogoStyle}${mvpNavigationStyle}${localThemeAndUiStyle}${localDocumentTitleScript}${localRootNavigationScript}${localSettingsPanelScript}${originalPlaygroundSettingsButtonScript}${localThemeToggleScript}${localFixedFieldsScript}${localResolutionButtonsScript}${localAspectRatioButtonsScript}${localOfflineGuardsScript}${localGenerationButtonScript}${localResponsivePreviewScript}${localProxySetupScript}<link rel="stylesheet" href="/playground-settings/assets/index.css?v=background-removal-timeout-20260928-v2"><script type="module" src="/playground-settings/assets/index.js?v=background-removal-timeout-20260928-v2"></script><script src="/_pixpix-assets/local-vendor/xlsx.full.min.js?sheetjs-local-0.18.5"></script><script src="/_pixpix-assets/local-vendor/fflate.umd.js?fflate-local-0.8.3"></script><script type="module" src="/data-contract/index.js?contract-v35-20260927"></script><link rel="stylesheet" href="/_pixpix-assets/local-canvas/canvas.css?canvas-v15"><script src="/_pixpix-assets/local-canvas/canvas.js?canvas-v15"></script></head>`));
+      response.end(refreshedFavicon.replace("</head>", `${workbenchLogoStyle}${mvpNavigationStyle}${localThemeAndUiStyle}${localDocumentTitleScript}${localRootNavigationScript}${localSettingsPanelScript}${originalPlaygroundSettingsButtonScript}${localThemeToggleScript}${localFixedFieldsScript}${localResolutionButtonsScript}${localAspectRatioButtonsScript}${localOfflineGuardsScript}${localGenerationButtonScript}${localResponsivePreviewScript}${localProxySetupScript}<link rel="stylesheet" href="/playground-settings/assets/index.css?v=background-removal-timeout-20260928-v2"><script type="module" src="/playground-settings/assets/index.js?v=background-removal-timeout-20260928-v2"></script><script src="/_pixpix-assets/local-vendor/xlsx.full.min.js?sheetjs-local-0.18.5"></script><script src="/_pixpix-assets/local-vendor/fflate.umd.js?fflate-local-0.8.3"></script><script type="module" src="/data-contract/index.js?contract-v35-20260927"></script><link rel="stylesheet" href="/_pixpix-assets/local-canvas/canvas.css?canvas-v16"><script src="/_pixpix-assets/local-canvas/canvas.js?canvas-v16"></script></head>`));
     return;
   }
   createReadStream(path).pipe(response);
