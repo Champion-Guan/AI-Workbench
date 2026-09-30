@@ -128,6 +128,7 @@ const localDocumentTitleScript = `<script id="local-document-title">
 
 const localRootNavigationScript = `<script id="local-root-navigation">
   (() => {
+    let proxySetupOpen = false;
     const isExcelUploaded = () => {
       const picker = document.querySelector('[role="dialog"] button[aria-label="选择已上传的 Excel 文件"]');
       return Boolean(picker && picker.textContent && !/暂无已上传 Excel|暂无已上传Excel/i.test(picker.textContent));
@@ -143,7 +144,7 @@ const localRootNavigationScript = `<script id="local-root-navigation">
         if (button.textContent?.trim() === '数据') button.hidden = true;
       }
       let hint = dialog.querySelector('.local-upload-step-hint');
-      if (!hasExcel) {
+      if (!hasExcel && !proxySetupOpen) {
         if (!hint) {
           hint = document.createElement('div');
           hint.className = 'local-upload-step-hint';
@@ -208,6 +209,14 @@ const localRootNavigationScript = `<script id="local-root-navigation">
       characterData: true,
     });
     document.addEventListener("DOMContentLoaded", syncEmptyWorkspaceChrome, { once: true });
+    window.addEventListener('guan-proxy-setup-opened', () => {
+      proxySetupOpen = true;
+      document.querySelector('.local-upload-step-hint')?.setAttribute('hidden', '');
+    });
+    window.addEventListener('guan-proxy-setup-closed', () => {
+      proxySetupOpen = false;
+      syncEmptyWorkspaceChrome();
+    });
 
     // Cancel any hydrated navigation handler before React handles the logo.
     document.addEventListener("click", (event) => {
@@ -222,6 +231,11 @@ const localRootNavigationScript = `<script id="local-root-navigation">
 
 const localSettingsPanelScript = `<script id="local-settings-panel-script">
   (() => {
+    const hasUploadedExcel = () => {
+      const picker = document.querySelector('[role="dialog"] button[aria-label="选择已上传的 Excel 文件"]');
+      return Boolean(picker && picker.textContent && !/暂无已上传 Excel|暂无已上传Excel/i.test(picker.textContent));
+    };
+
     const setup = () => {
       const dialog = document.querySelector('[role="dialog"]');
       if (!dialog) return false;
@@ -251,7 +265,12 @@ const localSettingsPanelScript = `<script id="local-settings-panel-script">
       toggle.addEventListener("click", () => {
         setCollapsed(panel.dataset.localSettingsCollapsed !== "true");
       });
-      setCollapsed(false);
+      setCollapsed(!hasUploadedExcel());
+      const stateObserver = new MutationObserver(() => {
+        if (!hasUploadedExcel() && panel.dataset.localSettingsCollapsed !== 'true') setCollapsed(true);
+        if (hasUploadedExcel() && panel.dataset.localSettingsCollapsed === 'true') setCollapsed(false);
+      });
+      stateObserver.observe(document.documentElement, { childList: true, subtree: true, characterData: true });
       return true;
     };
 
@@ -1971,7 +1990,8 @@ const localProxySetupScript = `<script id="local-proxy-setup-script">
       const style = document.createElement("style");
       style.id = "local-proxy-setup-style";
       style.textContent = [
-        ".local-proxy-setup{position:fixed;inset:0;z-index:3200;display:grid;place-items:center;padding:20px;background:rgba(15,17,22,.32);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);font-family:ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}",
+        ".local-proxy-setup{position:fixed;inset:0;z-index:2147483000;isolation:isolate;display:grid;place-items:center;padding:20px;background:rgba(15,17,22,.32);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);font-family:ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}",
+        ".local-proxy-setup,.local-proxy-setup *{pointer-events:auto!important}",
         ".local-proxy-setup-card{width:min(520px,calc(100vw - 32px));border:1px solid rgba(0,0,0,.08);border-radius:24px;background:#fff;color:#17181a;box-shadow:0 30px 100px rgba(0,0,0,.24);padding:26px}",
         ".local-proxy-setup-card h2{margin:0 0 8px;font-size:22px;line-height:1.3}.local-proxy-setup-card p{margin:0;color:#686d76;font-size:13px;line-height:1.6}",
         ".local-proxy-setup-field{display:grid;gap:7px;margin-top:18px}.local-proxy-setup-field label{font-size:13px;font-weight:650}.local-proxy-setup-field input{width:100%;box-sizing:border-box;border:1px solid #d9dce2;border-radius:12px;padding:11px 12px;font:13px inherit;outline:none;background:#fff}.local-proxy-setup-field input:focus{border-color:#3478f6;box-shadow:0 0 0 3px rgba(52,120,246,.14)}",
@@ -1982,7 +2002,11 @@ const localProxySetupScript = `<script id="local-proxy-setup-script">
       document.head.append(style);
     };
 
-    const close = () => { modal?.remove(); modal = null; };
+    const close = () => {
+      modal?.remove();
+      modal = null;
+      window.dispatchEvent(new Event('guan-proxy-setup-closed'));
+    };
     const open = (status) => {
       if (modal) return;
       addStyles();
@@ -1990,6 +2014,7 @@ const localProxySetupScript = `<script id="local-proxy-setup-script">
       modal.className = "local-proxy-setup";
       modal.setAttribute("role", "dialog");
       modal.setAttribute("aria-modal", "true");
+      window.dispatchEvent(new Event('guan-proxy-setup-opened'));
       modal.innerHTML = '<section class="local-proxy-setup-card"><h2>设置网络代理</h2><p>本项目会先尝试直连。若服务商无法直连，再使用这里配置的临时代理节点。代理配置只在本次服务运行期间使用，关闭服务后自动清除。</p><div class="local-proxy-setup-field"><label>上传 Mihomo / Clash 配置文件</label><input data-proxy-file type="file" accept=".yaml,.yml,.txt,text/plain,application/yaml" /></div><div class="local-proxy-setup-field"><label>或填写远端订阅地址</label><input data-proxy-url type="url" placeholder="https://example.com/your-subscription" autocomplete="off" /></div><p class="local-proxy-setup-hint">没有代理也可以先跳过，直连仍然可用。首次配置成功后不会再次提示。</p><div class="local-proxy-setup-error" role="alert"></div><div class="local-proxy-setup-actions"><button type="button" data-proxy-skip>稍后配置</button><button type="button" class="primary" data-proxy-save>保存并启动代理</button></div></section>';
       document.body.append(modal);
       const error = modal.querySelector('.local-proxy-setup-error');
@@ -2026,6 +2051,27 @@ const localProxySetupScript = `<script id="local-proxy-setup-script">
       modal.addEventListener('click', (event) => { if (event.target === modal) close(); });
       modal.querySelector('[data-proxy-file]')?.focus();
     };
+
+    window.addEventListener('guan-open-proxy-setup', () => open(null));
+
+    const installSettingsEntry = () => {
+      const root = document.querySelector('#playground-settings-root');
+      const nav = root?.querySelector('nav');
+      if (!nav || nav.querySelector('[data-local-proxy-settings-entry]')) return false;
+      const entry = document.createElement('button');
+      entry.type = 'button';
+      entry.dataset.localProxySettingsEntry = 'true';
+      entry.className = 'whitespace-nowrap flex-shrink-0 flex items-center gap-2.5 px-3 py-2.5 text-sm rounded-xl transition-colors text-gray-600 dark:text-gray-400 hover:bg-gray-100/80 dark:hover:bg-white/[0.04]';
+      entry.innerHTML = '<span class="w-4 text-center" aria-hidden="true">⇆</span><span>网络代理</span>';
+      entry.addEventListener('click', () => {
+        window.dispatchEvent(new Event('guan-open-proxy-setup'));
+      });
+      const apiEntry = Array.from(nav.querySelectorAll('button')).find((button) => button.textContent?.includes('API 配置'));
+      if (apiEntry) apiEntry.after(entry); else nav.append(entry);
+      return true;
+    };
+    new MutationObserver(installSettingsEntry).observe(document.documentElement, { childList: true, subtree: true });
+    installSettingsEntry();
 
     const check = async () => {
       try {
