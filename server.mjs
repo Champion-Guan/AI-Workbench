@@ -2053,6 +2053,7 @@ const localProxySetupScript = `<script id="local-proxy-setup-script">
         ".local-proxy-input-row{display:flex;align-items:center;gap:8px;width:100%;box-sizing:border-box;border:1px solid #d9dce2;border-radius:12px;padding:4px 5px 4px 12px;background:#fff}.local-proxy-input-row:focus-within{border-color:#3478f6;box-shadow:0 0 0 3px rgba(52,120,246,.14)}.local-proxy-input-row input[type=url]{min-width:0;flex:1;border:0!important;box-shadow:none!important;outline:none;padding:7px 0!important;background:transparent}.local-proxy-file-button{flex:0 0 auto;border:1px solid #d9dce2;border-radius:9px;padding:7px 10px;background:#f7f8fa;color:#34363b;font:12px inherit;cursor:pointer;white-space:nowrap}.local-proxy-file-button:hover{background:#eef1f5}.local-proxy-file-input{display:none!important}",
         ".local-proxy-setup-actions{display:flex;justify-content:flex-end;gap:9px;margin-top:22px}.local-proxy-setup-actions button{border:1px solid #d9dce2;border-radius:12px;padding:10px 15px;background:#fff;color:#24262a;font:13px inherit;cursor:pointer}.local-proxy-setup-actions button.primary{border-color:#111;background:#111;color:#fff}.local-proxy-setup-actions button:disabled{cursor:wait;opacity:.55}",
         ".local-proxy-setup-error{min-height:20px;margin-top:12px;color:#c53030;font-size:12px;line-height:1.5}.local-proxy-setup-hint{margin-top:15px!important;font-size:12px!important;color:#8a9099!important}",
+        ".local-proxy-inline-host{position:absolute!important;inset:64px 18px 18px 250px!important;display:block!important;padding:0!important;background:transparent!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;overflow:auto!important;z-index:3!important}.local-proxy-inline-host .local-proxy-setup-card{width:auto!important;min-height:100%;box-sizing:border-box;border-radius:16px!important;box-shadow:none!important;padding:22px!important}.local-proxy-inline-host .local-proxy-setup-actions{position:sticky;bottom:0;padding-top:14px;background:inherit}",
         "html[data-workbench-theme='dark'] .local-proxy-setup-card{border-color:rgba(255,255,255,.1);background:#1e2024;color:#f4f4f5}html[data-workbench-theme='dark'] .local-proxy-setup-field input,html[data-workbench-theme='dark'] .local-proxy-setup-actions button,html[data-workbench-theme='dark'] .local-proxy-input-row{border-color:rgba(255,255,255,.14);background:#26292e;color:#f4f4f5}html[data-workbench-theme='dark'] .local-proxy-file-button{border-color:rgba(255,255,255,.14);background:#30343b;color:#f4f4f5}",
       ].join("");
       document.head.append(style);
@@ -2063,18 +2064,22 @@ const localProxySetupScript = `<script id="local-proxy-setup-script">
       modal = null;
       window.dispatchEvent(new Event('guan-proxy-setup-closed'));
     };
-    const open = (status) => {
+    const open = (status, inline = false) => {
       if (modal) return;
       addStyles();
       modal = document.createElement("div");
-      modal.className = "local-proxy-setup";
+      modal.className = inline ? "local-proxy-setup local-proxy-inline-host" : "local-proxy-setup";
       modal.setAttribute("role", "dialog");
       modal.setAttribute("aria-modal", "true");
       window.dispatchEvent(new Event('guan-proxy-setup-opened'));
       modal.innerHTML = '<section class="local-proxy-setup-card"><h2>设置网络代理</h2><p>本项目会先尝试直连。若服务商无法直连，再使用这里配置的临时代理节点。代理配置只在本次服务运行期间使用，关闭服务后自动清除。</p><div class="local-proxy-setup-field"><label>代理配置文件或远端订阅地址</label><div class="local-proxy-input-row"><input data-proxy-url type="url" placeholder="https://example.com/your-subscription" autocomplete="off" /><button type="button" class="local-proxy-file-button" data-proxy-file-button>选择文件</button><input data-proxy-file class="local-proxy-file-input" type="file" accept=".yaml,.yml,.txt,text/plain,application/yaml" /></div></div><p class="local-proxy-setup-hint">支持 Mihomo / Clash 配置文件，也可以直接填写订阅地址。没有代理也可以先跳过。</p><div class="local-proxy-setup-error" role="alert"></div><div class="local-proxy-setup-actions"><button type="button" data-proxy-skip>稍后配置</button><button type="button" class="primary" data-proxy-save>保存并启动代理</button></div></section>';
       // Keep the controls inside the active Radix dialog's focus scope.
+      const root = document.querySelector('#playground-settings-root');
+      if (inline && root instanceof HTMLElement) root.style.position = 'relative';
       const dialogs = Array.from(document.querySelectorAll('[role="dialog"]')).filter((node) => !node.closest('.local-proxy-setup'));
-      const host = dialogs.filter((node) => node.getAttribute('aria-hidden') !== 'true').at(-1) || document.body;
+      const host = inline && root instanceof HTMLElement
+        ? root
+        : (dialogs.filter((node) => node.getAttribute('aria-hidden') !== 'true').at(-1) || document.body);
       host.append(modal);
       const error = modal.querySelector('.local-proxy-setup-error');
       const fileInput = modal.querySelector('[data-proxy-file]');
@@ -2134,11 +2139,13 @@ const localProxySetupScript = `<script id="local-proxy-setup-script">
       entry.dataset.localProxySettingsEntry = 'true';
       entry.className = 'whitespace-nowrap flex-shrink-0 flex items-center gap-2.5 px-3 py-2.5 text-sm rounded-xl transition-colors text-gray-600 dark:text-gray-400 hover:bg-gray-100/80 dark:hover:bg-white/[0.04]';
       entry.innerHTML = '<span class="w-4 text-center" aria-hidden="true">⇆</span><span>网络代理</span>';
-      entry.addEventListener('click', () => {
-        window.dispatchEvent(new Event('guan-open-proxy-setup'));
-      });
+      entry.addEventListener('click', () => open(null, true));
       const apiEntry = Array.from(nav.querySelectorAll('button')).find((button) => button.textContent?.includes('API 配置'));
       if (apiEntry) apiEntry.after(entry); else nav.append(entry);
+      nav.addEventListener('click', (event) => {
+        const button = event.target instanceof Element ? event.target.closest('button') : null;
+        if (button && button !== entry && modal?.classList.contains('local-proxy-inline-host')) close();
+      }, true);
       return true;
     };
     new MutationObserver(installSettingsEntry).observe(document.documentElement, { childList: true, subtree: true });
