@@ -2038,6 +2038,7 @@ const mvpNavigationStyle = `<style id="mvp-navigation">
 const localProxySetupScript = `<script id="local-proxy-setup-script">
   (() => {
     const SESSION_KEY = "guan-workbench:proxy-setup-dismissed";
+    const FILE_NAME_KEY = "guan-workbench:proxy-file-name";
     let modal = null;
 
     const addStyles = () => {
@@ -2051,7 +2052,7 @@ const localProxySetupScript = `<script id="local-proxy-setup-script">
         ".local-proxy-setup-card h2{margin:0 0 8px;font-size:22px;line-height:1.3}.local-proxy-setup-card p{margin:0;color:#686d76;font-size:13px;line-height:1.6}",
         ".local-proxy-setup-field{display:grid;gap:7px;margin-top:18px}.local-proxy-setup-field label{font-size:13px;font-weight:650}.local-proxy-setup-field input{width:100%;box-sizing:border-box;border:1px solid #d9dce2;border-radius:12px;padding:11px 12px;font:13px inherit;outline:none;background:#fff}.local-proxy-setup-field input:focus{border-color:#3478f6;box-shadow:0 0 0 3px rgba(52,120,246,.14)}",
         ".local-proxy-input-row{display:flex;align-items:center;gap:8px;width:100%;box-sizing:border-box;border:1px solid #d9dce2;border-radius:12px;padding:4px 5px 4px 12px;background:#fff}.local-proxy-input-row:focus-within{border-color:#3478f6;box-shadow:0 0 0 3px rgba(52,120,246,.14)}.local-proxy-input-row input[type=url]{min-width:0;flex:1;border:0!important;box-shadow:none!important;outline:none;padding:7px 0!important;background:transparent}.local-proxy-file-button{flex:0 0 auto;border:1px solid #d9dce2;border-radius:9px;padding:7px 10px;background:#f7f8fa;color:#34363b;font:12px inherit;cursor:pointer;white-space:nowrap}.local-proxy-file-button:hover{background:#eef1f5}.local-proxy-file-input{display:none!important}",
-        ".local-proxy-setup-actions{display:flex;justify-content:flex-end;gap:9px;margin-top:22px}.local-proxy-setup-actions button{border:1px solid #d9dce2;border-radius:12px;padding:10px 15px;background:#fff;color:#24262a;font:13px inherit;cursor:pointer}.local-proxy-setup-actions button.primary{border-color:#111;background:#111;color:#fff}.local-proxy-setup-actions button:disabled{cursor:wait;opacity:.55}",
+        ".local-proxy-setup-actions{display:flex;align-items:center;justify-content:flex-end;gap:9px;margin-top:22px}.local-proxy-setup-actions button{border:1px solid #d9dce2;border-radius:12px;padding:10px 15px;background:#fff;color:#24262a;font:13px inherit;cursor:pointer}.local-proxy-setup-actions button.primary{border-color:#111;background:#111;color:#fff}.local-proxy-setup-actions button:disabled{cursor:wait;opacity:.55}.local-proxy-setup-status{margin-right:auto;font-size:12px;color:#22925a}.local-proxy-setup-status:empty{display:none}",
         ".local-proxy-setup-error{min-height:20px;margin-top:12px;color:#c53030;font-size:12px;line-height:1.5}.local-proxy-setup-hint{margin-top:15px!important;font-size:12px!important;color:#8a9099!important}",
         ".local-proxy-content-active> :not(.local-proxy-inline-host){display:none!important}.local-proxy-inline-host{position:absolute!important;inset:0!important;display:block!important;padding:0!important;background:transparent!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;overflow:auto!important;z-index:3!important}.local-proxy-inline-host .local-proxy-setup-card{width:100%!important;min-height:100%;box-sizing:border-box;border:0!important;border-radius:0!important;box-shadow:none!important;padding:24px!important}.local-proxy-inline-host .local-proxy-setup-actions{padding-top:14px;background:inherit}#playground-settings-root[data-proxy-tab-active] nav button:not([data-local-proxy-settings-entry]){background:transparent!important;color:#6b7280!important;box-shadow:none!important}#playground-settings-root[data-proxy-tab-active] [data-local-proxy-settings-entry]{background:#f3f6ff!important;color:#3478f6!important}",
         "html[data-workbench-theme='dark'] .local-proxy-setup-card{border-color:rgba(255,255,255,.1);background:#1e2024;color:#f4f4f5}html[data-workbench-theme='dark'] .local-proxy-setup-field input,html[data-workbench-theme='dark'] .local-proxy-setup-actions button,html[data-workbench-theme='dark'] .local-proxy-input-row{border-color:rgba(255,255,255,.14);background:#26292e;color:#f4f4f5}html[data-workbench-theme='dark'] .local-proxy-file-button{border-color:rgba(255,255,255,.14);background:#30343b;color:#f4f4f5}",
@@ -2074,7 +2075,7 @@ const localProxySetupScript = `<script id="local-proxy-setup-script">
       modal.setAttribute("role", inline ? "region" : "dialog");
       if (!inline) modal.setAttribute("aria-modal", "true");
       window.dispatchEvent(new Event('guan-proxy-setup-opened'));
-      modal.innerHTML = '<section class="local-proxy-setup-card"><h2>设置网络代理</h2><p>本项目会先尝试直连。若服务商无法直连，再使用这里配置的临时代理节点。代理配置只在本次服务运行期间使用，关闭服务后自动清除。</p><div class="local-proxy-setup-field"><label>代理配置文件或远端订阅地址</label><div class="local-proxy-input-row"><input data-proxy-url type="url" placeholder="https://example.com/your-subscription" autocomplete="off" /><button type="button" class="local-proxy-file-button" data-proxy-file-button>选择文件</button><input data-proxy-file class="local-proxy-file-input" type="file" accept=".yaml,.yml,.txt,text/plain,application/yaml" /></div></div><p class="local-proxy-setup-hint">支持 Mihomo / Clash 配置文件，也可以直接填写订阅地址。没有代理也可以先跳过。</p><div class="local-proxy-setup-error" role="alert"></div><div class="local-proxy-setup-actions"><button type="button" data-proxy-skip>稍后配置</button><button type="button" class="primary" data-proxy-save>保存并启动代理</button></div></section>';
+      modal.innerHTML = '<section class="local-proxy-setup-card"><h2>设置网络代理</h2><p>本项目会先尝试直连。若服务商无法直连，再使用这里配置的临时代理节点。代理配置只在本次服务运行期间使用，关闭服务后自动清除。</p><div class="local-proxy-setup-field"><label>代理配置文件或远端订阅地址</label><div class="local-proxy-input-row"><input data-proxy-url type="url" placeholder="https://example.com/your-subscription" autocomplete="off" /><button type="button" class="local-proxy-file-button" data-proxy-file-button>选择文件</button><input data-proxy-file class="local-proxy-file-input" type="file" accept=".yaml,.yml,.txt,text/plain,application/yaml" /></div></div><p class="local-proxy-setup-hint">支持 Mihomo / Clash 配置文件，也可以直接填写订阅地址。没有代理也可以先跳过。</p><div class="local-proxy-setup-error" role="alert"></div><div class="local-proxy-setup-actions"><span class="local-proxy-setup-status" data-proxy-status></span><button type="button" data-proxy-skip>稍后配置</button><button type="button" class="primary" data-proxy-save>保存并启动代理</button></div></section>';
       // Keep the controls inside the active Radix dialog's focus scope.
       const root = document.querySelector('#playground-settings-root');
       const nav = root?.querySelector('nav');
@@ -2094,10 +2095,26 @@ const localProxySetupScript = `<script id="local-proxy-setup-script">
       const urlInput = modal.querySelector('[data-proxy-url]');
       const fileButton = modal.querySelector('[data-proxy-file-button]');
       const save = modal.querySelector('[data-proxy-save]');
+      const statusNode = modal.querySelector('[data-proxy-status]');
+      let savedFileName = '';
+      try { savedFileName = sessionStorage.getItem(FILE_NAME_KEY) || ''; } catch {}
+      if (savedFileName && urlInput instanceof HTMLInputElement) urlInput.value = savedFileName;
+      void fetch('/local-proxy/status', { cache: 'no-store' }).then((response) => response.json()).then((state) => {
+        if (statusNode && state.running) {
+          statusNode.textContent = '代理启动成功';
+          if (save instanceof HTMLButtonElement) save.disabled = false;
+        }
+        if (!state.running && savedFileName && urlInput instanceof HTMLInputElement && !fileInput?.files?.length) {
+          urlInput.value = '';
+          savedFileName = '';
+          try { sessionStorage.removeItem(FILE_NAME_KEY); } catch {}
+        }
+      }).catch(() => {});
       fileButton?.addEventListener('click', () => fileInput instanceof HTMLInputElement && fileInput.click());
       fileInput?.addEventListener('change', () => {
         const fileName = fileInput instanceof HTMLInputElement ? fileInput.files?.[0]?.name : '';
         if (urlInput instanceof HTMLInputElement && fileName) urlInput.value = fileName;
+        if (statusNode) statusNode.textContent = '';
       });
       urlInput?.addEventListener('input', () => {
         if (!(urlInput instanceof HTMLInputElement) || !(fileInput instanceof HTMLInputElement)) return;
@@ -2116,7 +2133,8 @@ const localProxySetupScript = `<script id="local-proxy-setup-script">
         try {
           const file = fileInput instanceof HTMLInputElement ? fileInput.files?.[0] : null;
           const configText = file ? await file.text() : '';
-          const subscriptionUrl = file ? '' : (urlInput instanceof HTMLInputElement ? urlInput.value.trim() : '');
+          const enteredValue = urlInput instanceof HTMLInputElement ? urlInput.value.trim() : '';
+          const subscriptionUrl = file || (savedFileName && enteredValue === savedFileName) ? '' : enteredValue;
           if (!configText.trim() && !subscriptionUrl) throw new Error('请先选择配置文件或填写订阅地址');
           const response = await fetch('/local-proxy/config', {
             method: 'POST',
@@ -2125,8 +2143,13 @@ const localProxySetupScript = `<script id="local-proxy-setup-script">
           });
           const payload = await response.json().catch(() => ({}));
           if (!response.ok) throw new Error(payload.error || '代理启动失败');
+          if (file?.name) {
+            savedFileName = file.name;
+            try { sessionStorage.setItem(FILE_NAME_KEY, savedFileName); } catch {}
+          }
+          if (statusNode) statusNode.textContent = '代理启动成功';
+          save.disabled = false;
           try { sessionStorage.setItem(SESSION_KEY, 'true'); } catch {}
-          close();
         } catch (requestError) {
           if (error) error.textContent = requestError instanceof Error ? requestError.message : String(requestError);
           save.disabled = false;
