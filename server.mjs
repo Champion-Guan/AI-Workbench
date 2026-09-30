@@ -129,6 +129,7 @@ const localDocumentTitleScript = `<script id="local-document-title">
 const localRootNavigationScript = `<script id="local-root-navigation">
   (() => {
     let proxySetupOpen = false;
+    let uploadHintDismissed = false;
     const isExcelUploaded = () => {
       const picker = document.querySelector('[role="dialog"] button[aria-label="选择已上传的 Excel 文件"]');
       return Boolean(picker && picker.textContent && !/暂无已上传 Excel|暂无已上传Excel/i.test(picker.textContent));
@@ -138,13 +139,14 @@ const localRootNavigationScript = `<script id="local-root-navigation">
       const dialog = document.querySelector('[role="dialog"]');
       if (!dialog) return false;
       const hasExcel = isExcelUploaded();
+      const picker = dialog.querySelector('[role="dialog"] button[aria-label="选择已上传的 Excel 文件"]');
       const toggle = dialog.querySelector('.local-settings-toggle');
       if (toggle) toggle.hidden = !hasExcel;
       for (const button of document.querySelectorAll('button')) {
         if (button.textContent?.trim() === '数据') button.hidden = true;
       }
       let hint = dialog.querySelector('.local-upload-step-hint');
-      if (!hasExcel && !proxySetupOpen) {
+      if (!hasExcel && !proxySetupOpen && !uploadHintDismissed) {
         if (!hint) {
           hint = document.createElement('div');
           hint.className = 'local-upload-step-hint';
@@ -153,6 +155,25 @@ const localRootNavigationScript = `<script id="local-root-navigation">
           dialog.append(hint);
         }
         hint.hidden = false;
+        if (picker && picker.dataset.uploadHintBound !== 'true') {
+          picker.dataset.uploadHintBound = 'true';
+          picker.addEventListener('click', () => {
+            uploadHintDismissed = true;
+            hint.hidden = true;
+          });
+        }
+        const positionHint = () => {
+          if (!picker || !hint || hint.hidden) return;
+          const rect = picker.getBoundingClientRect();
+          hint.style.top = String(Math.round(rect.bottom + 54)) + 'px';
+          hint.style.left = String(Math.round(Math.max(12, Math.min(window.innerWidth - hint.offsetWidth - 12, rect.left + rect.width / 2 - hint.offsetWidth / 2)))) + 'px';
+          hint.style.right = 'auto';
+        };
+        positionHint();
+        if (!dialog.dataset.uploadHintResizeBound) {
+          dialog.dataset.uploadHintResizeBound = 'true';
+          window.addEventListener('resize', positionHint, { passive: true });
+        }
       } else if (hint) {
         hint.hidden = true;
       }
@@ -231,6 +252,7 @@ const localRootNavigationScript = `<script id="local-root-navigation">
 
 const localSettingsPanelScript = `<script id="local-settings-panel-script">
   (() => {
+    document.documentElement.dataset.localSettingsBooting = 'true';
     const hasUploadedExcel = () => {
       const picker = document.querySelector('[role="dialog"] button[aria-label="选择已上传的 Excel 文件"]');
       return Boolean(picker && picker.textContent && !/暂无已上传 Excel|暂无已上传Excel/i.test(picker.textContent));
@@ -265,7 +287,11 @@ const localSettingsPanelScript = `<script id="local-settings-panel-script">
       toggle.addEventListener("click", () => {
         setCollapsed(panel.dataset.localSettingsCollapsed !== "true");
       });
+      document.documentElement.dataset.localSettingsBooting = 'true';
       setCollapsed(!hasUploadedExcel());
+      window.requestAnimationFrame(() => {
+        delete document.documentElement.dataset.localSettingsBooting;
+      });
       const stateObserver = new MutationObserver(() => {
         if (!hasUploadedExcel() && panel.dataset.localSettingsCollapsed !== 'true') setCollapsed(true);
         if (hasUploadedExcel() && panel.dataset.localSettingsCollapsed === 'true') setCollapsed(false);
@@ -456,8 +482,8 @@ const localThemeAndUiStyle = `<style id="local-theme-and-ui-style">
   }
   .local-upload-step-hint {
     position: fixed !important;
-    top: 104px !important;
-    right: 76px !important;
+    top: 104px;
+    left: auto;
     z-index: 35 !important;
     padding: 10px 16px !important;
     border: 1px solid #e6e6e8 !important;
@@ -468,6 +494,26 @@ const localThemeAndUiStyle = `<style id="local-theme-and-ui-style">
     line-height: 20px !important;
     box-shadow: 0 8px 24px rgba(20,20,30,.08) !important;
     pointer-events: none !important;
+  }
+  .local-upload-step-hint::before {
+    content: "" !important;
+    position: absolute !important;
+    top: -36px !important;
+    left: calc(50% - 5px) !important;
+    width: 10px !important;
+    height: 10px !important;
+    border-left: 2px solid #a7abb4 !important;
+    border-top: 2px solid #a7abb4 !important;
+    transform: rotate(45deg) !important;
+  }
+  .local-upload-step-hint::after {
+    content: "" !important;
+    position: absolute !important;
+    top: -35px !important;
+    left: 50% !important;
+    width: 2px !important;
+    height: 27px !important;
+    background: #a7abb4 !important;
   }
   .local-upload-step-hint[hidden],
   .local-settings-toggle[hidden] {
@@ -1973,6 +2019,15 @@ const mvpNavigationStyle = `<style id="mvp-navigation">
     color: var(--accent-foreground) !important;
     box-shadow: 0 6px 18px rgb(0 0 0 / 15%) !important;
   }
+  html[data-local-settings-booting="true"] [role="dialog"] aside:has(textarea) {
+    visibility: hidden !important;
+  }
+  html[data-local-settings-booting="true"] #local-settings-panel,
+  html[data-local-settings-booting="true"] #local-settings-panel > form,
+  html[data-local-settings-booting="true"] #local-settings-panel > * {
+    transition: none !important;
+    animation: none !important;
+  }
   @media (max-width: 799px) {
     .local-settings-toggle {
       display: none !important;
@@ -2017,7 +2072,10 @@ const localProxySetupScript = `<script id="local-proxy-setup-script">
       modal.setAttribute("aria-modal", "true");
       window.dispatchEvent(new Event('guan-proxy-setup-opened'));
       modal.innerHTML = '<section class="local-proxy-setup-card"><h2>设置网络代理</h2><p>本项目会先尝试直连。若服务商无法直连，再使用这里配置的临时代理节点。代理配置只在本次服务运行期间使用，关闭服务后自动清除。</p><div class="local-proxy-setup-field"><label>代理配置文件或远端订阅地址</label><div class="local-proxy-input-row"><input data-proxy-url type="url" placeholder="https://example.com/your-subscription" autocomplete="off" /><button type="button" class="local-proxy-file-button" data-proxy-file-button>选择文件</button><input data-proxy-file class="local-proxy-file-input" type="file" accept=".yaml,.yml,.txt,text/plain,application/yaml" /></div></div><p class="local-proxy-setup-hint">支持 Mihomo / Clash 配置文件，也可以直接填写订阅地址。没有代理也可以先跳过。</p><div class="local-proxy-setup-error" role="alert"></div><div class="local-proxy-setup-actions"><button type="button" data-proxy-skip>稍后配置</button><button type="button" class="primary" data-proxy-save>保存并启动代理</button></div></section>';
-      document.body.append(modal);
+      // Keep the controls inside the active Radix dialog's focus scope.
+      const dialogs = Array.from(document.querySelectorAll('[role="dialog"]')).filter((node) => !node.closest('.local-proxy-setup'));
+      const host = dialogs.filter((node) => node.getAttribute('aria-hidden') !== 'true').at(-1) || document.body;
+      host.append(modal);
       const error = modal.querySelector('.local-proxy-setup-error');
       const fileInput = modal.querySelector('[data-proxy-file]');
       const urlInput = modal.querySelector('[data-proxy-url]');
@@ -2056,7 +2114,7 @@ const localProxySetupScript = `<script id="local-proxy-setup-script">
         }
       });
       modal.addEventListener('click', (event) => { if (event.target === modal) close(); });
-      modal.querySelector('[data-proxy-file]')?.focus();
+      urlInput?.focus();
     };
 
     window.addEventListener('guan-open-proxy-setup', () => open(null));
