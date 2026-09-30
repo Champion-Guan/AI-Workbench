@@ -32,6 +32,7 @@ loadLocalEnvFile(join(projectRoot, ".env.local"));
 const archiveRoot = join(projectRoot, "archive");
 const pageFile = join(archiveRoot, "index.html");
 const assetRoot = join(archiveRoot, "assets");
+const infiniteCanvasRoot = join(archiveRoot, "infinite-canvas");
 const port = Number(process.env.PORT || 5174);
 const staticOnlyCsp = [
   "default-src 'self' data: blob:;",
@@ -2563,6 +2564,24 @@ const server = createServer(async (request, response) => {
   }
   if (pathname.startsWith("/data-contract/")) {
     const file = safeFile(join(projectRoot, "data-contract"), pathname.slice("/data-contract/".length));
+    if (file && await existingFile(file)) return send(response, file, method);
+    return notFound(response);
+  }
+
+  // The canvas source is bundled from the reference infinite-canvas project.
+  // Keep its SPA routes and absolute Vite asset paths working from this app.
+  if (pathname === "/canvas" || pathname.startsWith("/canvas/")) {
+    if (pathname.startsWith("/canvas/assets/") || pathname.startsWith("/canvas/icons/") || pathname.startsWith("/canvas/plugins/")) {
+      const relative = pathname.slice("/canvas/".length);
+      const file = safeFile(infiniteCanvasRoot, relative);
+      if (file && await existingFile(file)) return send(response, file, method);
+    }
+    const canvasIndex = safeFile(infiniteCanvasRoot, "index.html");
+    if (canvasIndex && await existingFile(canvasIndex)) return send(response, canvasIndex, method);
+    return notFound(response);
+  }
+  if (pathname === "/logo.svg" || pathname.startsWith("/assets/") || pathname.startsWith("/icons/") || pathname.startsWith("/plugins/")) {
+    const file = safeFile(infiniteCanvasRoot, pathname.slice(1));
     if (file && await existingFile(file)) return send(response, file, method);
     return notFound(response);
   }
