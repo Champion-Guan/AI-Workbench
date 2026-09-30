@@ -8,6 +8,7 @@
   // prompts recognized from the active Excel workbook.
   const STORE_KEY = "infinite-canvas:prompt_source_store_v2";
   const SOURCE_ID = "guan-excel-prompts";
+  const SOURCE_CACHE_VERSION = "v2";
   const BUILT_IN_SOURCES = [
     ["banana-prompt-quicker", "Banana Prompt Quicker", "https://glidea.github.io/banana-prompt-quicker/", "https://raw.githubusercontent.com/yukkcat/image-prompts/main/dist/sources/banana-prompt-quicker.json"],
     ["davidwu-gpt-image2-prompts", "DavidWu GPT Image 2", "https://github.com/davidwuw0811-boop/awesome-gpt-image2-prompts", "https://raw.githubusercontent.com/yukkcat/image-prompts/main/dist/sources/davidwu-gpt-image2-prompts.json"],
@@ -39,9 +40,9 @@
     if (value === "Main Prompt") return "主图提示词";
     if (value === "Video Prompt") return "视频提示词";
     const detail = value.match(/^Detail Prompt (\d+)$/i);
-    if (detail) return `详情图提示词 ${detail[1].padStart(2, "0")}`;
+    if (detail) return `详情页提示词${detail[1].padStart(2, "0")}`;
     const rich = value.match(/^Rich Prompt (\d+)$/i);
-    if (rich) return `富内容提示词 ${rich[1].padStart(2, "0")}`;
+    if (rich) return `富内容提示词${rich[1].padStart(2, "0")}`;
     return value || "Excel 提示词";
   };
 
@@ -100,6 +101,69 @@
     return Math.abs(result).toString(36);
   };
 
+  const installPromptMenuEnhancement = () => {
+    const enhance = () => {
+      const sourceButtons = [...document.querySelectorAll("button")].filter((button) => clean(button.textContent).startsWith("Excel 提示词"));
+      sourceButtons.forEach((sourceButton) => {
+        const sourceGroup = sourceButton.parentElement;
+        if (!sourceGroup || sourceGroup.dataset.guanExcelPromptMenu === "true") return;
+        const content = [...sourceGroup.children].find((child) => child !== sourceButton && child.querySelector?.("button"));
+        if (!content) return;
+        const insertButtons = [...content.querySelectorAll("button")].filter((button) => {
+          const label = `${clean(button.textContent)} ${clean(button.getAttribute("aria-label"))} ${clean(button.title)}`;
+          return label.includes("插入画布");
+        });
+        if (!insertButtons.length) return;
+        const rows = [...new Set(insertButtons.map((button) => button.closest(".group") || button.parentElement?.parentElement).filter(Boolean))];
+        if (!rows.length) return;
+        const firstTitle = clean(rows[0].querySelector("button")?.textContent);
+        const productName = firstTitle.split(" · ", 1)[0] || "当前产品";
+        const productButton = document.createElement("button");
+        productButton.type = "button";
+        productButton.className = "guan-excel-product-menu";
+        productButton.textContent = productName;
+        productButton.setAttribute("aria-expanded", "true");
+        productButton.style.cssText = "display:flex;align-items:center;width:100%;gap:6px;padding:6px 8px 6px 20px;margin:2px 0;border:0;border-radius:6px;background:transparent;color:inherit;font-size:12px;font-weight:600;text-align:left;cursor:pointer;opacity:.82";
+        const chevron = document.createElement("span");
+        chevron.textContent = "›";
+        chevron.style.cssText = "display:inline-block;width:12px;font-size:16px;line-height:12px;transform:rotate(90deg);transition:transform .15s ease";
+        productButton.prepend(chevron);
+        const rowContainer = rows[0].parentElement;
+        if (!rowContainer) return;
+        productButton.addEventListener("click", () => {
+          const expanded = productButton.getAttribute("aria-expanded") === "true";
+          productButton.setAttribute("aria-expanded", String(!expanded));
+          rowContainer.style.display = expanded ? "none" : "";
+          chevron.style.transform = expanded ? "rotate(0deg)" : "rotate(90deg)";
+        });
+        const searchInput = document.querySelector('input[placeholder="搜索提示词"]');
+        searchInput?.addEventListener("input", () => {
+          if (clean(searchInput.value)) {
+            rowContainer.style.display = "";
+            productButton.setAttribute("aria-expanded", "true");
+            chevron.style.transform = "rotate(90deg)";
+          }
+        });
+        content.insertBefore(productButton, rowContainer);
+        rows.forEach((row) => {
+          const titleButton = [...row.querySelectorAll("button")].find((button) => {
+            const label = `${clean(button.textContent)} ${clean(button.getAttribute("aria-label"))} ${clean(button.title)}`;
+            return !label.includes("查看详情") && !label.includes("插入画布");
+          });
+          const title = titleButton?.querySelector("div");
+          if (title) title.textContent = clean(title.textContent).replace(`${productName} · `, "");
+        });
+        sourceGroup.dataset.guanExcelPromptMenu = "true";
+      });
+    };
+    const start = () => {
+      enhance();
+      new MutationObserver(enhance).observe(document.documentElement, { childList: true, subtree: true });
+    };
+    if (document.body) start();
+    else document.addEventListener("DOMContentLoaded", start, { once: true });
+  };
+
   const applyPromptSource = () => {
     const contractState = parentContractState();
     const { fileName, templates, activeProductName } = readTemplates(contractState);
@@ -107,10 +171,10 @@
     // The native source app caches prompt records by source id. Scope that id
     // to the active product so a product switch cannot briefly show another
     // product's cached prompts while the new source is loading.
-    const scopedSourceId = `${SOURCE_ID}-${hash(activeProductName || "all")}`;
+    const scopedSourceId = `${SOURCE_ID}-${SOURCE_CACHE_VERSION}-${hash(activeProductName || "all")}`;
     const activeSetId = contractState?.workspace?.activeProductSetId || "none";
     const fileSha = clean(contractState?.productSets?.find((item) => item.id === activeSetId)?.source?.fileSha256);
-    const sourcePath = `/canvas/__guan_excel_prompts__.json?source=${encodeURIComponent(`${fileSha || hash(JSON.stringify(items))}-${hash(activeProductName || "all")}`)}`;
+    const sourcePath = `/canvas/__guan_excel_prompts__.json?source=${encodeURIComponent(`${SOURCE_CACHE_VERSION}-${fileSha || hash(JSON.stringify(items))}-${hash(activeProductName || "all")}`)}`;
     window.__guanExcelPromptItems = items;
     if (!window.__guanExcelPromptFetchInstalled) {
       const nativeFetch = window.fetch.bind(window);
@@ -151,5 +215,6 @@
     }
   };
 
+  installPromptMenuEnhancement();
   applyPromptSource();
 })();
