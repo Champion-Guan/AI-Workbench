@@ -77,6 +77,14 @@
   z-index: 20 !important;
 }
 
+/* Reserve the fixed theme-toggle slot in the product header.  The Excel
+ * picker is flex-aligned to the right, so without this space its last 42px
+ * sit underneath the theme button after a workbook is loaded. */
+.guan-canvas-mode .guan-dc-header-controls {
+  box-sizing: border-box !important;
+  padding-right: 60px !important;
+}
+
 .guan-canvas-mode .local-workbench-theme-button,
 .guan-canvas-mode [data-local-fixed="true"] {
   z-index: 40 !important;
