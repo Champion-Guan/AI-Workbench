@@ -53,7 +53,24 @@
       || null;
     const source = activeSet?.source || {};
     const templates = Array.isArray(source.promptTemplates) ? source.promptTemplates : [];
-    return { fileName: clean(source.fileName), templates };
+    // The host opens one native canvas per Excel product and passes the
+    // product name in the iframe query string. Keep the prompt source scoped
+    // to that canvas so the prompt library never mixes products together.
+    let activeProductName = "";
+    try {
+      activeProductName = clean(new URLSearchParams(window.location.search).get("productTitle"));
+    } catch {
+      activeProductName = "";
+    }
+    if (!activeProductName) {
+      const activeProductId = state.workspace?.activeProductId;
+      const activeProduct = state.products?.find((product) => product.id === activeProductId);
+      activeProductName = productName(activeProduct?.identity?.titleZh || activeProduct?.identity?.sku, 0);
+    }
+    const scopedTemplates = activeProductName
+      ? templates.filter((template) => productName(template?.route, 0) === activeProductName)
+      : templates;
+    return { fileName: clean(source.fileName), templates: scopedTemplates, activeProductName };
   };
 
   const makeItems = (templates) => templates.flatMap((template, templateIndex) => {
@@ -85,11 +102,15 @@
 
   const applyPromptSource = () => {
     const contractState = parentContractState();
-    const { fileName, templates } = readTemplates(contractState);
+    const { fileName, templates, activeProductName } = readTemplates(contractState);
     const items = makeItems(templates);
+    // The native source app caches prompt records by source id. Scope that id
+    // to the active product so a product switch cannot briefly show another
+    // product's cached prompts while the new source is loading.
+    const scopedSourceId = `${SOURCE_ID}-${hash(activeProductName || "all")}`;
     const activeSetId = contractState?.workspace?.activeProductSetId || "none";
     const fileSha = clean(contractState?.productSets?.find((item) => item.id === activeSetId)?.source?.fileSha256);
-    const sourcePath = `/canvas/__guan_excel_prompts__.json?source=${encodeURIComponent(fileSha || hash(JSON.stringify(items)))}`;
+    const sourcePath = `/canvas/__guan_excel_prompts__.json?source=${encodeURIComponent(`${fileSha || hash(JSON.stringify(items))}-${hash(activeProductName || "all")}`)}`;
     window.__guanExcelPromptItems = items;
     if (!window.__guanExcelPromptFetchInstalled) {
       const nativeFetch = window.fetch.bind(window);
@@ -110,8 +131,10 @@
       window.__guanExcelPromptFetchInstalled = true;
     }
     const customSource = {
-      id: SOURCE_ID,
-      name: fileName ? `Excel 提示词 · ${fileName}` : "Excel 提示词",
+      id: scopedSourceId,
+      name: activeProductName
+        ? `Excel 提示词 · ${activeProductName}`
+        : (fileName ? `Excel 提示词 · ${fileName}` : "Excel 提示词"),
       url: sourcePath,
       homepage: "",
       enabled: true,
