@@ -189,7 +189,8 @@
     const productId = state.productId;
     let route = "";
     try { route = localStorage.getItem(`guan-native-canvas-route:${productId}`) || ""; } catch {}
-    frame.src = /^\/canvas\/[A-Za-z0-9_-]+$/.test(route) ? route : `/canvas/${encodeURIComponent(productId)}`;
+    const canvasRoute = /^\/canvas\/[A-Za-z0-9_-]+$/.test(route) ? route : `/canvas/${encodeURIComponent(productId)}`;
+    frame.src = `${canvasRoute}?productTitle=${encodeURIComponent(productDisplayName(getActiveProduct()))}`;
     root.append(frame);
     state.root = root;
     state.nativeFrame = frame;

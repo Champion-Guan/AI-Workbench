@@ -2052,7 +2052,7 @@ const localProxySetupScript = `<script id="local-proxy-setup-script">
         ".local-proxy-setup-card h2{margin:0 0 8px;font-size:22px;line-height:1.3}.local-proxy-setup-card p{margin:0;color:#686d76;font-size:13px;line-height:1.6}",
         ".local-proxy-setup-field{display:grid;gap:7px;margin-top:18px}.local-proxy-setup-field label{font-size:13px;font-weight:650}.local-proxy-setup-field input{width:100%;box-sizing:border-box;border:1px solid #d9dce2;border-radius:12px;padding:11px 12px;font:13px inherit;outline:none;background:#fff}.local-proxy-setup-field input:focus{border-color:#3478f6;box-shadow:0 0 0 3px rgba(52,120,246,.14)}",
         ".local-proxy-input-row{display:flex;align-items:center;gap:8px;width:100%;box-sizing:border-box;border:1px solid #d9dce2;border-radius:12px;padding:4px 5px 4px 12px;background:#fff}.local-proxy-input-row:focus-within{border-color:#3478f6;box-shadow:0 0 0 3px rgba(52,120,246,.14)}.local-proxy-input-row input[type=url]{min-width:0;flex:1;border:0!important;box-shadow:none!important;outline:none;padding:7px 0!important;background:transparent}.local-proxy-file-button{flex:0 0 auto;border:1px solid #d9dce2;border-radius:9px;padding:7px 10px;background:#f7f8fa;color:#34363b;font:12px inherit;cursor:pointer;white-space:nowrap}.local-proxy-file-button:hover{background:#eef1f5}.local-proxy-file-input{display:none!important}",
-        ".local-proxy-setup-actions{display:flex;align-items:center;justify-content:flex-end;gap:9px;margin-top:22px}.local-proxy-setup-actions button{border:1px solid #d9dce2;border-radius:12px;padding:10px 15px;background:#fff;color:#24262a;font:13px inherit;cursor:pointer}.local-proxy-setup-actions button.primary{border-color:#111;background:#111;color:#fff}.local-proxy-setup-actions button:disabled{cursor:not-allowed;opacity:.55}.local-proxy-setup-status{margin-right:auto;font-size:12px;color:#22925a}.local-proxy-setup-status:empty{display:none}",
+        ".local-proxy-setup-actions{display:flex;align-items:center;justify-content:flex-end;gap:9px;margin-top:22px}.local-proxy-setup-actions button{border:1px solid #d9dce2;border-radius:12px;padding:10px 15px;background:#fff;color:#24262a;font:13px inherit;cursor:pointer}.local-proxy-setup-actions button.primary{border-color:#111;background:#111;color:#fff}.local-proxy-setup-actions button:disabled{cursor:not-allowed;opacity:.55}.local-proxy-setup-status{margin-right:auto;font-size:12px;color:#22925a}.local-proxy-setup-status[data-status="inactive"],.local-proxy-setup-status[data-status="error"]{color:#d92d20}.local-proxy-setup-status:empty{display:none}",
         ".local-proxy-setup-error{min-height:20px;margin-top:12px;color:#c53030;font-size:12px;line-height:1.5}.local-proxy-setup-hint{margin-top:15px!important;font-size:12px!important;color:#8a9099!important}",
         ".local-proxy-content-active> :not(.local-proxy-inline-host){display:none!important}.local-proxy-inline-host{position:absolute!important;inset:0!important;display:block!important;padding:0!important;background:transparent!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;overflow:auto!important;z-index:3!important}.local-proxy-inline-host .local-proxy-setup-card{width:100%!important;min-height:100%;box-sizing:border-box;border:0!important;border-radius:0!important;box-shadow:none!important;padding:24px!important}.local-proxy-inline-host .local-proxy-setup-actions{padding-top:14px;background:inherit}#playground-settings-root[data-proxy-tab-active] nav button:not([data-local-proxy-settings-entry]){background:transparent!important;color:#6b7280!important;box-shadow:none!important}#playground-settings-root[data-proxy-tab-active] [data-local-proxy-settings-entry]{background:#f3f6ff!important;color:#3478f6!important}",
         "html[data-workbench-theme='dark'] .local-proxy-setup-card{border-color:rgba(255,255,255,.1);background:#1e2024;color:#f4f4f5}html[data-workbench-theme='dark'] .local-proxy-setup-field input,html[data-workbench-theme='dark'] .local-proxy-setup-actions button,html[data-workbench-theme='dark'] .local-proxy-input-row{border-color:rgba(255,255,255,.14);background:#26292e;color:#f4f4f5}html[data-workbench-theme='dark'] .local-proxy-file-button{border-color:rgba(255,255,255,.14);background:#30343b;color:#f4f4f5}",
@@ -2098,6 +2098,11 @@ const localProxySetupScript = `<script id="local-proxy-setup-script">
       const statusNode = modal.querySelector('[data-proxy-status]');
       const unfreeze = modal.querySelector('[data-proxy-unfreeze]');
       let statusTimer = null;
+      const setStatus = (text, state) => {
+        if (!statusNode) return;
+        statusNode.textContent = text;
+        statusNode.dataset.status = state;
+      };
       const setFrozen = (frozen) => {
         if (urlInput instanceof HTMLInputElement) urlInput.disabled = frozen;
         if (fileButton instanceof HTMLButtonElement) fileButton.disabled = frozen;
@@ -2110,7 +2115,7 @@ const localProxySetupScript = `<script id="local-proxy-setup-script">
       if (savedFileName && urlInput instanceof HTMLInputElement) urlInput.value = savedFileName;
       void fetch('/local-proxy/status', { cache: 'no-store' }).then((response) => response.json()).then((state) => {
         if (statusNode && state.running) {
-          statusNode.textContent = '代理启动成功';
+          setStatus('代理启动成功', 'active');
           setFrozen(Boolean(savedFileName));
         }
         if (!state.running && savedFileName && urlInput instanceof HTMLInputElement && !fileInput?.files?.length) {
@@ -2121,20 +2126,20 @@ const localProxySetupScript = `<script id="local-proxy-setup-script">
       }).catch(() => {});
       statusTimer = window.setInterval(() => {
         void fetch('/local-proxy/status', { cache: 'no-store' }).then((response) => response.json()).then((state) => {
-          if (statusNode) statusNode.textContent = state.running ? '代理启动成功' : (state.lastError ? '代理已停止' : '代理未启动');
+          setStatus(state.running ? '代理启动成功' : (state.lastError ? '代理已停止' : '代理未启动'), state.running ? 'active' : 'inactive');
           if (state.running && savedFileName && modal.dataset.proxyFrozen !== 'true') setFrozen(true);
           if (!state.running && modal.dataset.proxyFrozen === 'true') setFrozen(false);
-        }).catch(() => { if (statusNode) statusNode.textContent = '状态获取失败'; });
+        }).catch(() => { setStatus('状态获取失败', 'error'); });
       }, 3000);
       unfreeze?.addEventListener('click', () => {
         setFrozen(false);
-        if (statusNode) statusNode.textContent = '可更换配置';
+        setStatus('可更换配置', 'inactive');
       });
       fileButton?.addEventListener('click', () => fileInput instanceof HTMLInputElement && fileInput.click());
       fileInput?.addEventListener('change', () => {
         const fileName = fileInput instanceof HTMLInputElement ? fileInput.files?.[0]?.name : '';
         if (urlInput instanceof HTMLInputElement && fileName) urlInput.value = fileName;
-        if (statusNode) statusNode.textContent = '';
+        setStatus('', '');
       });
       urlInput?.addEventListener('input', () => {
         if (!(urlInput instanceof HTMLInputElement) || !(fileInput instanceof HTMLInputElement)) return;
@@ -2167,7 +2172,7 @@ const localProxySetupScript = `<script id="local-proxy-setup-script">
             savedFileName = file.name;
             try { sessionStorage.setItem(FILE_NAME_KEY, savedFileName); } catch {}
           }
-          if (statusNode) statusNode.textContent = '代理启动成功';
+          setStatus('代理启动成功', 'active');
           setFrozen(true);
           try { sessionStorage.setItem(SESSION_KEY, 'true'); } catch {}
         } catch (requestError) {
@@ -2191,13 +2196,29 @@ const localProxySetupScript = `<script id="local-proxy-setup-script">
       entry.dataset.localProxySettingsEntry = 'true';
       entry.className = 'whitespace-nowrap flex-shrink-0 flex items-center gap-2.5 px-3 py-2.5 text-sm rounded-xl transition-colors text-gray-600 dark:text-gray-400 hover:bg-gray-100/80 dark:hover:bg-white/[0.04]';
       entry.innerHTML = '<span class="w-4 text-center" aria-hidden="true">⇆</span><span>网络代理</span>';
-      entry.addEventListener('click', () => open(null, true));
+      entry.addEventListener('click', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        event.stopImmediatePropagation();
+        open(null, true);
+      });
       const apiEntry = Array.from(nav.querySelectorAll('button')).find((button) => button.textContent?.includes('API 配置'));
       if (apiEntry) apiEntry.after(entry); else nav.append(entry);
       nav.addEventListener('click', (event) => {
         const button = event.target instanceof Element ? event.target.closest('button') : null;
         if (button && button !== entry && modal?.classList.contains('local-proxy-inline-host')) close();
       }, true);
+      new MutationObserver(() => {
+        if (!modal?.classList.contains('local-proxy-inline-host')) return;
+        const currentRoot = document.querySelector('#playground-settings-root');
+        const currentNav = currentRoot?.querySelector('nav');
+        const currentContent = currentNav?.parentElement?.nextElementSibling;
+        if (currentContent instanceof HTMLElement && !currentContent.contains(modal)) {
+          currentContent.classList.add('local-proxy-content-active');
+          currentContent.append(modal);
+          currentRoot?.setAttribute('data-proxy-tab-active', 'true');
+        }
+      }).observe(root, { childList: true, subtree: true });
       return true;
     };
     new MutationObserver(installSettingsEntry).observe(document.documentElement, { childList: true, subtree: true });
