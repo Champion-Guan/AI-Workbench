@@ -77,12 +77,12 @@
   z-index: 20 !important;
 }
 
-/* Reserve the fixed theme-toggle slot in the product header.  The Excel
- * picker is flex-aligned to the right, so without this space its last 42px
- * sit underneath the theme button after a workbook is loaded. */
-.guan-canvas-mode .guan-dc-header-controls {
+/* Reserve the fixed theme/settings utility cluster in the product header.
+ * The Excel picker is flex-aligned to the right, so without this space its
+ * last pixels sit underneath the utility buttons in either workbook state. */
+.guan-dc-header-controls {
   box-sizing: border-box !important;
-  padding-right: 60px !important;
+  padding-right: 104px !important;
 }
 
 .guan-canvas-mode .local-workbench-theme-button,
@@ -747,15 +747,40 @@ html.dark .guan-canvas-hint {
   bottom: 88px;
 }
 
-/* Keep the theme control in the same upper-right utility cluster in both
- * empty-workspace and uploaded-product modes. */
-.guan-canvas-mode .local-workbench-theme-button {
+/* Keep the workbook picker and both utility controls in one global header
+ * layout.  These controls exist in both empty and uploaded workspaces, so
+ * their geometry must not depend on the current canvas mode. */
+.local-workbench-theme-button,
+.local-workbench-settings-button,
+.guan-dc-header-controls ~ .local-workbench-theme-button,
+.guan-dc-header-controls ~ .local-workbench-settings-button,
+.guan-canvas-mode .local-workbench-theme-button,
+.guan-canvas-mode .local-workbench-settings-button {
   position: fixed !important;
-  top: 18px !important;
-  right: 76px !important;
+  top: 21px !important;
   bottom: auto !important;
   left: auto !important;
   z-index: 80 !important;
+  margin: 0 !important;
+}
+
+.local-workbench-theme-button,
+.guan-dc-header-controls ~ .local-workbench-theme-button,
+.guan-canvas-mode .local-workbench-theme-button {
+  right: 76px !important;
+}
+
+.local-workbench-settings-button,
+.guan-dc-header-controls ~ .local-workbench-settings-button,
+.guan-canvas-mode .local-workbench-settings-button {
+  right: 24px !important;
+}
+
+/* data-contract.css is loaded asynchronously and adds an 8px sibling
+ * margin to the theme button.  Match that selector with duplicated class
+ * specificity so the global fixed cluster stays exactly aligned. */
+.guan-dc-header-controls ~ .local-workbench-theme-button.local-workbench-theme-button,
+.guan-dc-header-controls ~ .local-workbench-settings-button.local-workbench-settings-button {
   margin: 0 !important;
 }
 
