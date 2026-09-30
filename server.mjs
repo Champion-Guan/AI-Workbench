@@ -2397,7 +2397,7 @@ async function send(response, path, method) {
      * The original button injector only creates the trigger; the React bundle
      * owns the modal, focus scope, nested dialogs and persistence.
      */
-      response.end(refreshedFavicon.replace("</head>", `${workbenchLogoStyle}${mvpNavigationStyle}${localThemeAndUiStyle}${localDocumentTitleScript}${localRootNavigationScript}${localSettingsPanelScript}${originalPlaygroundSettingsButtonScript}${localThemeToggleScript}${localFixedFieldsScript}${localResolutionButtonsScript}${localAspectRatioButtonsScript}${localOfflineGuardsScript}${localGenerationButtonScript}${localResponsivePreviewScript}${localProxySetupScript}<link rel="stylesheet" href="/playground-settings/assets/index.css?v=background-removal-timeout-20260928-v2"><script type="module" src="/playground-settings/assets/index.js?v=background-removal-timeout-20260928-v2"></script><script src="/_pixpix-assets/local-vendor/xlsx.full.min.js?sheetjs-local-0.18.5"></script><script src="/_pixpix-assets/local-vendor/fflate.umd.js?fflate-local-0.8.3"></script><script type="module" src="/data-contract/index.js?contract-v35-20260927"></script><link rel="stylesheet" href="/_pixpix-assets/local-canvas/canvas.css?canvas-v21"><script src="/_pixpix-assets/local-canvas/canvas.js?canvas-v16"></script></head>`));
+      response.end(refreshedFavicon.replace("</head>", `${workbenchLogoStyle}${mvpNavigationStyle}${localThemeAndUiStyle}${localDocumentTitleScript}${localRootNavigationScript}${localSettingsPanelScript}${originalPlaygroundSettingsButtonScript}${localThemeToggleScript}${localFixedFieldsScript}${localResolutionButtonsScript}${localAspectRatioButtonsScript}${localOfflineGuardsScript}${localGenerationButtonScript}${localResponsivePreviewScript}${localProxySetupScript}<link rel="stylesheet" href="/playground-settings/assets/index.css?v=background-removal-timeout-20260928-v2"><script type="module" src="/playground-settings/assets/index.js?v=background-removal-timeout-20260928-v2"></script><script src="/_pixpix-assets/local-vendor/xlsx.full.min.js?sheetjs-local-0.18.5"></script><script src="/_pixpix-assets/local-vendor/fflate.umd.js?fflate-local-0.8.3"></script><script type="module" src="/data-contract/index.js?contract-v35-20260927"></script><link rel="stylesheet" href="/_pixpix-assets/local-canvas/canvas.css?canvas-v21"><script src="/_pixpix-assets/local-canvas/canvas.js?canvas-v17"></script></head>`));
     return;
   }
   createReadStream(path).pipe(response);
@@ -2836,6 +2836,10 @@ const server = createServer(async (request, response) => {
   // The canvas source is bundled from the reference infinite-canvas project.
   // Keep its SPA routes and absolute Vite asset paths working from this app.
   if (pathname === "/canvas" || pathname.startsWith("/canvas/")) {
+    if (pathname === "/canvas/excel-prompts-bridge.js") {
+      const bridge = safeFile(infiniteCanvasRoot, "excel-prompts-bridge.js");
+      if (bridge && await existingFile(bridge)) return send(response, bridge, method);
+    }
     if (pathname.startsWith("/canvas/assets/") || pathname.startsWith("/canvas/icons/") || pathname.startsWith("/canvas/plugins/")) {
       const relative = pathname.slice("/canvas/".length);
       const file = safeFile(infiniteCanvasRoot, relative);

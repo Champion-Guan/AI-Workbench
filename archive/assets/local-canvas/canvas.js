@@ -1096,7 +1096,9 @@
         state.productId = activeProduct.id;
         let route = "";
         try { route = localStorage.getItem(`guan-native-canvas-route:${activeProduct.id}`) || ""; } catch {}
-        state.nativeFrame.src = /^\/canvas\/[A-Za-z0-9_-]+$/.test(route) ? route : `/canvas/${encodeURIComponent(activeProduct.id)}`;
+        const productTitle = encodeURIComponent(productDisplayName(activeProduct));
+        const canvasPath = /^\/canvas\/[A-Za-z0-9_-]+$/.test(route) ? route : `/canvas/${encodeURIComponent(activeProduct.id)}`;
+        state.nativeFrame.src = `${canvasPath}?productTitle=${productTitle}`;
         syncCanvasChrome();
         return true;
       }
