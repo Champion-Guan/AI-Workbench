@@ -1,4 +1,4 @@
-import { access, chmod, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { access, chmod, copyFile, mkdir, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { spawn } from "node:child_process";
 import { createConnection } from "node:net";
 import { delimiter, join } from "node:path";
@@ -340,17 +340,33 @@ async function resolveMihomoBinary(projectRoot) {
     "/Applications/Clash Party.app/Contents/Resources/sidecar/mihomo-smart",
     ...String(process.env.PATH || "").split(delimiter).map((directory) => join(directory, "mihomo")),
   ].filter(Boolean);
-  for (const candidate of candidates) if (await pathExists(candidate)) return candidate;
+  for (const candidate of candidates) {
+    if (!(await pathExists(candidate))) continue;
+    try {
+      const info = await stat(candidate);
+      if (info.mode & 0o4000) {
+        const userBinary = join(tmpdir(), "guan-mihomo-user", `${platform()}-${arch()}-mihomo`);
+        await mkdir(join(tmpdir(), "guan-mihomo-user"), { recursive: true, mode: 0o700 });
+        await copyFile(candidate, userBinary);
+        await chmod(userBinary, 0o700);
+        return userBinary;
+      }
+    } catch {
+      // Fall through to the original executable when it cannot be copied.
+    }
+    return candidate;
+  }
   return downloadMihomoBinary();
 }
 
-function waitForPort(port, timeoutMs, child) {
+function waitForPort(port, timeoutMs, child, getDiagnostics = () => "") {
   return new Promise((resolve, reject) => {
     const startedAt = Date.now();
     let timer;
     const attempt = () => {
       if (child.exitCode != null) {
-        reject(new Error("内置 Mihomo 进程提前退出"));
+        const diagnostics = getDiagnostics();
+        reject(new Error(diagnostics ? `内置 Mihomo 进程提前退出：${diagnostics}` : "内置 Mihomo 进程提前退出"));
         return;
       }
       const socket = createConnection({ host: "127.0.0.1", port });
@@ -363,7 +379,8 @@ function waitForPort(port, timeoutMs, child) {
         socket.destroy();
         if (Date.now() - startedAt >= timeoutMs) {
           clearTimeout(timer);
-          reject(new Error("内置 Mihomo 代理端口启动超时"));
+          const diagnostics = getDiagnostics();
+          reject(new Error(diagnostics ? `内置 Mihomo 代理端口启动超时：${diagnostics}` : "内置 Mihomo 代理端口启动超时"));
           return;
         }
         timer = setTimeout(attempt, 250);
@@ -387,11 +404,18 @@ export async function startBuiltInImageProxy({ projectRoot, onProxyReady, source
 
   const child = spawn(binary, ["-d", runtimeDir, "-f", configPath], {
     cwd: runtimeDir,
-    stdio: ["ignore", "ignore", "ignore"],
+    stdio: ["ignore", "pipe", "pipe"],
     env: { ...process.env },
   });
+  let diagnostics = "";
+  const collectDiagnostics = (chunk) => {
+    const safe = String(chunk || "").replace(/https?:\/\/[^\s]+/gi, "<url>").replace(/(password|token|secret|uuid)\s*[:=]\s*[^\s,]+/gi, "$1=<redacted>");
+    diagnostics = `${diagnostics}${safe}`.slice(-1600);
+  };
+  child.stdout?.on("data", collectDiagnostics);
+  child.stderr?.on("data", collectDiagnostics);
   try {
-    await waitForPort(port, 20_000, child);
+    await waitForPort(port, 20_000, child, () => diagnostics.trim().split(/\r?\n/).filter(Boolean).slice(-4).join(" | "));
   } catch (error) {
     child.kill("SIGTERM");
     await rm(runtimeDir, { recursive: true, force: true });
@@ -405,6 +429,15 @@ export async function startBuiltInImageProxy({ projectRoot, onProxyReady, source
     if (stopping) return;
     stopping = true;
     child.kill("SIGTERM");
+    if (child.exitCode == null) {
+      await new Promise((resolve) => {
+        const timer = setTimeout(resolve, 2_000);
+        child.once("exit", () => {
+          clearTimeout(timer);
+          resolve();
+        });
+      });
+    }
     await rm(runtimeDir, { recursive: true, force: true });
   };
   return { proxyUrl, stop, pid: child.pid };

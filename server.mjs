@@ -2674,10 +2674,11 @@ async function handleLocalProxyConfig(request, response) {
       "cache-control": "no-store",
     });
     response.end(body);
-  } catch {
-    runtimeImageProxyLastError = "代理启动失败";
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : "代理启动失败";
+    runtimeImageProxyLastError = detail;
     // Do not echo subscription URLs, node credentials, or Mihomo command lines.
-    const body = JSON.stringify({ error: "代理启动失败，请检查配置格式、节点可用性和 Mihomo 运行环境" });
+    const body = JSON.stringify({ error: `代理启动失败：${detail}` });
     response.writeHead(400, {
       "content-type": "application/json; charset=utf-8",
       "content-length": Buffer.byteLength(body),
