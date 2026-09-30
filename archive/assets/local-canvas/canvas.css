@@ -623,7 +623,7 @@ html.dark .guan-canvas-hint {
   z-index: 50;
   right: calc(var(--guan-canvas-side-offset, 0px) + 16px);
   bottom: 16px;
-  left: 300px;
+  left: calc(var(--guan-canvas-panel-width, 0px) + 16px);
   display: flex;
   justify-content: center;
   pointer-events: none;
@@ -696,7 +696,7 @@ html.dark .guan-canvas-hint {
   position: absolute;
   z-index: 50;
   bottom: 16px;
-  left: 16px;
+  left: calc(var(--guan-canvas-panel-width, 0px) + 16px);
   min-width: 236px;
   padding: 5px 7px;
 }
@@ -736,9 +736,97 @@ html.dark .guan-canvas-hint {
   top: auto !important;
   right: auto !important;
   bottom: 18px !important;
-  left: 76px !important;
+  left: calc(var(--guan-canvas-panel-width, 0px) + 76px) !important;
   z-index: 80 !important;
   margin: 0 !important;
+}
+
+.guan-canvas-source-topbar {
+  position: absolute;
+  z-index: 65;
+  top: 0;
+  left: calc(var(--guan-canvas-panel-width, 0px));
+  display: flex;
+  height: 48px;
+  align-items: center;
+  gap: 8px;
+  padding: 0 14px;
+  color: var(--canvas-text);
+  pointer-events: auto;
+}
+.guan-canvas-source-icon {
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--canvas-muted);
+}
+.guan-canvas-source-icon:hover { background: var(--canvas-accent-soft); color: var(--canvas-accent); }
+.guan-canvas-source-title { margin-left: 2px; font-size: 14px; font-weight: 750; }
+.guan-canvas-source-status { color: var(--canvas-muted); font-size: 12px; }
+.guan-canvas-source-status::first-letter { color: #9aa0aa; }
+.guan-canvas-source-menu {
+  position: absolute;
+  top: 40px;
+  left: 46px;
+  display: grid;
+  min-width: 160px;
+  padding: 6px;
+  border: 1px solid var(--canvas-border);
+  border-radius: 10px;
+  background: var(--canvas-panel);
+  box-shadow: 0 12px 30px rgba(24, 29, 39, .16);
+}
+.guan-canvas-source-menu button { border: 0; border-radius: 7px; background: transparent; color: var(--canvas-text); padding: 8px 10px; text-align: left; cursor: pointer; font: inherit; font-size: 12px; }
+.guan-canvas-source-menu button:hover { background: var(--canvas-accent-soft); color: var(--canvas-accent); }
+.guan-canvas-source-panel {
+  position: absolute;
+  z-index: 60;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  display: flex;
+  width: 310px;
+  flex-direction: column;
+  border-right: 1px solid var(--canvas-border);
+  background: color-mix(in srgb, var(--canvas-panel) 95%, transparent);
+  box-shadow: 8px 0 24px rgba(24, 29, 39, .06);
+  -webkit-backdrop-filter: blur(18px);
+  backdrop-filter: blur(18px);
+  transition: transform .2s ease, opacity .2s ease;
+}
+.guan-canvas-source-panel.is-closed { transform: translateX(-100%); opacity: 0; pointer-events: none; }
+.guan-canvas-panel-tabs { display: flex; gap: 4px; padding: 14px 12px 8px; border-bottom: 1px solid var(--canvas-border); }
+.guan-canvas-panel-tab { min-height: 30px; border: 0; border-radius: 7px; background: transparent; color: var(--canvas-muted); cursor: pointer; font: inherit; font-size: 13px; padding: 0 10px; }
+.guan-canvas-panel-tab.is-active { background: var(--canvas-accent-soft); color: var(--canvas-accent); font-weight: 700; }
+.guan-canvas-panel-body { min-height: 0; overflow: auto; padding: 10px 12px 80px; }
+.guan-canvas-panel-search { width: 100%; box-sizing: border-box; min-height: 30px; border: 1px solid var(--canvas-border); border-radius: 7px; background: rgba(255,255,255,.58); color: var(--canvas-text); padding: 0 10px; font: inherit; font-size: 12px; outline: 0; }
+.guan-canvas-panel-search:focus { border-color: var(--canvas-accent); }
+.guan-canvas-panel-controls { display: flex; align-items: center; gap: 9px; padding: 14px 2px 8px; color: var(--canvas-muted); font-size: 12px; }
+.guan-canvas-panel-controls strong { color: var(--canvas-text); font-size: 13px; margin-right: auto; }
+.guan-canvas-panel-controls button { border: 0; background: transparent; color: var(--canvas-accent); cursor: pointer; font: inherit; }
+.guan-canvas-panel-list { display: grid; gap: 5px; margin-top: 8px; }
+.guan-canvas-panel-item { display: flex; min-height: 38px; align-items: center; gap: 8px; width: 100%; border: 1px solid transparent; border-radius: 7px; background: transparent; color: var(--canvas-text); cursor: pointer; padding: 7px 8px; text-align: left; font: inherit; font-size: 12px; overflow: hidden; }
+.guan-canvas-panel-item:hover, .guan-canvas-panel-item.is-selected { border-color: var(--canvas-accent-soft); background: var(--canvas-accent-soft); }
+.guan-canvas-panel-item-icon { display: inline-flex; color: var(--canvas-muted); }
+.guan-canvas-panel-thumb { width: 30px; height: 30px; flex: 0 0 30px; border-radius: 5px; background-size: cover; background-position: center; background-color: var(--canvas-accent-soft); }
+.guan-canvas-panel-empty { color: var(--canvas-muted); padding: 34px 8px; text-align: center; font-size: 12px; }
+.guan-canvas-dock-button svg, .guan-canvas-source-icon svg { display: block; }
+.guan-canvas-dock-button:disabled { opacity: .35; cursor: default; }
+.guan-canvas-node.is-selected { outline: 2px solid var(--canvas-accent); outline-offset: 2px; }
+.guan-canvas-appearance-popover { position: absolute; z-index: 70; bottom: 78px; right: calc(var(--guan-canvas-side-offset, 0px) + 18px); width: 210px; display: grid; gap: 8px; padding: 12px; border: 1px solid var(--canvas-border); border-radius: 12px; background: var(--canvas-panel); box-shadow: 0 16px 36px rgba(24,29,39,.16); color: var(--canvas-text); font-size: 12px; }
+.guan-canvas-appearance-popover strong { font-size: 13px; }
+.guan-canvas-appearance-popover span { color: var(--canvas-muted); font-size: 11px; }
+.guan-canvas-appearance-row { display: flex; gap: 5px; }
+.guan-canvas-appearance-row button { flex: 1; border: 1px solid var(--canvas-border); border-radius: 7px; background: transparent; color: inherit; padding: 6px; cursor: pointer; font: inherit; }
+.guan-canvas-appearance-row button:hover { background: var(--canvas-accent-soft); color: var(--canvas-accent); }
+.guan-canvas-appearance-popover label { display: flex; gap: 7px; align-items: center; color: var(--canvas-muted); }
+
+@media (max-width: 900px) {
+  .guan-canvas-source-panel { width: min(310px, 82vw); }
+  .guan-canvas-tool-dock-wrap { left: calc(var(--guan-canvas-panel-width, 0px) + 8px); right: 8px; }
+  .guan-canvas-zoom-dock { left: calc(var(--guan-canvas-panel-width, 0px) + 8px); }
 }
 
 @media (max-width: 900px) {
