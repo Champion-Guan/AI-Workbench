@@ -739,16 +739,28 @@ html.dark .guan-canvas-hint {
   bottom: 88px;
 }
 
-/* Keep the theme control in the original lower-left utility cluster while a
- * product canvas is active. The settings control remains in the app header. */
+/* Keep the theme control in the same upper-right utility cluster in both
+ * empty-workspace and uploaded-product modes. */
 .guan-canvas-mode .local-workbench-theme-button {
   position: fixed !important;
-  top: auto !important;
-  right: auto !important;
-  bottom: 18px !important;
-  left: calc(var(--guan-canvas-panel-width, 0px) + 76px) !important;
+  top: 18px !important;
+  right: 76px !important;
+  bottom: auto !important;
+  left: auto !important;
   z-index: 80 !important;
   margin: 0 !important;
+}
+
+/* The product settings pane sits beside the canvas. Keep its collapse affordance
+ * above the canvas iframe so a click is delivered to the real button. */
+.guan-canvas-mode #local-settings-panel,
+.guan-canvas-mode .local-settings-toggle {
+  position: relative !important;
+  z-index: 2147482000 !important;
+  pointer-events: auto !important;
+}
+.guan-canvas-mode .local-settings-toggle {
+  position: absolute !important;
 }
 
 .guan-canvas-source-topbar {
