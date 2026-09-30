@@ -177,6 +177,16 @@ function buildMihomoConfig(source, port) {
     // or a private subscription URL. Only the listener settings are changed;
     // node credentials stay in the temporary runtime file.
     let config = String(source).replace(/^\uFEFF/, "");
+    // Mihomo removed the global-client-fingerprint option. Older Clash
+    // exports may still contain it; per-proxy client-fingerprint values are
+    // retained, so remove only this obsolete top-level setting.
+    config = config.replace(/^global-client-fingerprint\s*:\s*[^\n]*\n?/gim, "");
+    // Do not block the local listener on downloading GeoIP/GeoSite assets.
+    // The relay only needs an HTTP mixed port; remote rule providers remain
+    // available to Mihomo after startup when the user's config references them.
+    config = config.replace(/^geodata-mode\s*:\s*[^\n]*\n?/gim, "geodata-mode: false\n");
+    config = config.replace(/^geox-url:\s*\n(?:^[ \t]+[^\n]*\n?)*/gim, "");
+    config = config.replace(/^[ \t]*-[ \t]*GEOSITE,[^\n]*\n?/gim, "  - MATCH,DIRECT\n");
     const replacements = [
       ["mixed-port", String(port)],
       ["port", "0"],
@@ -415,7 +425,9 @@ export async function startBuiltInImageProxy({ projectRoot, onProxyReady, source
   child.stdout?.on("data", collectDiagnostics);
   child.stderr?.on("data", collectDiagnostics);
   try {
-    await waitForPort(port, 20_000, child, () => diagnostics.trim().split(/\r?\n/).filter(Boolean).slice(-4).join(" | "));
+    // Large Clash exports may initialize GeoIP/rule providers on first run.
+    // Give Mihomo enough time to finish that one-time initialization.
+    await waitForPort(port, 120_000, child, () => diagnostics.trim().split(/\r?\n/).filter(Boolean).slice(-4).join(" | "));
   } catch (error) {
     child.kill("SIGTERM");
     await rm(runtimeDir, { recursive: true, force: true });
