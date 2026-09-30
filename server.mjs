@@ -2084,7 +2084,13 @@ const localProxySetupScript = `<script id="local-proxy-setup-script">
       fileButton?.addEventListener('click', () => fileInput instanceof HTMLInputElement && fileInput.click());
       fileInput?.addEventListener('change', () => {
         const fileName = fileInput instanceof HTMLInputElement ? fileInput.files?.[0]?.name : '';
-        if (fileButton) fileButton.textContent = fileName || '选择文件';
+        if (urlInput instanceof HTMLInputElement && fileName) urlInput.value = fileName;
+      });
+      urlInput?.addEventListener('input', () => {
+        if (!(urlInput instanceof HTMLInputElement) || !(fileInput instanceof HTMLInputElement)) return;
+        if (fileInput.files?.length) {
+          fileInput.value = '';
+        }
       });
       modal.querySelector('[data-proxy-skip]')?.addEventListener('click', () => {
         try { sessionStorage.setItem(SESSION_KEY, 'true'); } catch {}
@@ -2096,8 +2102,8 @@ const localProxySetupScript = `<script id="local-proxy-setup-script">
         if (error) error.textContent = '';
         try {
           const file = fileInput instanceof HTMLInputElement ? fileInput.files?.[0] : null;
-          const subscriptionUrl = urlInput instanceof HTMLInputElement ? urlInput.value.trim() : '';
           const configText = file ? await file.text() : '';
+          const subscriptionUrl = file ? '' : (urlInput instanceof HTMLInputElement ? urlInput.value.trim() : '');
           if (!configText.trim() && !subscriptionUrl) throw new Error('请先选择配置文件或填写订阅地址');
           const response = await fetch('/local-proxy/config', {
             method: 'POST',
