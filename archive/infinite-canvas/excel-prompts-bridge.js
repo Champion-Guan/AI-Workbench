@@ -106,7 +106,7 @@
       const sourceButtons = [...document.querySelectorAll("button")].filter((button) => clean(button.textContent).startsWith("Excel 提示词"));
       sourceButtons.forEach((sourceButton) => {
         const sourceGroup = sourceButton.parentElement;
-        if (!sourceGroup || sourceGroup.dataset.guanExcelPromptMenu === "true") return;
+        if (!sourceGroup) return;
         const content = [...sourceGroup.children].find((child) => child !== sourceButton && child.querySelector?.("button"));
         if (!content) return;
         const insertButtons = [...content.querySelectorAll("button")].filter((button) => {
@@ -117,48 +117,71 @@
         const rows = [...new Set(insertButtons.map((button) => button.closest(".group") || button.parentElement?.parentElement).filter(Boolean))];
         if (!rows.length) return;
         const firstTitle = clean(rows[0].querySelector("button")?.textContent);
-        const productName = firstTitle.split(" · ", 1)[0] || "当前产品";
-        const productButton = document.createElement("button");
-        productButton.type = "button";
-        productButton.className = "guan-excel-product-menu";
-        productButton.textContent = productName;
-        productButton.setAttribute("aria-expanded", "true");
-        productButton.style.cssText = "display:flex;align-items:center;width:100%;gap:6px;padding:6px 8px 6px 20px;margin:2px 0;border:0;border-radius:6px;background:transparent;color:inherit;font-size:12px;font-weight:600;text-align:left;cursor:pointer;opacity:.82";
-        const chevron = document.createElement("span");
-        chevron.textContent = "›";
-        chevron.style.cssText = "display:inline-block;width:12px;font-size:16px;line-height:12px;transform:rotate(90deg);transition:transform .15s ease";
-        productButton.prepend(chevron);
+        const existingProductButton = content.querySelector(".guan-excel-product-menu");
+        const productName = existingProductButton
+          ? clean(existingProductButton.textContent).replace(/^›\s*/, "")
+          : (firstTitle.split(" · ", 1)[0] || "当前产品");
+        const productButton = existingProductButton || document.createElement("button");
         const rowContainer = rows[0].parentElement;
         if (!rowContainer) return;
-        productButton.addEventListener("click", () => {
-          const expanded = productButton.getAttribute("aria-expanded") === "true";
-          productButton.setAttribute("aria-expanded", String(!expanded));
-          rowContainer.style.display = expanded ? "none" : "";
-          chevron.style.transform = expanded ? "rotate(0deg)" : "rotate(90deg)";
-        });
+        let chevron = productButton.querySelector("span");
+        if (!existingProductButton) {
+          productButton.type = "button";
+          productButton.className = "guan-excel-product-menu";
+          productButton.textContent = productName;
+          productButton.setAttribute("aria-expanded", "true");
+          productButton.style.cssText = "display:flex;align-items:center;width:100%;gap:6px;padding:6px 8px 6px 20px;margin:2px 0;border:0;border-radius:6px;background:transparent;color:inherit;font-size:12px;font-weight:600;text-align:left;cursor:pointer;opacity:.82";
+          chevron = document.createElement("span");
+          chevron.textContent = "›";
+          chevron.style.cssText = "display:inline-block;width:12px;font-size:16px;line-height:12px;transform:rotate(90deg);transition:transform .15s ease";
+          productButton.prepend(chevron);
+          productButton.addEventListener("click", () => {
+            const expanded = productButton.getAttribute("aria-expanded") === "true";
+            productButton.setAttribute("aria-expanded", String(!expanded));
+            rowContainer.style.display = expanded ? "none" : "";
+            chevron.style.transform = expanded ? "rotate(0deg)" : "rotate(90deg)";
+          });
+          content.insertBefore(productButton, rowContainer);
+        }
         const searchInput = document.querySelector('input[placeholder="搜索提示词"]');
-        searchInput?.addEventListener("input", () => {
-          if (clean(searchInput.value)) {
-            rowContainer.style.display = "";
-            productButton.setAttribute("aria-expanded", "true");
-            chevron.style.transform = "rotate(90deg)";
-          }
-        });
-        content.insertBefore(productButton, rowContainer);
+        if (searchInput && searchInput.dataset.guanExcelSearchBridge !== "true") {
+          searchInput.addEventListener("input", () => {
+            if (clean(searchInput.value)) {
+              rowContainer.style.display = "";
+              productButton.setAttribute("aria-expanded", "true");
+              if (chevron) chevron.style.transform = "rotate(90deg)";
+            }
+          });
+          searchInput.dataset.guanExcelSearchBridge = "true";
+        }
         rows.forEach((row) => {
           const titleButton = [...row.querySelectorAll("button")].find((button) => {
             const label = `${clean(button.textContent)} ${clean(button.getAttribute("aria-label"))} ${clean(button.title)}`;
             return !label.includes("查看详情") && !label.includes("插入画布");
           });
           const title = titleButton?.querySelector("div");
-          if (title) title.textContent = clean(title.textContent).replace(`${productName} · `, "");
+          if (title) {
+            const nextTitle = clean(title.textContent).replace(`${productName} · `, "");
+            if (title.textContent !== nextTitle) title.textContent = nextTitle;
+          }
         });
-        sourceGroup.dataset.guanExcelPromptMenu = "true";
+        if (sourceGroup.dataset.guanExcelPromptMenu !== "true") sourceGroup.dataset.guanExcelPromptMenu = "true";
       });
     };
     const start = () => {
-      enhance();
-      new MutationObserver(enhance).observe(document.documentElement, { childList: true, subtree: true });
+      let scheduled = false;
+      const scheduleEnhance = () => {
+        if (scheduled) return;
+        scheduled = true;
+        const run = () => {
+          scheduled = false;
+          enhance();
+        };
+        if (typeof window.requestAnimationFrame === "function") window.requestAnimationFrame(run);
+        else window.setTimeout(run, 0);
+      };
+      scheduleEnhance();
+      new MutationObserver(scheduleEnhance).observe(document.documentElement, { childList: true, subtree: true });
     };
     if (document.body) start();
     else document.addEventListener("DOMContentLoaded", start, { once: true });
