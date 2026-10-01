@@ -2084,7 +2084,7 @@ const localProxySetupScript = `<script id="local-proxy-setup-script">
       modal.setAttribute("role", inline ? "region" : "dialog");
       if (!inline) modal.setAttribute("aria-modal", "true");
       window.dispatchEvent(new Event('guan-proxy-setup-opened'));
-      modal.innerHTML = '<section class="local-proxy-setup-card"><h2>设置网络代理</h2><p>本项目会先尝试直连。若服务商无法直连，再使用这里配置的临时代理节点。代理配置只在本次服务运行期间使用，关闭服务后自动清除。</p><div class="local-proxy-setup-field"><label>代理配置文件或远端订阅地址</label><div class="local-proxy-input-row"><input data-proxy-url type="url" placeholder="https://example.com/your-subscription" autocomplete="off" /><button type="button" class="local-proxy-file-button" data-proxy-file-button>选择文件</button><input data-proxy-file class="local-proxy-file-input" type="file" accept=".yaml,.yml,.txt,text/plain,application/yaml" /></div></div><p class="local-proxy-setup-hint">支持 Mihomo / Clash 配置文件，也可以直接填写订阅地址。没有代理也可以先跳过。</p><div class="local-proxy-setup-error" role="alert"></div><div class="local-proxy-setup-actions"><span class="local-proxy-setup-status" data-proxy-status></span><button type="button" data-proxy-skip>稍后配置</button><button type="button" data-proxy-unfreeze hidden>取消冻结</button><button type="button" class="primary" data-proxy-save>保存并启动代理</button></div></section>';
+      modal.innerHTML = '<section class="local-proxy-setup-card"><h2>设置网络代理</h2><p>本项目会先尝试直连。若服务商无法直连，再使用这里配置的临时代理节点。代理配置只在本次服务运行期间使用，关闭服务后自动清除。</p><div class="local-proxy-setup-field"><label>代理配置文件或远端订阅地址</label><div class="local-proxy-input-row"><input data-proxy-url type="text" inputmode="url" placeholder="https://example.com/your-subscription" autocomplete="off" spellcheck="false" /><button type="button" class="local-proxy-file-button" data-proxy-file-button>选择文件</button><input data-proxy-file class="local-proxy-file-input" type="file" accept=".yaml,.yml,.txt,text/plain,application/yaml" /></div></div><p class="local-proxy-setup-hint">支持 Mihomo / Clash 配置文件，也可以直接填写订阅地址。没有代理也可以先跳过。</p><div class="local-proxy-setup-error" role="alert"></div><div class="local-proxy-setup-actions"><span class="local-proxy-setup-status" data-proxy-status></span><button type="button" data-proxy-skip>稍后配置</button><button type="button" data-proxy-unfreeze hidden>取消冻结</button><button type="button" class="primary" data-proxy-save>保存并启动代理</button></div></section>';
       // Keep the controls inside the active Radix dialog's focus scope.
       const root = document.querySelector('#playground-settings-root');
       const nav = root?.querySelector('nav');
@@ -2106,6 +2106,8 @@ const localProxySetupScript = `<script id="local-proxy-setup-script">
       const save = modal.querySelector('[data-proxy-save]');
       const statusNode = modal.querySelector('[data-proxy-status]');
       const unfreeze = modal.querySelector('[data-proxy-unfreeze]');
+      urlInput?.addEventListener('pointerdown', (event) => event.stopPropagation());
+      urlInput?.addEventListener('click', (event) => event.stopPropagation());
       let statusTimer = null;
       const setStatus = (text, state) => {
         if (!statusNode) return;
