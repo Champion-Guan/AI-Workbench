@@ -2405,12 +2405,12 @@ const localCanvasSettingsBridgeScript = `<script id="local-canvas-settings-bridg
           });
           capabilities[key] = { enabled: Boolean(stored?.enabled), entries };
         });
-        return { raw, settings, capabilities };
+        return { raw, settings, capabilities, enabled: storedFallback?.enabled === true || legacyFallback?.enabled === true };
       } catch {
-        return { raw: null, settings: {}, capabilities: {} };
+        return { raw: null, settings: {}, capabilities: {}, enabled: false };
       }
     };
-    const writeFallbackCapabilities = (capabilities) => {
+    const writeFallbackCapabilities = (capabilities, enabled) => {
       try {
         const normalized = {};
         FALLBACK_CAPABILITIES.forEach(({ key }) => {
@@ -2420,7 +2420,7 @@ const localCanvasSettingsBridgeScript = `<script id="local-canvas-settings-bridg
             entries: Array.isArray(group.entries) ? group.entries.map((entry) => ({ profileId: entry.profileId, enabled: entry.enabled === true })) : [],
           };
         });
-        localStorage.setItem(FALLBACK_KEY, JSON.stringify({ capabilities: normalized }));
+        localStorage.setItem(FALLBACK_KEY, JSON.stringify({ enabled: enabled === true, capabilities: normalized }));
       } catch {}
     };
     const makeNetworkPanel = () => {
@@ -2466,7 +2466,10 @@ const localCanvasSettingsBridgeScript = `<script id="local-canvas-settings-bridg
       panel.dataset.localCanvasPanel = "fallback";
       const render = () => {
         const data = readRootSettings();
-        panel.innerHTML = '<section class="local-canvas-settings-card"><h4>失败自动切换</h4><p>按渠道模型能力分别配置生图、视频、文本和音频的 Fallback。名称、协议、地址和模型跟随渠道更新。</p><div data-canvas-fallback-groups></div><div class="local-canvas-settings-note">每种能力独立保存总开关、渠道勾选和切换顺序；新增渠道会自动加入对应能力。</div></section>';
+        panel.innerHTML = '<section class="local-canvas-settings-card"><h4>失败自动切换</h4><p>按渠道模型能力分别配置生图、视频、文本和音频的 Fallback。名称、协议、地址和模型跟随渠道更新。</p><div class="local-canvas-fallback-group-head local-canvas-fallback-global"><input class="local-canvas-fallback-master" type="checkbox" /><label>启用 Fallback 自动切换</label><small>总开关</small></div><div data-canvas-fallback-groups></div><div class="local-canvas-settings-note">总开关关闭时不会执行任何 Fallback；每种能力还可独立保存渠道勾选和切换顺序。</div></section>';
+        const globalMaster = panel.querySelector(".local-canvas-fallback-global .local-canvas-fallback-master");
+        globalMaster.checked = data.enabled === true;
+        globalMaster.addEventListener("change", () => writeFallbackCapabilities(data.capabilities, globalMaster.checked));
         const groups = panel.querySelector("[data-canvas-fallback-groups]");
         FALLBACK_CAPABILITIES.forEach(({ key, label }) => {
           const groupData = data.capabilities[key] || { enabled: false, entries: [] };
@@ -2476,7 +2479,7 @@ const localCanvasSettingsBridgeScript = `<script id="local-canvas-settings-bridg
           const headLabel = group.querySelector("label"); headLabel.textContent = "启用" + label + " Fallback 自动切换";
           const count = group.querySelector("small"); count.textContent = groupData.entries.length + " 个可用渠道";
           const list = group.querySelector(".local-canvas-fallback-list");
-          const save = (next) => { const capabilities = { ...data.capabilities, [key]: { enabled: next.enabled, entries: next.entries.map((item) => ({ profileId: item.profileId, enabled: item.enabled })) } }; writeFallbackCapabilities(capabilities); render(); };
+          const save = (next) => { const capabilities = { ...data.capabilities, [key]: { enabled: next.enabled, entries: next.entries.map((item) => ({ profileId: item.profileId, enabled: item.enabled })) } }; writeFallbackCapabilities(capabilities, data.enabled); render(); };
           master.addEventListener("change", () => save({ enabled: master.checked, entries: groupData.entries }));
           groupData.entries.forEach((entry, index) => {
             const profile = entry.profile;
