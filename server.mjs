@@ -2312,7 +2312,8 @@ const localProxySetupScript = `<script id="local-proxy-setup-script">
 
 const localCanvasSettingsBridgeScript = `<script id="local-canvas-settings-bridge">
   (() => {
-    const STORAGE_KEY = "gpt-image-playground";
+    const STORAGE_KEY = "infinite-canvas:ai_config_store";
+    const FALLBACK_KEY = "infinite-canvas:channel-fallback";
     const installedDialogs = new WeakSet();
     const styleId = "local-canvas-settings-bridge-style";
     const addStyle = () => {
@@ -2350,13 +2351,25 @@ const localCanvasSettingsBridgeScript = `<script id="local-canvas-settings-bridg
     const readRootSettings = () => {
       try {
         const raw = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
-        const settings = raw?.state?.settings || raw?.settings || {};
-        const profiles = Array.isArray(settings.profiles) ? settings.profiles : [];
-        const fallback = settings.imageApiFallback && Array.isArray(settings.imageApiFallback.entries)
-          ? settings.imageApiFallback
-          : { enabled: false, entries: profiles.map((profile) => ({ profileId: profile.id, enabled: false })) };
+        const settings = raw?.state?.config || raw?.config || {};
+        const profiles = Array.isArray(settings.channels) ? settings.channels : [{
+          id: "default", name: "默认渠道", baseUrl: "https://api.openai.com", apiFormat: "openai",
+          models: [{ name: "gpt-image-2" }, { name: "grok-imagine-video" }, { name: "gpt-5.5" }, { name: "gpt-4o-mini-tts" }],
+        }];
+        const storedFallback = JSON.parse(localStorage.getItem(FALLBACK_KEY) || "null");
+        const fallback = storedFallback && Array.isArray(storedFallback.entries)
+          ? storedFallback
+          : { enabled: false, entries: [] };
         const byId = new Map(profiles.map((profile) => [profile.id, profile]));
-        const entries = fallback.entries.map((entry) => ({ ...entry, profile: byId.get(entry.profileId) })).filter((entry) => entry.profile);
+        const seen = new Set();
+        const entries = fallback.entries.filter((entry) => {
+          if (!byId.has(entry.profileId) || seen.has(entry.profileId)) return false;
+          seen.add(entry.profileId);
+          return true;
+        }).map((entry) => ({ ...entry, profile: byId.get(entry.profileId) }));
+        profiles.forEach((profile) => {
+          if (!seen.has(profile.id)) entries.push({ profileId: profile.id, enabled: false, profile });
+        });
         return { raw, settings, entries, enabled: Boolean(fallback.enabled) };
       } catch {
         return { raw: null, settings: {}, entries: [], enabled: false };
@@ -2364,10 +2377,7 @@ const localCanvasSettingsBridgeScript = `<script id="local-canvas-settings-bridg
     };
     const writeRootSettings = (settings) => {
       try {
-        const raw = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null") || {};
-        const next = raw.state ? { ...raw, state: { ...raw.state, settings } } : { ...raw, settings };
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-        window.dispatchEvent(new StorageEvent("storage", { key: STORAGE_KEY, newValue: JSON.stringify(next) }));
+        localStorage.setItem(FALLBACK_KEY, JSON.stringify(settings.imageApiFallback));
       } catch {}
     };
     const makeNetworkPanel = () => {
@@ -2413,16 +2423,17 @@ const localCanvasSettingsBridgeScript = `<script id="local-canvas-settings-bridg
       panel.dataset.localCanvasPanel = "fallback";
       const render = () => {
         const data = readRootSettings();
-        panel.innerHTML = '<section class="local-canvas-settings-card"><h4>失败自动切换</h4><p>从上到下依次尝试已勾选的中转站，失败后自动切换下一站。</p><div class="local-canvas-fallback-list" data-canvas-fallback-list></div><div class="local-canvas-settings-note">设置会保存到当前浏览器，并与右侧工作台共用。</div></section>';
+        panel.innerHTML = '<section class="local-canvas-settings-card"><h4>失败自动切换</h4><p>配置来源于画布渠道，名称、协议、地址和模型跟随渠道更新。</p><div class="local-canvas-fallback-list" data-canvas-fallback-list></div><div class="local-canvas-settings-note">勾选和顺序保存在当前浏览器；新增渠道自动加入，删除渠道自动移除。</div></section>';
         const list = panel.querySelector("[data-canvas-fallback-list]");
         data.entries.forEach((entry, index) => {
           const profile = entry.profile;
           const row = document.createElement("div"); row.className = "local-canvas-fallback-row";
           row.innerHTML = '<input type="checkbox" /><label></label><button type="button" data-up>↑</button><button type="button" data-down>↓</button>';
           const checkbox = row.querySelector("input"); checkbox.checked = entry.enabled === true;
-          const label = row.querySelector("label"); label.textContent = profile.name || profile.id; const small = document.createElement("small"); small.textContent = profile.baseUrl || ""; label.appendChild(small);
+          const label = row.querySelector("label"); label.textContent = profile.name || profile.id; const small = document.createElement("small"); small.textContent = (profile.apiFormat === "gemini" ? "Gemini" : "OpenAI") + " · " + (profile.baseUrl || "未设置地址"); label.appendChild(small);
+          const models = document.createElement("small"); models.textContent = (profile.models || []).map((model) => model.name).join("、") || "未配置模型"; label.appendChild(models);
           const save = (nextEntries) => writeRootSettings({ ...data.settings, imageApiFallback: { enabled: nextEntries.some((item) => item.enabled), entries: nextEntries.map((item) => ({ profileId: item.profileId, enabled: item.enabled })) } });
-          checkbox.addEventListener("change", () => { const next = data.entries.map((item) => ({ profileId: item.profileId, enabled: item.profileId === entry.profileId ? checkbox.checked : item.enabled })); save(next); });
+          checkbox.addEventListener("change", () => { const next = data.entries.map((item) => ({ profileId: item.profileId, enabled: item.profileId === entry.profileId ? checkbox.checked : item.enabled })); save(next); render(); });
           const up = row.querySelector("[data-up]"), down = row.querySelector("[data-down]"); up.disabled = index === 0; down.disabled = index === data.entries.length - 1;
           up.addEventListener("click", () => { const next = data.entries.map((item) => ({ profileId: item.profileId, enabled: item.enabled })); [next[index - 1], next[index]] = [next[index], next[index - 1]]; save(next); render(); });
           down.addEventListener("click", () => { const next = data.entries.map((item) => ({ profileId: item.profileId, enabled: item.enabled })); [next[index], next[index + 1]] = [next[index + 1], next[index]]; save(next); render(); });
