@@ -122,6 +122,40 @@
     else document.addEventListener("DOMContentLoaded", start, { once: true });
   };
 
+  const installFitAllButtonLabel = () => {
+    const update = () => {
+      document.querySelectorAll('button[aria-label="重置视图"]').forEach((button) => {
+        button.setAttribute("aria-label", "定位全部内容");
+        button.setAttribute("title", "定位全部内容");
+        if (button.dataset.guanFitAllBound) return;
+        button.dataset.guanFitAllBound = "1";
+        button.addEventListener("click", () => {
+          window.setTimeout(() => {
+            const viewport = [...document.querySelectorAll("div.absolute.origin-top-left")].find((item) => item.querySelector("svg"));
+            const host = viewport?.parentElement;
+            if (!viewport || !host) return;
+            const match = viewport.style.transform.match(/translate\\(([-.\\d]+)px,\\s*([-.\\d]+)px\\)\\s*scale\\(([-.\\d]+)\\)/);
+            const tx = Number(match?.[1] || 0), ty = Number(match?.[2] || 0), scale = Number(match?.[3] || 1);
+            const hostRect = host.getBoundingClientRect();
+            const items = [...viewport.children].map((item) => item.getBoundingClientRect()).filter((rect) => rect.width > 4 && rect.height > 4);
+            if (!items.length) return;
+            const left = Math.min(...items.map((rect) => rect.left)), top = Math.min(...items.map((rect) => rect.top));
+            const right = Math.max(...items.map((rect) => rect.right)), bottom = Math.max(...items.map((rect) => rect.bottom));
+            const worldLeft = (left - hostRect.left - tx) / scale, worldTop = (top - hostRect.top - ty) / scale;
+            const worldRight = (right - hostRect.left - tx) / scale, worldBottom = (bottom - hostRect.top - ty) / scale;
+            const padding = 80;
+            const nextScale = Math.min(Math.max((hostRect.width - padding * 2) / Math.max(worldRight - worldLeft, 1), (hostRect.height - padding * 2) / Math.max(worldBottom - worldTop, 1)), 1);
+            const nextTx = hostRect.width / 2 - ((worldLeft + worldRight) / 2) * nextScale;
+            const nextTy = hostRect.height / 2 - ((worldTop + worldBottom) / 2) * nextScale;
+            viewport.style.transform = `translate(${nextTx}px, ${nextTy}px) scale(${nextScale})`;
+          }, 0);
+        }, { capture: true });
+      });
+    };
+    update();
+    new MutationObserver(update).observe(document.documentElement, { childList: true, subtree: true });
+  };
+
   const syncCanvasTheme = (theme) => {
     const nextTheme = theme === "dark" ? "dark" : "light";
     const targetLabel = nextTheme === "dark" ? "切换到深色主题" : "切换到浅色主题";
@@ -283,6 +317,7 @@
   };
 
   installCanvasHeaderCleanup();
+  installFitAllButtonLabel();
   installPromptMenuEnhancement();
   applyPromptSource();
 })();
