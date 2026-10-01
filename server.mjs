@@ -2344,6 +2344,10 @@ const localCanvasSettingsBridgeScript = `<script id="local-canvas-settings-bridg
         .local-canvas-settings-actions button:disabled{opacity:.55;cursor:not-allowed}
         .local-canvas-settings-status{margin-right:auto;font-size:12px;color:#22925a}.local-canvas-settings-status.error{color:#d92d20}
         .local-canvas-fallback-list{display:grid;gap:8px;margin-top:14px}
+        .local-canvas-fallback-switch{display:flex;align-items:center;gap:2px;width:max-content;max-width:100%;margin-top:14px;padding:3px;border-radius:9px;background:#f1f2f4}
+        .local-canvas-fallback-switch button{border:0;border-radius:7px;padding:6px 14px;background:transparent;color:#60656d;font:inherit;font-size:12px;cursor:pointer;transition:background .18s,color .18s,box-shadow .18s}
+        .local-canvas-fallback-switch button:hover{color:#1677ff}
+        .local-canvas-fallback-switch button.is-active{background:#fff;color:#24262a;box-shadow:0 1px 4px rgba(20,24,32,.16);font-weight:600}
         .local-canvas-fallback-group{margin-top:14px;padding-top:14px;border-top:1px solid #eceef1}
         .local-canvas-fallback-group:first-of-type{margin-top:12px;padding-top:0;border-top:0}
         .local-canvas-fallback-group-head{display:flex;align-items:center;gap:10px}
@@ -2362,6 +2366,10 @@ const localCanvasSettingsBridgeScript = `<script id="local-canvas-settings-bridg
         html[data-theme="dark"] .local-canvas-fallback-row,html.dark .local-canvas-fallback-row,html[data-theme="dark"] .local-canvas-fallback-group,html.dark .local-canvas-fallback-group{border-color:rgba(255,255,255,.12)}
         html[data-theme="dark"] .local-canvas-fallback-group-head label,html.dark .local-canvas-fallback-group-head label{color:#f4f4f5}
         html[data-theme="dark"] .local-canvas-fallback-master,html.dark .local-canvas-fallback-master{accent-color:#8ab4ff}
+        html[data-theme="dark"] .local-canvas-fallback-switch,html.dark .local-canvas-fallback-switch{background:#292c32}
+        html[data-theme="dark"] .local-canvas-fallback-switch button,html.dark .local-canvas-fallback-switch button{color:#aeb4bf}
+        html[data-theme="dark"] .local-canvas-fallback-switch button:hover,html.dark .local-canvas-fallback-switch button:hover{color:#8ab4ff}
+        html[data-theme="dark"] .local-canvas-fallback-switch button.is-active,html.dark .local-canvas-fallback-switch button.is-active{background:#3a3f48;color:#f4f4f5;box-shadow:0 1px 4px rgba(0,0,0,.35)}
         [data-local-canvas-tab] .ant-tabs-tab-btn{color:#60656d}
         [data-local-canvas-tab]:hover .ant-tabs-tab-btn{color:#1677ff}
         [data-local-canvas-tab].ant-tabs-tab-active .ant-tabs-tab-btn{color:#1677ff;font-weight:600}
@@ -2464,16 +2472,28 @@ const localCanvasSettingsBridgeScript = `<script id="local-canvas-settings-bridg
       const panel = document.createElement("div");
       panel.className = "local-canvas-settings-tabpanel";
       panel.dataset.localCanvasPanel = "fallback";
+      let activeCapability = "image";
       const render = () => {
         const data = readRootSettings();
-        panel.innerHTML = '<section class="local-canvas-settings-card"><h4>失败自动切换</h4><p>按渠道模型能力分别配置生图、视频、文本和音频的 Fallback。名称、协议、地址和模型跟随渠道更新。</p><div class="local-canvas-fallback-group-head local-canvas-fallback-global"><input class="local-canvas-fallback-master" type="checkbox" /><label>启用 Fallback 自动切换</label><small>总开关</small></div><div data-canvas-fallback-groups></div><div class="local-canvas-settings-note">总开关关闭时不会执行任何 Fallback；每种能力还可独立保存渠道勾选和切换顺序。</div></section>';
+        panel.innerHTML = '<section class="local-canvas-settings-card"><h4>失败自动切换</h4><p>按渠道模型能力分别配置生图、视频、文本和音频的 Fallback。名称、协议、地址和模型跟随渠道更新。</p><div class="local-canvas-fallback-group-head local-canvas-fallback-global"><input class="local-canvas-fallback-master" type="checkbox" /><label>启用 Fallback 自动切换</label><small>总开关</small></div><div class="local-canvas-fallback-switch" data-canvas-fallback-switch></div><div data-canvas-fallback-groups></div><div class="local-canvas-settings-note">总开关关闭时不会执行任何 Fallback；每种能力还可独立保存渠道勾选和切换顺序。</div></section>';
         const globalMaster = panel.querySelector(".local-canvas-fallback-global .local-canvas-fallback-master");
         globalMaster.checked = data.enabled === true;
         globalMaster.addEventListener("change", () => writeFallbackCapabilities(data.capabilities, globalMaster.checked));
+        const switcher = panel.querySelector("[data-canvas-fallback-switch]");
+        FALLBACK_CAPABILITIES.forEach(({ key, label }) => {
+          const button = document.createElement("button");
+          button.type = "button";
+          button.textContent = label;
+          button.className = key === activeCapability ? "is-active" : "";
+          button.setAttribute("aria-pressed", String(key === activeCapability));
+          button.addEventListener("click", () => { activeCapability = key; render(); });
+          switcher?.appendChild(button);
+        });
         const groups = panel.querySelector("[data-canvas-fallback-groups]");
         FALLBACK_CAPABILITIES.forEach(({ key, label }) => {
           const groupData = data.capabilities[key] || { enabled: false, entries: [] };
           const group = document.createElement("div"); group.className = "local-canvas-fallback-group";
+          group.hidden = key !== activeCapability;
           group.innerHTML = '<div class="local-canvas-fallback-group-head"><input class="local-canvas-fallback-master" type="checkbox" /><label></label><small></small></div><div class="local-canvas-fallback-list"></div>';
           const master = group.querySelector(".local-canvas-fallback-master"); master.checked = groupData.enabled === true;
           const headLabel = group.querySelector("label"); headLabel.textContent = "启用" + label + " Fallback 自动切换";
