@@ -101,6 +101,27 @@
     return Math.abs(result).toString(36);
   };
 
+  const installCanvasHeaderCleanup = () => {
+    const style = document.createElement("style");
+    style.textContent = ".guan-hidden-canvas-header-item{display:none!important}";
+    (document.head || document.documentElement).append(style);
+    const hide = () => {
+      document.querySelectorAll("button, a").forEach((element) => {
+        const label = clean(element.getAttribute("aria-label") || element.textContent);
+        const hideItem = label === "节点插件" || label === "文档" || label === "切换到 English" || label === "切换到中文" || label === "GitHub" || /^\d+\.\d+\.\d+$/.test(label);
+        if (hideItem && !element.classList.contains("guan-hidden-canvas-header-item")) {
+          element.classList.add("guan-hidden-canvas-header-item");
+        }
+      });
+    };
+    const start = () => {
+      hide();
+      new MutationObserver(hide).observe(document.documentElement, { childList: true, subtree: true });
+    };
+    if (document.body) start();
+    else document.addEventListener("DOMContentLoaded", start, { once: true });
+  };
+
   const installPromptMenuEnhancement = () => {
     const enhance = () => {
       const sourceButtons = [...document.querySelectorAll("button")].filter((button) => clean(button.textContent).startsWith("Excel 提示词"));
@@ -238,6 +259,7 @@
     }
   };
 
+  installCanvasHeaderCleanup();
   installPromptMenuEnhancement();
   applyPromptSource();
 })();
