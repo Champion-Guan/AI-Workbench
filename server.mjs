@@ -565,6 +565,11 @@ const localThemeAndUiStyle = `<style id="local-theme-and-ui-style">
   .local-settings-toggle[hidden] {
     display: none !important;
   }
+  /* The canvas view no longer uses the right-side generation settings panel. */
+  #local-settings-panel,
+  .local-settings-toggle {
+    display: none !important;
+  }
   /*
    * The settings app is mounted inside the archived dialog. Keep its
    * top-level overlay above the Excel controls and make the modal backdrop
