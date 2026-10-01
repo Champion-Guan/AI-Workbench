@@ -1092,7 +1092,18 @@ function InfiniteCanvasPage() {
     }, [getCanvasCenter]);
 
     const resetViewport = useCallback(() => {
-        setViewport({ x: size.width / 2, y: size.height / 2, k: 1 });
+        if (!nodesRef.current.length) {
+            setViewport({ x: size.width / 2, y: size.height / 2, k: 1 });
+            setContextMenu(null);
+            return;
+        }
+        const padding = 80;
+        const left = Math.min(...nodesRef.current.map((node) => node.position.x));
+        const top = Math.min(...nodesRef.current.map((node) => node.position.y));
+        const right = Math.max(...nodesRef.current.map((node) => node.position.x + (node.width || node.measured?.width || 240)));
+        const bottom = Math.max(...nodesRef.current.map((node) => node.position.y + (node.height || node.measured?.height || 160)));
+        const k = Math.min(Math.max(Math.min((size.width - padding * 2) / Math.max(right - left, 1), (size.height - padding * 2) / Math.max(bottom - top, 1)), 0.05), 1);
+        setViewport({ x: size.width / 2 - ((left + right) / 2) * k, y: size.height / 2 - ((top + bottom) / 2) * k, k });
         setContextMenu(null);
     }, [size.height, size.width]);
 

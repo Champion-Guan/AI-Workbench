@@ -244,7 +244,7 @@ export default {
         shortcuts: "快捷键",
         miniMapOpen: "打开小地图",
         miniMapClose: "关闭小地图",
-        resetView: "重置视图",
+        resetView: "定位全部内容",
         zoom: "放大/缩小画布",
         agentConnected: "Codex 已连接",
         agentConnecting: "Codex {{activity}}",

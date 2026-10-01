@@ -244,7 +244,7 @@ export default {
         shortcuts: "Keyboard shortcuts",
         miniMapOpen: "Open minimap",
         miniMapClose: "Close minimap",
-        resetView: "Reset view",
+        resetView: "Fit all content",
         zoom: "Zoom canvas",
         agentConnected: "Codex connected",
         agentConnecting: "Codex {{activity}}",
