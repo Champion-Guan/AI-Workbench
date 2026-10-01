@@ -2911,8 +2911,6 @@ const server = createServer(async (request, response) => {
           const original = "sE=f.useCallback(()=>{Ce({x:ge.width/2,y:ge.height/2,k:1}),Ze(null)},[ge.height,ge.width]),";
           const replacement = "sE=f.useCallback(()=>{const ue=Tn.current.filter(Zn=>Number.isFinite((Zn.positionAbsolute||Zn.position)?.x)&&Number.isFinite((Zn.positionAbsolute||Zn.position)?.y));if(!ue.length){Ce({x:ge.width/2,y:ge.height/2,k:1}),Ze(null);return}const ce=ue.reduce((Zn,It)=>Math.min(Zn,(It.positionAbsolute||It.position).x),1/0),ve=ue.reduce((Zn,It)=>Math.min(Zn,(It.positionAbsolute||It.position).y),1/0),_e=ue.reduce((Zn,It)=>Math.max(Zn,(It.positionAbsolute||It.position).x+(It.width||It.measured?.width||240)),-1/0),gt=ue.reduce((Zn,It)=>Math.max(Zn,(It.positionAbsolute||It.position).y+(It.height||It.measured?.height||160)),-1/0),jt=80,mn=Math.min((ge.width-2*jt)/Math.max(_e-ce,1),(ge.height-2*jt)/Math.max(gt-ve,1)),Zn=Math.min(Math.max(mn,.05),1);Ce({x:ge.width/2-(ce+_e)/2*Zn,y:ge.height/2-(ve+gt)/2*Zn,k:Zn}),Ze(null)},[ge.height,ge.width]),";
           const patched = (source.includes(original) ? source.replace(original, replacement) : source)
-            .replaceAll("(Zn.positionAbsolute||Zn.position)", "Zn.position")
-            .replaceAll("(It.positionAbsolute||It.position)", "It.position")
             .replaceAll("重置视图", "定位全部内容")
             .replaceAll("bottom-24 left-6", "bottom-24 right-6")
             .replace("const w=-t.x/t.k,C=-t.y/t.k,O=n.width/t.k,T=n.height/t.k", "const w=-t.x/t.k,C=-t.y/t.k,q=i.current?.closest(\".relative.h-full.w-full.select-none\")?.getBoundingClientRect(),O=(q?.width||n.width)/t.k,T=(q?.height||n.height)/t.k")
