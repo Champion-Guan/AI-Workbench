@@ -2343,6 +2343,7 @@ const localCanvasSettingsBridgeScript = `<script id="local-canvas-settings-bridg
         html[data-theme="dark"] .local-canvas-settings-card,html.dark .local-canvas-settings-card{border-color:rgba(255,255,255,.12);background:#1e2024;color:#f4f4f5}
         html[data-theme="dark"] .local-canvas-settings-input-row,html.dark .local-canvas-settings-input-row,html[data-theme="dark"] .local-canvas-settings-file,html.dark .local-canvas-settings-file,html[data-theme="dark"] .local-canvas-settings-actions button,html.dark .local-canvas-settings-actions button{border-color:rgba(255,255,255,.14);background:#26292e;color:#f4f4f5}
         html[data-theme="dark"] .local-canvas-fallback-row,html.dark .local-canvas-fallback-row{border-color:rgba(255,255,255,.12)}
+        .ant-tabs-nav-list{gap:4px}
       \`;
       document.head.appendChild(style);
     };
@@ -2451,7 +2452,12 @@ const localCanvasSettingsBridgeScript = `<script id="local-canvas-settings-bridg
         tab.innerHTML = '<div role="tab" class="ant-tabs-tab-btn">' + (key === "network" ? "网络代理" : "Fallback 配置") + '</div>';
         return tab;
       });
-      customTabs.forEach((tab) => nav.appendChild(tab));
+      const channelsTab = nav.querySelector("[data-node-key='channels']");
+      const localProxyTab = nav.querySelector("[data-node-key='local-proxy']");
+      if (channelsTab instanceof HTMLElement) nav.insertBefore(customTabs[1], channelsTab.nextSibling);
+      else nav.appendChild(customTabs[1]);
+      if (localProxyTab instanceof HTMLElement) nav.insertBefore(customTabs[0], localProxyTab.nextSibling);
+      else nav.appendChild(customTabs[0]);
       const setCustom = (key) => {
         nav.querySelectorAll(".ant-tabs-tab").forEach((tab) => {
           const active = tab === nav.querySelector("[data-local-canvas-tab='" + key + "']");
@@ -2465,10 +2471,20 @@ const localCanvasSettingsBridgeScript = `<script id="local-canvas-settings-bridg
         Object.entries(customPanels).forEach(([name, panel]) => { panel.hidden = name !== key; });
         customPanels[key]._renderFallback?.();
       };
+      const restoreOriginal = () => {
+        holder.querySelectorAll(".ant-tabs-tabpane").forEach((pane) => { pane.hidden = false; });
+        Object.values(customPanels).forEach((panel) => { panel.hidden = true; });
+        nav.querySelectorAll("[data-local-canvas-tab]").forEach((tab) => {
+          tab.classList.remove("ant-tabs-tab-active");
+          tab.querySelector("[role=tab]")?.setAttribute("aria-selected", "false");
+        });
+        const inkBar = nav.parentElement?.querySelector(".ant-tabs-ink-bar");
+        if (inkBar instanceof HTMLElement) inkBar.style.display = "";
+      };
       nav.addEventListener("click", (event) => {
         const target = event.target instanceof Element ? event.target.closest("[data-local-canvas-tab]") : null;
         if (target) { event.preventDefault(); event.stopPropagation(); setCustom(target.dataset.localCanvasTab); }
-        else if (event.target instanceof Element && event.target.closest(".ant-tabs-tab")) { Object.values(customPanels).forEach((panel) => { panel.hidden = true; }); }
+        else if (event.target instanceof Element && event.target.closest(".ant-tabs-tab")) restoreOriginal();
       }, true);
       installedDialogs.add(dialog);
     };
