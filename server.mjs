@@ -2313,7 +2313,14 @@ const localProxySetupScript = `<script id="local-proxy-setup-script">
 const localCanvasSettingsBridgeScript = `<script id="local-canvas-settings-bridge">
   (() => {
     const STORAGE_KEY = "infinite-canvas:ai_config_store";
-    const FALLBACK_KEY = "infinite-canvas:channel-fallback";
+    const FALLBACK_KEY = "infinite-canvas:channel-fallback-v2";
+    const LEGACY_FALLBACK_KEY = "infinite-canvas:channel-fallback";
+    const FALLBACK_CAPABILITIES = [
+      { key: "image", label: "生图" },
+      { key: "video", label: "视频" },
+      { key: "text", label: "文本" },
+      { key: "audio", label: "音频" },
+    ];
     const installedDialogs = new WeakSet();
     const styleId = "local-canvas-settings-bridge-style";
     const addStyle = () => {
@@ -2337,13 +2344,29 @@ const localCanvasSettingsBridgeScript = `<script id="local-canvas-settings-bridg
         .local-canvas-settings-actions button:disabled{opacity:.55;cursor:not-allowed}
         .local-canvas-settings-status{margin-right:auto;font-size:12px;color:#22925a}.local-canvas-settings-status.error{color:#d92d20}
         .local-canvas-fallback-list{display:grid;gap:8px;margin-top:14px}
+        .local-canvas-fallback-group{margin-top:14px;padding-top:14px;border-top:1px solid #eceef1}
+        .local-canvas-fallback-group:first-of-type{margin-top:12px;padding-top:0;border-top:0}
+        .local-canvas-fallback-group-head{display:flex;align-items:center;gap:10px}
+        .local-canvas-fallback-group-head label{font-size:12px;color:#34363b;font-weight:650;cursor:pointer}
+        .local-canvas-fallback-group-head small{margin-left:auto;color:#8b9098;font-size:11px}
+        .local-canvas-fallback-master{width:15px;height:15px;accent-color:#1677ff}
         .local-canvas-fallback-row{display:flex;align-items:center;gap:10px;border:1px solid #e7e7eb;border-radius:9px;padding:10px 11px}
         .local-canvas-fallback-row label{min-width:0;flex:1;font-size:12px;color:#25272b}.local-canvas-fallback-row small{display:block;margin-top:3px;color:#8b9098;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
         .local-canvas-fallback-row button{border:0;background:transparent;color:#717780;cursor:pointer;font-size:14px;padding:2px 4px}.local-canvas-fallback-row button:disabled{opacity:.35;cursor:not-allowed}
         .local-canvas-settings-note{margin-top:12px;font-size:12px;color:#70757d}
         html[data-theme="dark"] .local-canvas-settings-card,html.dark .local-canvas-settings-card{border-color:rgba(255,255,255,.12);background:#1e2024;color:#f4f4f5}
+        html[data-theme="dark"] .local-canvas-settings-card h4,html.dark .local-canvas-settings-card h4{color:#f4f4f5}
+        html[data-theme="dark"] .local-canvas-settings-card p,html.dark .local-canvas-settings-card p,html[data-theme="dark"] .local-canvas-settings-note,html.dark .local-canvas-settings-note{color:#aeb4bf}
+        html[data-theme="dark"] .local-canvas-settings-field label,html.dark .local-canvas-settings-field label{color:#d8dce3}
         html[data-theme="dark"] .local-canvas-settings-input-row,html.dark .local-canvas-settings-input-row,html[data-theme="dark"] .local-canvas-settings-file,html.dark .local-canvas-settings-file,html[data-theme="dark"] .local-canvas-settings-actions button,html.dark .local-canvas-settings-actions button{border-color:rgba(255,255,255,.14);background:#26292e;color:#f4f4f5}
-        html[data-theme="dark"] .local-canvas-fallback-row,html.dark .local-canvas-fallback-row{border-color:rgba(255,255,255,.12)}
+        html[data-theme="dark"] .local-canvas-fallback-row,html.dark .local-canvas-fallback-row,html[data-theme="dark"] .local-canvas-fallback-group,html.dark .local-canvas-fallback-group{border-color:rgba(255,255,255,.12)}
+        html[data-theme="dark"] .local-canvas-fallback-group-head label,html.dark .local-canvas-fallback-group-head label{color:#f4f4f5}
+        html[data-theme="dark"] .local-canvas-fallback-master,html.dark .local-canvas-fallback-master{accent-color:#8ab4ff}
+        [data-local-canvas-tab] .ant-tabs-tab-btn{color:#60656d}
+        [data-local-canvas-tab]:hover .ant-tabs-tab-btn{color:#1677ff}
+        [data-local-canvas-tab].ant-tabs-tab-active .ant-tabs-tab-btn{color:#1677ff;font-weight:600}
+        html[data-theme="dark"] [data-local-canvas-tab] .ant-tabs-tab-btn,html.dark [data-local-canvas-tab] .ant-tabs-tab-btn{color:#aeb4bf}
+        html[data-theme="dark"] [data-local-canvas-tab]:hover .ant-tabs-tab-btn,html.dark [data-local-canvas-tab]:hover .ant-tabs-tab-btn,html[data-theme="dark"] [data-local-canvas-tab].ant-tabs-tab-active .ant-tabs-tab-btn,html.dark [data-local-canvas-tab].ant-tabs-tab-active .ant-tabs-tab-btn{color:#8ab4ff}
         .ant-tabs-nav-list{gap:4px}
       \`;
       document.head.appendChild(style);
@@ -2357,27 +2380,47 @@ const localCanvasSettingsBridgeScript = `<script id="local-canvas-settings-bridg
           models: [{ name: "gpt-image-2" }, { name: "grok-imagine-video" }, { name: "gpt-5.5" }, { name: "gpt-4o-mini-tts" }],
         }];
         const storedFallback = JSON.parse(localStorage.getItem(FALLBACK_KEY) || "null");
-        const fallback = storedFallback && Array.isArray(storedFallback.entries)
-          ? storedFallback
-          : { enabled: false, entries: [] };
+        const legacyFallback = JSON.parse(localStorage.getItem(LEGACY_FALLBACK_KEY) || "null");
+        const storedCapabilities = storedFallback && storedFallback.capabilities
+          ? storedFallback.capabilities
+          : { image: legacyFallback && Array.isArray(legacyFallback.entries) ? legacyFallback : null };
         const byId = new Map(profiles.map((profile) => [profile.id, profile]));
-        const seen = new Set();
-        const entries = fallback.entries.filter((entry) => {
-          if (!byId.has(entry.profileId) || seen.has(entry.profileId)) return false;
-          seen.add(entry.profileId);
-          return true;
-        }).map((entry) => ({ ...entry, profile: byId.get(entry.profileId) }));
-        profiles.forEach((profile) => {
-          if (!seen.has(profile.id)) entries.push({ profileId: profile.id, enabled: false, profile });
+        const capabilities = {};
+        FALLBACK_CAPABILITIES.forEach(({ key }) => {
+          const stored = storedCapabilities[key];
+          const storedEntries = stored && Array.isArray(stored.entries) ? stored.entries : [];
+          const available = profiles.filter((profile) => {
+            const models = Array.isArray(profile.models) ? profile.models : [];
+            return models.some((model) => !model.capability || model.capability === key);
+          });
+          const availableIds = new Set(available.map((profile) => profile.id));
+          const seen = new Set();
+          const entries = storedEntries.filter((entry) => {
+            if (!availableIds.has(entry.profileId) || seen.has(entry.profileId)) return false;
+            seen.add(entry.profileId);
+            return true;
+          }).map((entry) => ({ ...entry, profile: byId.get(entry.profileId) }));
+          available.forEach((profile) => {
+            if (!seen.has(profile.id)) entries.push({ profileId: profile.id, enabled: false, profile });
+          });
+          capabilities[key] = { enabled: Boolean(stored?.enabled), entries };
         });
-        return { raw, settings, entries, enabled: Boolean(fallback.enabled) };
+        return { raw, settings, capabilities };
       } catch {
-        return { raw: null, settings: {}, entries: [], enabled: false };
+        return { raw: null, settings: {}, capabilities: {} };
       }
     };
-    const writeRootSettings = (settings) => {
+    const writeFallbackCapabilities = (capabilities) => {
       try {
-        localStorage.setItem(FALLBACK_KEY, JSON.stringify(settings.imageApiFallback));
+        const normalized = {};
+        FALLBACK_CAPABILITIES.forEach(({ key }) => {
+          const group = capabilities?.[key] || {};
+          normalized[key] = {
+            enabled: Boolean(group.enabled),
+            entries: Array.isArray(group.entries) ? group.entries.map((entry) => ({ profileId: entry.profileId, enabled: entry.enabled === true })) : [],
+          };
+        });
+        localStorage.setItem(FALLBACK_KEY, JSON.stringify({ capabilities: normalized }));
       } catch {}
     };
     const makeNetworkPanel = () => {
@@ -2423,23 +2466,35 @@ const localCanvasSettingsBridgeScript = `<script id="local-canvas-settings-bridg
       panel.dataset.localCanvasPanel = "fallback";
       const render = () => {
         const data = readRootSettings();
-        panel.innerHTML = '<section class="local-canvas-settings-card"><h4>失败自动切换</h4><p>配置来源于画布渠道，名称、协议、地址和模型跟随渠道更新。</p><div class="local-canvas-fallback-list" data-canvas-fallback-list></div><div class="local-canvas-settings-note">勾选和顺序保存在当前浏览器；新增渠道自动加入，删除渠道自动移除。</div></section>';
-        const list = panel.querySelector("[data-canvas-fallback-list]");
-        data.entries.forEach((entry, index) => {
-          const profile = entry.profile;
-          const row = document.createElement("div"); row.className = "local-canvas-fallback-row";
-          row.innerHTML = '<input type="checkbox" /><label></label><button type="button" data-up>↑</button><button type="button" data-down>↓</button>';
-          const checkbox = row.querySelector("input"); checkbox.checked = entry.enabled === true;
-          const label = row.querySelector("label"); label.textContent = profile.name || profile.id; const small = document.createElement("small"); small.textContent = (profile.apiFormat === "gemini" ? "Gemini" : "OpenAI") + " · " + (profile.baseUrl || "未设置地址"); label.appendChild(small);
-          const models = document.createElement("small"); models.textContent = (profile.models || []).map((model) => model.name).join("、") || "未配置模型"; label.appendChild(models);
-          const save = (nextEntries) => writeRootSettings({ ...data.settings, imageApiFallback: { enabled: nextEntries.some((item) => item.enabled), entries: nextEntries.map((item) => ({ profileId: item.profileId, enabled: item.enabled })) } });
-          checkbox.addEventListener("change", () => { const next = data.entries.map((item) => ({ profileId: item.profileId, enabled: item.profileId === entry.profileId ? checkbox.checked : item.enabled })); save(next); render(); });
-          const up = row.querySelector("[data-up]"), down = row.querySelector("[data-down]"); up.disabled = index === 0; down.disabled = index === data.entries.length - 1;
-          up.addEventListener("click", () => { const next = data.entries.map((item) => ({ profileId: item.profileId, enabled: item.enabled })); [next[index - 1], next[index]] = [next[index], next[index - 1]]; save(next); render(); });
-          down.addEventListener("click", () => { const next = data.entries.map((item) => ({ profileId: item.profileId, enabled: item.enabled })); [next[index], next[index + 1]] = [next[index + 1], next[index]]; save(next); render(); });
-          list?.appendChild(row);
+        panel.innerHTML = '<section class="local-canvas-settings-card"><h4>失败自动切换</h4><p>按渠道模型能力分别配置生图、视频、文本和音频的 Fallback。名称、协议、地址和模型跟随渠道更新。</p><div data-canvas-fallback-groups></div><div class="local-canvas-settings-note">每种能力独立保存总开关、渠道勾选和切换顺序；新增渠道会自动加入对应能力。</div></section>';
+        const groups = panel.querySelector("[data-canvas-fallback-groups]");
+        FALLBACK_CAPABILITIES.forEach(({ key, label }) => {
+          const groupData = data.capabilities[key] || { enabled: false, entries: [] };
+          const group = document.createElement("div"); group.className = "local-canvas-fallback-group";
+          group.innerHTML = '<div class="local-canvas-fallback-group-head"><input class="local-canvas-fallback-master" type="checkbox" /><label></label><small></small></div><div class="local-canvas-fallback-list"></div>';
+          const master = group.querySelector(".local-canvas-fallback-master"); master.checked = groupData.enabled === true;
+          const headLabel = group.querySelector("label"); headLabel.textContent = "启用" + label + " Fallback 自动切换";
+          const count = group.querySelector("small"); count.textContent = groupData.entries.length + " 个可用渠道";
+          const list = group.querySelector(".local-canvas-fallback-list");
+          const save = (next) => { const capabilities = { ...data.capabilities, [key]: { enabled: next.enabled, entries: next.entries.map((item) => ({ profileId: item.profileId, enabled: item.enabled })) } }; writeFallbackCapabilities(capabilities); render(); };
+          master.addEventListener("change", () => save({ enabled: master.checked, entries: groupData.entries }));
+          groupData.entries.forEach((entry, index) => {
+            const profile = entry.profile;
+            const row = document.createElement("div"); row.className = "local-canvas-fallback-row";
+            row.innerHTML = '<input type="checkbox" /><label></label><button type="button" data-up>↑</button><button type="button" data-down>↓</button>';
+            const checkbox = row.querySelector("input"); checkbox.checked = entry.enabled === true;
+            const rowLabel = row.querySelector("label"); rowLabel.textContent = profile.name || profile.id;
+            const small = document.createElement("small"); small.textContent = (profile.apiFormat === "gemini" ? "Gemini" : "OpenAI") + " · " + (profile.baseUrl || "未设置地址"); rowLabel.appendChild(small);
+            const models = document.createElement("small"); models.textContent = (profile.models || []).filter((model) => !model.capability || model.capability === key).map((model) => model.name).join("、") || "未配置模型"; rowLabel.appendChild(models);
+            checkbox.addEventListener("change", () => save({ enabled: groupData.enabled, entries: groupData.entries.map((item) => ({ profileId: item.profileId, enabled: item.profileId === entry.profileId ? checkbox.checked : item.enabled })) }));
+            const up = row.querySelector("[data-up]"), down = row.querySelector("[data-down]"); up.disabled = index === 0; down.disabled = index === groupData.entries.length - 1;
+            up.addEventListener("click", () => { const next = groupData.entries.map((item) => ({ profileId: item.profileId, enabled: item.enabled })); [next[index - 1], next[index]] = [next[index], next[index - 1]]; save({ enabled: groupData.enabled, entries: next }); });
+            down.addEventListener("click", () => { const next = groupData.entries.map((item) => ({ profileId: item.profileId, enabled: item.enabled })); [next[index], next[index + 1]] = [next[index + 1], next[index]]; save({ enabled: groupData.enabled, entries: next }); });
+            list?.appendChild(row);
+          });
+          if (!groupData.entries.length && list) list.textContent = "暂无匹配此能力的渠道模型。";
+          groups?.appendChild(group);
         });
-        if (!data.entries.length && list) list.textContent = "暂无可用的 API 配置，请先在渠道页添加配置。";
       };
       render();
       panel._renderFallback = render;
