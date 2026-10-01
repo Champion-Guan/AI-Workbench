@@ -370,6 +370,18 @@ const localThemeToggleScript = `<script id="local-theme-toggle">
     button.setAttribute("aria-pressed", String(theme === "dark"));
     button.setAttribute("aria-label", theme === "dark" ? "切换浅色主题" : "切换深色主题");
     button.title = theme === "dark" ? "切换浅色主题" : "切换深色主题";
+    // Keep the embedded infinite canvas on the same theme as the global
+    // workbench control. The canvas owns its own persisted theme store, so
+    // sync both the store and any already-mounted canvas iframe.
+    try {
+      const key = "infinite-canvas:theme_store";
+      const current = JSON.parse(localStorage.getItem(key) || "{}");
+      const next = JSON.stringify({ ...current, state: { ...(current.state || {}), theme } });
+      localStorage.setItem(key, next);
+      document.querySelectorAll("iframe").forEach((frame) => {
+        try { frame.contentWindow?.postMessage({ type: "guan-theme-sync", theme }, "*"); } catch {}
+      });
+    } catch {}
   };
   applyTheme(getTheme());
 

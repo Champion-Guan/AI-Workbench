@@ -108,7 +108,7 @@
     const hide = () => {
       document.querySelectorAll("button, a").forEach((element) => {
         const label = clean(element.getAttribute("aria-label") || element.textContent);
-        const hideItem = label === "节点插件" || label === "文档" || label === "切换到 English" || label === "切换到中文" || label === "GitHub" || /^\d+\.\d+\.\d+$/.test(label);
+        const hideItem = label === "节点插件" || label === "文档" || label === "切换到 English" || label === "切换到中文" || label === "GitHub" || label === "切换到浅色主题" || label === "切换到深色主题" || /^\d+\.\d+\.\d+$/.test(label);
         if (hideItem && !element.classList.contains("guan-hidden-canvas-header-item")) {
           element.classList.add("guan-hidden-canvas-header-item");
         }
@@ -121,6 +121,29 @@
     if (document.body) start();
     else document.addEventListener("DOMContentLoaded", start, { once: true });
   };
+
+  const syncCanvasTheme = (theme) => {
+    const nextTheme = theme === "dark" ? "dark" : "light";
+    const targetLabel = nextTheme === "dark" ? "切换到深色主题" : "切换到浅色主题";
+    const button = [...document.querySelectorAll("button")].find((candidate) => {
+      return clean(candidate.getAttribute("aria-label")) === targetLabel;
+    });
+    if (button) {
+      button.click();
+      return;
+    }
+    try {
+      const key = "infinite-canvas:theme_store";
+      const current = JSON.parse(localStorage.getItem(key) || "{}");
+      localStorage.setItem(key, JSON.stringify({ ...current, state: { ...(current.state || {}), theme: nextTheme } }));
+    } catch {}
+    document.documentElement.classList.toggle("dark", nextTheme === "dark");
+    document.documentElement.style.colorScheme = nextTheme;
+  };
+
+  window.addEventListener("message", (event) => {
+    if (event.data?.type === "guan-theme-sync") syncCanvasTheme(event.data.theme);
+  });
 
   const installPromptMenuEnhancement = () => {
     const enhance = () => {
