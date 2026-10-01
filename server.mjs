@@ -383,6 +383,31 @@ const localThemeToggleScript = `<script id="local-theme-toggle">
       });
     } catch {}
   };
+  const animateTheme = (theme, sourceButton) => {
+    const apply = () => applyTheme(theme);
+    if (typeof document.startViewTransition !== "function") {
+      apply();
+      return;
+    }
+    const rect = sourceButton?.getBoundingClientRect?.();
+    const x = (rect?.left || 0) + (rect?.width || 0) / 2;
+    const y = (rect?.top || 0) + (rect?.height || 0) / 2;
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+    const radius = Math.hypot(Math.max(x, width - x), Math.max(y, height - y));
+    const style = document.createElement("style");
+    style.textContent = "::view-transition-old(root),::view-transition-new(root){animation:none;mix-blend-mode:normal}";
+    document.head.append(style);
+    const transition = document.startViewTransition(apply);
+    const cleanup = () => style.remove();
+    transition.finished?.finally?.(cleanup);
+    transition.ready?.then?.(() => {
+      document.documentElement.animate(
+        { clipPath: ["circle(0px at " + x + "px " + y + "px)", "circle(" + radius + "px at " + x + "px " + y + "px)"] },
+        { duration: 400, easing: "ease-in-out", fill: "forwards", pseudoElement: "::view-transition-new(root)" },
+      );
+    });
+  };
   applyTheme(getTheme());
 
   const setup = () => {
@@ -394,7 +419,7 @@ const localThemeToggleScript = `<script id="local-theme-toggle">
       button = document.createElement("button");
       button.type = "button";
       button.className = "local-workbench-theme-button";
-      button.addEventListener("click", () => applyTheme(getTheme() === "dark" ? "light" : "dark"));
+      button.addEventListener("click", () => animateTheme(getTheme() === "dark" ? "light" : "dark", button));
       const settingsButton = header.querySelector(".local-workbench-settings-button");
       if (settingsButton) header.insertBefore(button, settingsButton);
       else header.append(button);
