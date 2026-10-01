@@ -2329,6 +2329,7 @@ const localCanvasSettingsBridgeScript = `<script id="local-canvas-settings-bridg
       style.id = styleId;
       style.textContent = \`
         .local-canvas-settings-tabpanel{padding:2px 0 12px;min-height:260px}
+        .local-canvas-proxy-section{margin-top:16px}
         .local-canvas-settings-card{border:1px solid #e7e7eb;border-radius:12px;padding:16px;background:#fff}
         .local-canvas-settings-card h4{margin:0;color:#17181a;font-size:14px;font-weight:650}
         .local-canvas-settings-card p{margin:6px 0 0;color:#70757d;font-size:12px;line-height:1.6}
@@ -2532,20 +2533,32 @@ const localCanvasSettingsBridgeScript = `<script id="local-canvas-settings-bridg
       const existing = nav.querySelector(".ant-tabs-tab");
       if (!(existing instanceof HTMLElement)) return;
       addStyle();
-      const customPanels = { network: makeNetworkPanel(), fallback: makeFallbackPanel() };
+      const customPanels = { fallback: makeFallbackPanel() };
       Object.values(customPanels).forEach((panel) => { panel.hidden = true; holder.appendChild(panel); });
-      const customTabs = ["network", "fallback"].map((key) => {
+      const localProxyTab = nav.querySelector("[data-node-key='local-proxy']");
+      const localProxyPane = holder.querySelector("[id$='-panel-local-proxy']");
+      if (localProxyTab instanceof HTMLElement) {
+        const tabButton = localProxyTab.querySelector(".ant-tabs-tab-btn");
+        if (tabButton instanceof HTMLElement) tabButton.textContent = "代理设置";
+        else localProxyTab.textContent = "代理设置";
+      }
+      const networkPanel = makeNetworkPanel();
+      networkPanel.classList.add("local-canvas-proxy-section");
+      const mountNetworkPanel = () => {
+        const pane = holder.querySelector("[id$='-panel-local-proxy']");
+        if (pane instanceof HTMLElement && !pane.contains(networkPanel)) pane.appendChild(networkPanel);
+      };
+      mountNetworkPanel();
+      new MutationObserver(mountNetworkPanel).observe(holder, { childList: true, subtree: true });
+      const customTabs = ["fallback"].map((key) => {
         const tab = document.createElement("div");
         tab.className = "ant-tabs-tab";
         tab.dataset.localCanvasTab = key;
-        tab.innerHTML = '<div role="tab" class="ant-tabs-tab-btn">' + (key === "network" ? "网络代理" : "Fallback 配置") + '</div>';
+        tab.innerHTML = '<div role="tab" class="ant-tabs-tab-btn">Fallback 配置</div>';
         return tab;
       });
       const channelsTab = nav.querySelector("[data-node-key='channels']");
-      const localProxyTab = nav.querySelector("[data-node-key='local-proxy']");
-      if (channelsTab instanceof HTMLElement) nav.insertBefore(customTabs[1], channelsTab.nextSibling);
-      else nav.appendChild(customTabs[1]);
-      if (localProxyTab instanceof HTMLElement) nav.insertBefore(customTabs[0], localProxyTab.nextSibling);
+      if (channelsTab instanceof HTMLElement) nav.insertBefore(customTabs[0], channelsTab.nextSibling);
       else nav.appendChild(customTabs[0]);
       const setCustom = (key) => {
         nav.querySelectorAll(".ant-tabs-tab").forEach((tab) => {
@@ -2558,7 +2571,7 @@ const localCanvasSettingsBridgeScript = `<script id="local-canvas-settings-bridg
         if (inkBar instanceof HTMLElement) inkBar.style.display = "none";
         holder.querySelectorAll(".ant-tabs-tabpane").forEach((pane) => { pane.hidden = true; });
         Object.entries(customPanels).forEach(([name, panel]) => { panel.hidden = name !== key; });
-        customPanels[key]._renderFallback?.();
+        customPanels[key]?._renderFallback?.();
       };
       const restoreOriginal = () => {
         holder.querySelectorAll(".ant-tabs-tabpane").forEach((pane) => { pane.hidden = false; });
