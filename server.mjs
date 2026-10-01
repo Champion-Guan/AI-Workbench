@@ -2330,7 +2330,7 @@ const localCanvasSettingsBridgeScript = `<script id="local-canvas-settings-bridg
       style.textContent = \`
         .local-canvas-settings-tabpanel{padding:2px 0 12px;min-height:260px}
         .local-canvas-proxy-section{margin-top:16px}
-        .local-canvas-settings-card{border:0;border-radius:0;padding:0;background:transparent}
+        .local-canvas-settings-card{border:1px solid #e7e7eb;border-radius:12px;padding:16px;background:transparent}
         .local-canvas-settings-card h4{margin:0;color:#17181a;font-size:14px;font-weight:650}
         .local-canvas-settings-card p{margin:6px 0 0;color:#70757d;font-size:12px;line-height:1.6}
         .local-canvas-settings-field{display:grid;gap:7px;margin-top:16px}
@@ -2359,11 +2359,12 @@ const localCanvasSettingsBridgeScript = `<script id="local-canvas-settings-bridg
         .local-canvas-fallback-row label{min-width:0;flex:1;font-size:12px;color:#25272b}.local-canvas-fallback-row small{display:block;margin-top:3px;color:#8b9098;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
         .local-canvas-fallback-row button{border:0;background:transparent;color:#717780;cursor:pointer;font-size:14px;padding:2px 4px}.local-canvas-fallback-row button:disabled{opacity:.35;cursor:not-allowed}
         .local-canvas-settings-note{margin-top:12px;font-size:12px;color:#70757d}
-        html[data-theme="dark"] .local-canvas-settings-card,html.dark .local-canvas-settings-card{border-color:transparent;background:transparent;color:#f4f4f5}
+        html[data-theme="dark"] .local-canvas-settings-card,html.dark .local-canvas-settings-card{border-color:rgba(255,255,255,.12);background:transparent;color:#f4f4f5}
         html[data-theme="dark"] .local-canvas-settings-card h4,html.dark .local-canvas-settings-card h4{color:#f4f4f5}
         html[data-theme="dark"] .local-canvas-settings-card p,html.dark .local-canvas-settings-card p,html[data-theme="dark"] .local-canvas-settings-note,html.dark .local-canvas-settings-note{color:#aeb4bf}
         html[data-theme="dark"] .local-canvas-settings-field label,html.dark .local-canvas-settings-field label{color:#d8dce3}
-        html[data-theme="dark"] .local-canvas-settings-input-row,html.dark .local-canvas-settings-input-row,html[data-theme="dark"] .local-canvas-settings-file,html.dark .local-canvas-settings-file,html[data-theme="dark"] .local-canvas-settings-actions button,html.dark .local-canvas-settings-actions button{border-color:rgba(255,255,255,.14);background:#26292e;color:#f4f4f5}
+        html[data-theme="dark"] .local-canvas-settings-input-row,html.dark .local-canvas-settings-input-row,html[data-theme="dark"] .local-canvas-settings-file,html.dark .local-canvas-settings-file,html[data-theme="dark"] .local-canvas-settings-actions button,html.dark .local-canvas-settings-actions button{border-color:rgba(255,255,255,.14);background:transparent;color:#f4f4f5}
+        html[data-theme="dark"] .local-canvas-settings-actions button.primary,html.dark .local-canvas-settings-actions button.primary{border-color:#f4f4f5;background:#f4f4f5;color:#1e2024}
         html[data-theme="dark"] .local-canvas-fallback-row,html.dark .local-canvas-fallback-row,html[data-theme="dark"] .local-canvas-fallback-group,html.dark .local-canvas-fallback-group{border-color:rgba(255,255,255,.12)}
         html[data-theme="dark"] .local-canvas-fallback-group-head label,html.dark .local-canvas-fallback-group-head label{color:#f4f4f5}
         html[data-theme="dark"] .local-canvas-fallback-master,html.dark .local-canvas-fallback-master{accent-color:#8ab4ff}
