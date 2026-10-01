@@ -2310,6 +2310,173 @@ const localProxySetupScript = `<script id="local-proxy-setup-script">
   })();
 </script>`;
 
+const localCanvasSettingsBridgeScript = `<script id="local-canvas-settings-bridge">
+  (() => {
+    const STORAGE_KEY = "gpt-image-playground";
+    const installedDialogs = new WeakSet();
+    const styleId = "local-canvas-settings-bridge-style";
+    const addStyle = () => {
+      if (document.getElementById(styleId)) return;
+      const style = document.createElement("style");
+      style.id = styleId;
+      style.textContent = \`
+        .local-canvas-settings-tabpanel{padding:2px 0 12px;min-height:260px}
+        .local-canvas-settings-card{border:1px solid #e7e7eb;border-radius:12px;padding:16px;background:#fff}
+        .local-canvas-settings-card h4{margin:0;color:#17181a;font-size:14px;font-weight:650}
+        .local-canvas-settings-card p{margin:6px 0 0;color:#70757d;font-size:12px;line-height:1.6}
+        .local-canvas-settings-field{display:grid;gap:7px;margin-top:16px}
+        .local-canvas-settings-field label{font-size:12px;color:#454950;font-weight:600}
+        .local-canvas-settings-input-row{display:flex;gap:8px;align-items:center;border:1px solid #d9dce2;border-radius:9px;padding:4px 5px 4px 10px}
+        .local-canvas-settings-input-row:focus-within{border-color:#3478f6;box-shadow:0 0 0 3px rgba(52,120,246,.14)}
+        .local-canvas-settings-input{min-width:0;flex:1;border:0;outline:0;padding:7px 0;font:inherit;background:transparent;color:inherit}
+        .local-canvas-settings-file{border:1px solid #d9dce2;border-radius:7px;padding:6px 9px;background:#f7f8fa;color:#34363b;font-size:12px;cursor:pointer}
+        .local-canvas-settings-actions{display:flex;align-items:center;gap:8px;margin-top:16px}
+        .local-canvas-settings-actions button{border:1px solid #d9dce2;border-radius:8px;padding:7px 11px;background:#fff;color:#24262a;font-size:12px;cursor:pointer}
+        .local-canvas-settings-actions button.primary{border-color:#111;background:#111;color:#fff}
+        .local-canvas-settings-actions button:disabled{opacity:.55;cursor:not-allowed}
+        .local-canvas-settings-status{margin-right:auto;font-size:12px;color:#22925a}.local-canvas-settings-status.error{color:#d92d20}
+        .local-canvas-fallback-list{display:grid;gap:8px;margin-top:14px}
+        .local-canvas-fallback-row{display:flex;align-items:center;gap:10px;border:1px solid #e7e7eb;border-radius:9px;padding:10px 11px}
+        .local-canvas-fallback-row label{min-width:0;flex:1;font-size:12px;color:#25272b}.local-canvas-fallback-row small{display:block;margin-top:3px;color:#8b9098;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+        .local-canvas-fallback-row button{border:0;background:transparent;color:#717780;cursor:pointer;font-size:14px;padding:2px 4px}.local-canvas-fallback-row button:disabled{opacity:.35;cursor:not-allowed}
+        .local-canvas-settings-note{margin-top:12px;font-size:12px;color:#70757d}
+        html[data-theme="dark"] .local-canvas-settings-card,html.dark .local-canvas-settings-card{border-color:rgba(255,255,255,.12);background:#1e2024;color:#f4f4f5}
+        html[data-theme="dark"] .local-canvas-settings-input-row,html.dark .local-canvas-settings-input-row,html[data-theme="dark"] .local-canvas-settings-file,html.dark .local-canvas-settings-file,html[data-theme="dark"] .local-canvas-settings-actions button,html.dark .local-canvas-settings-actions button{border-color:rgba(255,255,255,.14);background:#26292e;color:#f4f4f5}
+        html[data-theme="dark"] .local-canvas-fallback-row,html.dark .local-canvas-fallback-row{border-color:rgba(255,255,255,.12)}
+      \`;
+      document.head.appendChild(style);
+    };
+    const readRootSettings = () => {
+      try {
+        const raw = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
+        const settings = raw?.state?.settings || raw?.settings || {};
+        const profiles = Array.isArray(settings.profiles) ? settings.profiles : [];
+        const fallback = settings.imageApiFallback && Array.isArray(settings.imageApiFallback.entries)
+          ? settings.imageApiFallback
+          : { enabled: false, entries: profiles.map((profile) => ({ profileId: profile.id, enabled: false })) };
+        const byId = new Map(profiles.map((profile) => [profile.id, profile]));
+        const entries = fallback.entries.map((entry) => ({ ...entry, profile: byId.get(entry.profileId) })).filter((entry) => entry.profile);
+        return { raw, settings, entries, enabled: Boolean(fallback.enabled) };
+      } catch {
+        return { raw: null, settings: {}, entries: [], enabled: false };
+      }
+    };
+    const writeRootSettings = (settings) => {
+      try {
+        const raw = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null") || {};
+        const next = raw.state ? { ...raw, state: { ...raw.state, settings } } : { ...raw, settings };
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+        window.dispatchEvent(new StorageEvent("storage", { key: STORAGE_KEY, newValue: JSON.stringify(next) }));
+      } catch {}
+    };
+    const makeNetworkPanel = () => {
+      const panel = document.createElement("div");
+      panel.className = "local-canvas-settings-tabpanel";
+      panel.dataset.localCanvasPanel = "network";
+      panel.innerHTML = '<section class="local-canvas-settings-card"><h4>设置网络代理</h4><p>支持 Mihomo / Clash 配置文件或远端订阅地址。代理仅在本次服务运行期间使用。</p><div class="local-canvas-settings-field"><label>代理配置文件或远端订阅地址</label><div class="local-canvas-settings-input-row"><input class="local-canvas-settings-input" data-canvas-proxy-input type="text" placeholder="https://example.com/your-subscription" autocomplete="off" /><button type="button" class="local-canvas-settings-file" data-canvas-proxy-file>选择文件</button><input data-canvas-proxy-file-input type="file" accept=".yaml,.yml,.txt,text/plain,application/yaml" hidden /></div></div><div class="local-canvas-settings-actions"><span class="local-canvas-settings-status" data-canvas-proxy-status></span><button type="button" class="primary" data-canvas-proxy-save>保存并启动代理</button></div><div class="local-canvas-settings-note" data-canvas-proxy-error></div></section>';
+      let configText = "";
+      const input = panel.querySelector("[data-canvas-proxy-input]");
+      const fileButton = panel.querySelector("[data-canvas-proxy-file]");
+      const fileInput = panel.querySelector("[data-canvas-proxy-file-input]");
+      const saveButton = panel.querySelector("[data-canvas-proxy-save]");
+      const status = panel.querySelector("[data-canvas-proxy-status]");
+      const error = panel.querySelector("[data-canvas-proxy-error]");
+      fileButton?.addEventListener("click", () => fileInput?.click());
+      fileInput?.addEventListener("change", async () => {
+        const file = fileInput.files?.[0];
+        if (!file || !input) return;
+        configText = await file.text();
+        input.value = file.name;
+        input.dataset.fileName = file.name;
+      });
+      saveButton?.addEventListener("click", async () => {
+        if (!(input instanceof HTMLInputElement) || !(saveButton instanceof HTMLButtonElement)) return;
+        const value = input.value.trim();
+        const payload = configText.trim() ? { configText } : { subscriptionUrl: value };
+        if (!configText.trim() && !value) { error.textContent = "请先上传配置文件或填写订阅地址"; return; }
+        saveButton.disabled = true; error.textContent = ""; status.textContent = "启动中…"; status.classList.remove("error");
+        try {
+          const response = await fetch("/local-proxy/config", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(payload) });
+          const result = await response.json();
+          if (!response.ok) throw new Error(result?.error || "代理启动失败");
+          status.textContent = result?.running ? "代理启动成功" : "代理未启动";
+          status.classList.toggle("error", !result?.running);
+        } catch (reason) { status.textContent = "代理未启动"; status.classList.add("error"); error.textContent = reason instanceof Error ? reason.message : "代理启动失败"; }
+        finally { saveButton.disabled = false; }
+      });
+      return panel;
+    };
+    const makeFallbackPanel = () => {
+      const panel = document.createElement("div");
+      panel.className = "local-canvas-settings-tabpanel";
+      panel.dataset.localCanvasPanel = "fallback";
+      const render = () => {
+        const data = readRootSettings();
+        panel.innerHTML = '<section class="local-canvas-settings-card"><h4>失败自动切换</h4><p>从上到下依次尝试已勾选的中转站，失败后自动切换下一站。</p><div class="local-canvas-fallback-list" data-canvas-fallback-list></div><div class="local-canvas-settings-note">设置会保存到当前浏览器，并与右侧工作台共用。</div></section>';
+        const list = panel.querySelector("[data-canvas-fallback-list]");
+        data.entries.forEach((entry, index) => {
+          const profile = entry.profile;
+          const row = document.createElement("div"); row.className = "local-canvas-fallback-row";
+          row.innerHTML = '<input type="checkbox" /><label></label><button type="button" data-up>↑</button><button type="button" data-down>↓</button>';
+          const checkbox = row.querySelector("input"); checkbox.checked = entry.enabled === true;
+          const label = row.querySelector("label"); label.textContent = profile.name || profile.id; const small = document.createElement("small"); small.textContent = profile.baseUrl || ""; label.appendChild(small);
+          const save = (nextEntries) => writeRootSettings({ ...data.settings, imageApiFallback: { enabled: nextEntries.some((item) => item.enabled), entries: nextEntries.map((item) => ({ profileId: item.profileId, enabled: item.enabled })) } });
+          checkbox.addEventListener("change", () => { const next = data.entries.map((item) => ({ profileId: item.profileId, enabled: item.profileId === entry.profileId ? checkbox.checked : item.enabled })); save(next); });
+          const up = row.querySelector("[data-up]"), down = row.querySelector("[data-down]"); up.disabled = index === 0; down.disabled = index === data.entries.length - 1;
+          up.addEventListener("click", () => { const next = data.entries.map((item) => ({ profileId: item.profileId, enabled: item.enabled })); [next[index - 1], next[index]] = [next[index], next[index - 1]]; save(next); render(); });
+          down.addEventListener("click", () => { const next = data.entries.map((item) => ({ profileId: item.profileId, enabled: item.enabled })); [next[index], next[index + 1]] = [next[index + 1], next[index]]; save(next); render(); });
+          list?.appendChild(row);
+        });
+        if (!data.entries.length && list) list.textContent = "暂无可用的 API 配置，请先在渠道页添加配置。";
+      };
+      render();
+      panel._renderFallback = render;
+      return panel;
+    };
+    const install = () => {
+      const dialog = document.querySelector("[role=dialog]");
+      if (!(dialog instanceof HTMLElement) || installedDialogs.has(dialog)) return;
+      const nav = dialog.querySelector(".ant-tabs-nav-list");
+      const holder = dialog.querySelector(".ant-tabs-content-holder");
+      if (!(nav instanceof HTMLElement) || !(holder instanceof HTMLElement)) return;
+      const existing = nav.querySelector(".ant-tabs-tab");
+      if (!(existing instanceof HTMLElement)) return;
+      addStyle();
+      const customPanels = { network: makeNetworkPanel(), fallback: makeFallbackPanel() };
+      Object.values(customPanels).forEach((panel) => { panel.hidden = true; holder.appendChild(panel); });
+      const customTabs = ["network", "fallback"].map((key) => {
+        const tab = document.createElement("div");
+        tab.className = "ant-tabs-tab";
+        tab.dataset.localCanvasTab = key;
+        tab.innerHTML = '<div role="tab" class="ant-tabs-tab-btn">' + (key === "network" ? "网络代理" : "Fallback 配置") + '</div>';
+        return tab;
+      });
+      customTabs.forEach((tab) => nav.appendChild(tab));
+      const setCustom = (key) => {
+        nav.querySelectorAll(".ant-tabs-tab").forEach((tab) => {
+          const active = tab === nav.querySelector("[data-local-canvas-tab='" + key + "']");
+          tab.classList.toggle("ant-tabs-tab-active", active);
+          const roleTab = tab.querySelector("[role=tab]");
+          if (roleTab) roleTab.setAttribute("aria-selected", String(active));
+        });
+        const inkBar = nav.parentElement?.querySelector(".ant-tabs-ink-bar");
+        if (inkBar instanceof HTMLElement) inkBar.style.display = "none";
+        holder.querySelectorAll(".ant-tabs-tabpane").forEach((pane) => { pane.hidden = true; });
+        Object.entries(customPanels).forEach(([name, panel]) => { panel.hidden = name !== key; });
+        customPanels[key]._renderFallback?.();
+      };
+      nav.addEventListener("click", (event) => {
+        const target = event.target instanceof Element ? event.target.closest("[data-local-canvas-tab]") : null;
+        if (target) { event.preventDefault(); event.stopPropagation(); setCustom(target.dataset.localCanvasTab); }
+        else if (event.target instanceof Element && event.target.closest(".ant-tabs-tab")) { Object.values(customPanels).forEach((panel) => { panel.hidden = true; }); }
+      }, true);
+      installedDialogs.add(dialog);
+    };
+    new MutationObserver(install).observe(document.documentElement, { childList: true, subtree: true });
+    install();
+  })();
+</script>`;
+
 const contentTypes = {
   ".avif": "image/avif", ".css": "text/css; charset=utf-8", ".gif": "image/gif", ".html": "text/html; charset=utf-8", ".ico": "image/x-icon", ".jpeg": "image/jpeg", ".jpg": "image/jpeg", ".js": "text/javascript; charset=utf-8", ".json": "application/json; charset=utf-8", ".mjs": "text/javascript; charset=utf-8", ".mp4": "video/mp4", ".png": "image/png", ".svg": "image/svg+xml", ".ttf": "font/ttf", ".webm": "video/webm", ".webp": "image/webp", ".woff": "font/woff", ".woff2": "font/woff2",
 };
@@ -2929,7 +3096,14 @@ const server = createServer(async (request, response) => {
       }
     }
     const canvasIndex = safeFile(infiniteCanvasRoot, "index.html");
-    if (canvasIndex && await existingFile(canvasIndex)) return send(response, canvasIndex, method);
+    if (canvasIndex && await existingFile(canvasIndex)) {
+      if (method === "HEAD") return send(response, canvasIndex, method);
+      const source = await readFile(canvasIndex, "utf8");
+      const patched = source.includes("</head>") ? source.replace("</head>", `${localCanvasSettingsBridgeScript}</head>`) : source;
+      response.writeHead(200, { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" });
+      response.end(patched);
+      return;
+    }
     return notFound(response);
   }
   if (pathname === "/logo.svg" || pathname.startsWith("/assets/") || pathname.startsWith("/icons/") || pathname.startsWith("/plugins/")) {
