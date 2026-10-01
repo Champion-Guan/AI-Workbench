@@ -2122,6 +2122,8 @@ const localProxySetupScript = `<script id="local-proxy-setup-script">
       urlInput?.addEventListener('pointerdown', (event) => event.stopPropagation());
       urlInput?.addEventListener('click', (event) => event.stopPropagation());
       let statusTimer = null;
+      // An explicit unlock remains valid across status polls until a new save succeeds.
+      let editingUnlocked = false;
       const setStatus = (text, state) => {
         if (!statusNode) return;
         statusNode.textContent = text;
@@ -2140,7 +2142,7 @@ const localProxySetupScript = `<script id="local-proxy-setup-script">
       void fetch('/local-proxy/status', { cache: 'no-store' }).then((response) => response.json()).then((state) => {
         if (statusNode && state.running) {
           setStatus('代理启动成功', 'active');
-          setFrozen(Boolean(savedFileName));
+          if (!editingUnlocked) setFrozen(Boolean(savedFileName));
         }
         if (!state.running && savedFileName && urlInput instanceof HTMLInputElement && !fileInput?.files?.length) {
           urlInput.value = '';
@@ -2151,13 +2153,14 @@ const localProxySetupScript = `<script id="local-proxy-setup-script">
       statusTimer = window.setInterval(() => {
         void fetch('/local-proxy/status', { cache: 'no-store' }).then((response) => response.json()).then((state) => {
           setStatus(state.running ? '代理启动成功' : (state.lastError ? '代理已停止' : '代理未启动'), state.running ? 'active' : 'inactive');
-          if (state.running && savedFileName && modal.dataset.proxyFrozen !== 'true') setFrozen(true);
+          if (state.running && savedFileName && !editingUnlocked && modal.dataset.proxyFrozen !== 'true') setFrozen(true);
           if (!state.running && modal.dataset.proxyFrozen === 'true') setFrozen(false);
         }).catch(() => { setStatus('状态获取失败', 'error'); });
       }, 3000);
       unfreeze?.addEventListener('click', () => {
+        editingUnlocked = true;
         setFrozen(false);
-        setStatus('可更换配置', 'inactive');
+        urlInput?.focus();
       });
       fileButton?.addEventListener('click', () => fileInput instanceof HTMLInputElement && fileInput.click());
       fileInput?.addEventListener('change', () => {
@@ -2197,6 +2200,7 @@ const localProxySetupScript = `<script id="local-proxy-setup-script">
             try { sessionStorage.setItem(FILE_NAME_KEY, savedFileName); } catch {}
           }
           setStatus('代理启动成功', 'active');
+          editingUnlocked = false;
           setFrozen(true);
           try { sessionStorage.setItem(SESSION_KEY, 'true'); } catch {}
         } catch (requestError) {
