@@ -2049,6 +2049,19 @@ const localProxySetupScript = `<script id="local-proxy-setup-script">
     const SESSION_KEY = "guan-workbench:proxy-setup-dismissed";
     const FILE_NAME_KEY = "guan-workbench:proxy-file-name";
     let modal = null;
+    // The startup wizard can open before React mounts its trapped dialog.
+    // Follow that dialog when it appears so native typing remains in its scope.
+    const syncStartupFocusScope = () => {
+      if (!modal || modal.classList.contains('local-proxy-inline-host')) return;
+      const activeDialog = Array.from(document.querySelectorAll('[role="dialog"]'))
+        .filter((node) => !node.closest('.local-proxy-setup') && node.getAttribute('aria-hidden') !== 'true')
+        .at(-1);
+      if (activeDialog && !activeDialog.contains(modal)) {
+        activeDialog.append(modal);
+        modal.querySelector('[data-proxy-url]')?.focus({ preventScroll: true });
+      }
+    };
+    new MutationObserver(syncStartupFocusScope).observe(document.documentElement, { childList: true, subtree: true });
 
     const addStyles = () => {
       if (document.getElementById("local-proxy-setup-style")) return;
