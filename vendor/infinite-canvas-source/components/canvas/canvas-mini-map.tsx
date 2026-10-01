@@ -67,11 +67,21 @@ export function Minimap({ nodes, viewport, viewportSize, onViewportChange }: { n
         [offset.x, offset.y, scale, worldBounds.x, worldBounds.y],
     );
 
+    const getLiveCanvasSize = useCallback(() => {
+        const canvas = containerRef.current?.closest(".relative.h-full.w-full.select-none");
+        const rect = canvas?.getBoundingClientRect();
+        return {
+            width: rect?.width || viewportSize.width,
+            height: rect?.height || viewportSize.height,
+        };
+    }, [viewportSize.height, viewportSize.width]);
+
     const viewportRect = useMemo(() => {
         const vx = -viewport.x / viewport.k;
         const vy = -viewport.y / viewport.k;
-        const vw = viewportSize.width / viewport.k;
-        const vh = viewportSize.height / viewport.k;
+        const liveSize = getLiveCanvasSize();
+        const vw = liveSize.width / viewport.k;
+        const vh = liveSize.height / viewport.k;
         const p1 = toMinimap(vx, vy);
         const p2 = toMinimap(vx + vw, vy + vh);
 
@@ -81,16 +91,17 @@ export function Minimap({ nodes, viewport, viewportSize, onViewportChange }: { n
             w: Math.max(p2.x - p1.x, 4),
             h: Math.max(p2.y - p1.y, 4),
         };
-    }, [toMinimap, viewport.k, viewport.x, viewport.y, viewportSize.height, viewportSize.width]);
+    }, [getLiveCanvasSize, toMinimap, viewport.k, viewport.x, viewport.y]);
 
     const updateViewportFromEvent = (event: React.PointerEvent) => {
         const rect = containerRef.current?.getBoundingClientRect();
         if (!rect) return;
 
         const world = toWorld(event.clientX - rect.left, event.clientY - rect.top);
+        const liveSize = getLiveCanvasSize();
         onViewportChange({
-            x: viewportSize.width / 2 - world.x * viewport.k,
-            y: viewportSize.height / 2 - world.y * viewport.k,
+            x: liveSize.width / 2 - world.x * viewport.k,
+            y: liveSize.height / 2 - world.y * viewport.k,
             k: viewport.k,
         });
     };

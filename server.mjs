@@ -2913,6 +2913,8 @@ const server = createServer(async (request, response) => {
           const patched = (source.includes(original) ? source.replace(original, replacement) : source)
             .replaceAll("重置视图", "定位全部内容")
             .replaceAll("bottom-24 left-6", "bottom-24 right-6")
+            .replace("const w=-t.x/t.k,C=-t.y/t.k,O=n.width/t.k,T=n.height/t.k", "const w=-t.x/t.k,C=-t.y/t.k,q=i.current?.closest(\".relative.h-full.w-full.select-none\")?.getBoundingClientRect(),O=(q?.width||n.width)/t.k,T=(q?.height||n.height)/t.k")
+            .replace("r({x:n.width/2-O.x*t.k,y:n.height/2-O.y*t.k,k:t.k})", "const q=i.current?.closest(\".relative.h-full.w-full.select-none\")?.getBoundingClientRect();r({x:(q?.width||n.width)/2-O.x*t.k,y:(q?.height||n.height)/2-O.y*t.k,k:t.k})")
             .replace('min:"5",max:"500"', 'min:"5",max:"500"')
             .replace('Math.min(Math.max(K,.05),5)', 'Math.min(Math.max(K,.05),5)');
           response.writeHead(200, { "content-type": "application/javascript; charset=utf-8", "cache-control": "no-store" });
