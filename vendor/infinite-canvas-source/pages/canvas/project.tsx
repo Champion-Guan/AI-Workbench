@@ -1102,7 +1102,7 @@ function InfiniteCanvasPage() {
         const top = Math.min(...nodesRef.current.map((node) => node.position.y));
         const right = Math.max(...nodesRef.current.map((node) => node.position.x + (node.width || node.measured?.width || 240)));
         const bottom = Math.max(...nodesRef.current.map((node) => node.position.y + (node.height || node.measured?.height || 160)));
-        const k = Math.min(Math.max(Math.min((size.width - padding * 2) / Math.max(right - left, 1), (size.height - padding * 2) / Math.max(bottom - top, 1)), 0.05), 5);
+        const k = Math.min(Math.max(Math.min((size.width - padding * 2) / Math.max(right - left, 1), (size.height - padding * 2) / Math.max(bottom - top, 1)), 0.05), 1);
         setViewport({ x: size.width / 2 - ((left + right) / 2) * k, y: size.height / 2 - ((top + bottom) / 2) * k, k });
         setContextMenu(null);
     }, [size.height, size.width]);
@@ -1140,7 +1140,7 @@ function InfiniteCanvasPage() {
 
     const setZoomScale = useCallback(
         (scale: number) => {
-            const nextScale = Math.min(Math.max(scale, 0.05), 5);
+            const nextScale = Math.min(Math.max(scale, 0.05), 1);
             setViewport((prev) => ({
                 x: size.width / 2 - ((size.width / 2 - prev.x) / prev.k) * nextScale,
                 y: size.height / 2 - ((size.height / 2 - prev.y) / prev.k) * nextScale,

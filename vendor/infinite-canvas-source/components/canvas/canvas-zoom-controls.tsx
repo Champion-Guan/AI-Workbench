@@ -43,7 +43,7 @@ export function CanvasZoomControls({ scale, onScaleChange, onReset, isMiniMapOpe
                     <input
                         type="range"
                         min="5"
-                        max="500"
+                        max="100"
                         step="1"
                         value={Math.round(scale * 100)}
                         className="w-24"
