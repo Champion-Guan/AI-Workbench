@@ -2375,7 +2375,7 @@ const localCanvasSettingsBridgeScript = `<script id="local-canvas-settings-bridg
         [data-local-canvas-tab] .ant-tabs-tab-btn{color:#60656d}
         [data-local-canvas-tab]:hover .ant-tabs-tab-btn{color:#171717}
         [data-local-canvas-tab].ant-tabs-tab-active .ant-tabs-tab-btn{color:#171717;font-weight:400}
-        [data-local-canvas-tab].ant-tabs-tab-active{border-bottom:2px solid currentColor}
+        [data-local-canvas-tab].ant-tabs-tab-active{border-bottom:0}
         html[data-theme="dark"] [data-local-canvas-tab] .ant-tabs-tab-btn,html.dark [data-local-canvas-tab] .ant-tabs-tab-btn{color:#aeb4bf}
         html[data-theme="dark"] [data-local-canvas-tab]:hover .ant-tabs-tab-btn,html.dark [data-local-canvas-tab]:hover .ant-tabs-tab-btn,html[data-theme="dark"] [data-local-canvas-tab].ant-tabs-tab-active .ant-tabs-tab-btn,html.dark [data-local-canvas-tab].ant-tabs-tab-active .ant-tabs-tab-btn{color:#fafafa}
         .ant-tabs-nav-list{gap:4px}
@@ -2570,7 +2570,17 @@ const localCanvasSettingsBridgeScript = `<script id="local-canvas-settings-bridg
           if (roleTab) roleTab.setAttribute("aria-selected", String(active));
         });
         const inkBar = nav.parentElement?.querySelector(".ant-tabs-ink-bar");
-        if (inkBar instanceof HTMLElement) inkBar.style.display = "none";
+        const activeTab = nav.querySelector("[data-local-canvas-tab='" + key + "']");
+        if (inkBar instanceof HTMLElement && activeTab instanceof HTMLElement) {
+          const inkParent = inkBar.parentElement?.getBoundingClientRect();
+          const tabRect = activeTab.getBoundingClientRect();
+          if (inkParent) {
+            inkBar.style.width = tabRect.width + "px";
+            inkBar.style.left = (tabRect.left - inkParent.left + tabRect.width / 2) + "px";
+            inkBar.style.transform = "translateX(-50%)";
+            inkBar.style.display = "";
+          }
+        }
         holder.querySelectorAll(".ant-tabs-tabpane").forEach((pane) => { pane.hidden = true; });
         Object.entries(customPanels).forEach(([name, panel]) => { panel.hidden = name !== key; });
         customPanels[key]?._renderFallback?.();
