@@ -2372,12 +2372,8 @@ const localCanvasSettingsBridgeScript = `<script id="local-canvas-settings-bridg
         html[data-theme="dark"] .local-canvas-fallback-switch button,html.dark .local-canvas-fallback-switch button{color:#aeb4bf}
         html[data-theme="dark"] .local-canvas-fallback-switch button:hover,html.dark .local-canvas-fallback-switch button:hover{color:#8ab4ff}
         html[data-theme="dark"] .local-canvas-fallback-switch button.is-active,html.dark .local-canvas-fallback-switch button.is-active{background:#44403c;color:#f4f4f5;box-shadow:0 1px 4px rgba(0,0,0,.35)}
-        [data-local-canvas-tab] .ant-tabs-tab-btn{color:#60656d}
-        [data-local-canvas-tab]:hover .ant-tabs-tab-btn{color:#171717}
-        [data-local-canvas-tab].ant-tabs-tab-active .ant-tabs-tab-btn{color:#171717;font-weight:400}
+        [data-local-canvas-tab].ant-tabs-tab-active .ant-tabs-tab-btn{font-weight:400}
         [data-local-canvas-tab].ant-tabs-tab-active{border-bottom:0}
-        html[data-theme="dark"] [data-local-canvas-tab] .ant-tabs-tab-btn,html.dark [data-local-canvas-tab] .ant-tabs-tab-btn{color:#aeb4bf}
-        html[data-theme="dark"] [data-local-canvas-tab]:hover .ant-tabs-tab-btn,html.dark [data-local-canvas-tab]:hover .ant-tabs-tab-btn,html[data-theme="dark"] [data-local-canvas-tab].ant-tabs-tab-active .ant-tabs-tab-btn,html.dark [data-local-canvas-tab].ant-tabs-tab-active .ant-tabs-tab-btn{color:#fafafa}
         .ant-tabs-nav-list{gap:4px}
       \`;
       document.head.appendChild(style);
