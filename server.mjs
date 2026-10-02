@@ -2533,6 +2533,8 @@ const localCanvasSettingsBridgeScript = `<script id="local-canvas-settings-bridg
       addStyle();
       const customPanels = { fallback: makeFallbackPanel() };
       Object.values(customPanels).forEach((panel) => { panel.hidden = true; holder.appendChild(panel); });
+      let syncingCustom = false;
+      let customSyncScheduled = false;
       const localProxyTab = nav.querySelector("[data-node-key='local-proxy']");
       const localProxyPane = holder.querySelector("[id$='-panel-local-proxy']");
       if (localProxyTab instanceof HTMLElement) {
@@ -2571,6 +2573,8 @@ const localCanvasSettingsBridgeScript = `<script id="local-canvas-settings-bridg
         inkBar.style.display = "";
       };
       const applyCustomVisibility = (key) => {
+        if (syncingCustom) return;
+        syncingCustom = true;
         const panel = customPanels[key];
         if (!panel || !holder.contains(panel)) holder.appendChild(panel);
         holder.querySelectorAll(".ant-tabs-tabpane").forEach((pane) => {
@@ -2581,6 +2585,15 @@ const localCanvasSettingsBridgeScript = `<script id="local-canvas-settings-bridg
         Object.entries(customPanels).forEach(([name, customPanel]) => {
           customPanel.hidden = name !== key;
           if (name === key) customPanel.removeAttribute("aria-hidden");
+        });
+        syncingCustom = false;
+      };
+      const scheduleCustomVisibility = () => {
+        if (!activeCustomKey || customSyncScheduled) return;
+        customSyncScheduled = true;
+        window.requestAnimationFrame(() => {
+          customSyncScheduled = false;
+          if (activeCustomKey) applyCustomVisibility(activeCustomKey);
         });
       };
       const applyOriginalVisibility = (originalTab) => {
@@ -2646,8 +2659,8 @@ const localCanvasSettingsBridgeScript = `<script id="local-canvas-settings-bridg
       };
       ["pointerdown", "mousedown", "click"].forEach((type) => nav.addEventListener(type, handleTabEvent, true));
       new MutationObserver(() => {
-        if (activeCustomKey) applyCustomVisibility(activeCustomKey);
-      }).observe(holder, { childList: true, subtree: true });
+        scheduleCustomVisibility();
+      }).observe(holder, { childList: true, subtree: true, attributes: true, attributeFilter: ["class", "hidden", "aria-hidden"] });
       installedDialogs.add(dialog);
     };
     new MutationObserver(install).observe(document.documentElement, { childList: true, subtree: true });
