@@ -2310,6 +2310,41 @@ const localProxySetupScript = `<script id="local-proxy-setup-script">
   })();
 </script>`;
 
+const localCanvasImageRelayScript = `<script id="local-canvas-image-relay">
+(() => {
+  const relays = {
+    "https://www.tixyw.com/v1": "ixyapi",
+    "https://zzone.cc.cd/v1": "zzone",
+    "https://api2.jojocode.com/v1": "jojocode",
+    "https://api-cn.hi-code.cc/v1": "hi-code",
+  };
+  const endpoints = /\\/(models|images\\/generations|images\\/edits|responses)(?:[?#]|$)/;
+  const rewrite = (value) => {
+    try {
+      const input = new URL(String(value), location.href);
+      const base = input.origin + input.pathname.split("/").slice(0, input.pathname.split("/").indexOf("v1") + 1).join("/");
+      const provider = relays[base];
+      const match = input.pathname.match(endpoints);
+      if (!provider || !match) return value;
+      return "/local-image-api/" + provider + "/" + match[1] + input.search;
+    } catch { return value; }
+  };
+  const originalOpen = XMLHttpRequest.prototype.open;
+  XMLHttpRequest.prototype.open = function(method, url, ...rest) {
+    return originalOpen.call(this, method, rewrite(url), ...rest);
+  };
+  const originalFetch = window.fetch;
+  window.fetch = function(input, init) {
+    if (typeof input === "string" || input instanceof URL) return originalFetch.call(this, rewrite(input), init);
+    if (input instanceof Request) {
+      const next = rewrite(input.url);
+      return originalFetch.call(this, next === input.url ? input : new Request(next, input), init);
+    }
+    return originalFetch.call(this, input, init);
+  };
+})();
+</script>`;
+
 const localCanvasSettingsBridgeScript = `<script id="local-canvas-settings-bridge">
   (() => {
     const STORAGE_KEY = "infinite-canvas:ai_config_store";
@@ -3290,7 +3325,7 @@ const server = createServer(async (request, response) => {
     if (canvasIndex && await existingFile(canvasIndex)) {
       if (method === "HEAD") return send(response, canvasIndex, method);
       const source = await readFile(canvasIndex, "utf8");
-      const patched = source.includes("</head>") ? source.replace("</head>", `${localCanvasSettingsBridgeScript}</head>`) : source;
+      const patched = source.includes("</head>") ? source.replace("</head>", `${localCanvasImageRelayScript}${localCanvasSettingsBridgeScript}</head>`) : source;
       response.writeHead(200, { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" });
       response.end(patched);
       return;
