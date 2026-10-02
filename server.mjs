@@ -2594,6 +2594,13 @@ const localCanvasSettingsBridgeScript = `<script id="local-canvas-settings-bridg
         });
         Object.values(customPanels).forEach((panel) => { panel.hidden = true; });
       };
+      const applyOriginalTabState = (originalTab) => {
+        nav.querySelectorAll(".ant-tabs-tab").forEach((tab) => {
+          const active = tab === originalTab;
+          tab.classList.toggle("ant-tabs-tab-active", active);
+          tab.querySelector("[role=tab]")?.setAttribute("aria-selected", String(active));
+        });
+      };
       const setCustom = (key) => {
         activeCustomKey = key;
         nav.querySelectorAll(".ant-tabs-tab").forEach((tab) => {
@@ -2616,18 +2623,12 @@ const localCanvasSettingsBridgeScript = `<script id="local-canvas-settings-bridg
         activeCustomKey = null;
         holder.querySelectorAll(".ant-tabs-tabpane").forEach((pane) => { pane.hidden = false; });
         Object.values(customPanels).forEach((panel) => { panel.hidden = true; });
-        nav.querySelectorAll("[data-local-canvas-tab]").forEach((tab) => {
-          tab.classList.remove("ant-tabs-tab-active");
-          tab.querySelector("[role=tab]")?.setAttribute("aria-selected", "false");
-        });
-        originalTab?.classList.add("ant-tabs-tab-active");
-        originalTab?.querySelector("[role=tab]")?.setAttribute("aria-selected", "true");
-        setInkBar(originalTab);
+        applyOriginalTabState(originalTab);
         const key = originalTab instanceof HTMLElement ? originalTab.dataset.nodeKey : "";
         if (key) {
           applyOriginalVisibility(originalTab);
-          window.setTimeout(() => applyOriginalVisibility(originalTab), 0);
-          window.requestAnimationFrame(() => applyOriginalVisibility(originalTab));
+          window.setTimeout(() => { applyOriginalTabState(originalTab); applyOriginalVisibility(originalTab); }, 0);
+          window.requestAnimationFrame(() => { applyOriginalTabState(originalTab); applyOriginalVisibility(originalTab); });
         }
       };
       const handleTabEvent = (event) => {
@@ -2638,7 +2639,7 @@ const localCanvasSettingsBridgeScript = `<script id="local-canvas-settings-bridg
           event.stopImmediatePropagation?.();
           if (event.type === "click") setCustom(target.dataset.localCanvasTab);
         }
-        else if (event.target instanceof Element) {
+        else if (event.type === "click" && event.target instanceof Element) {
           const originalTab = event.target.closest(".ant-tabs-tab");
           if (originalTab instanceof HTMLElement && !originalTab.hasAttribute("data-local-canvas-tab")) restoreOriginal(originalTab);
         }
