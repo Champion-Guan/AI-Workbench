@@ -2502,6 +2502,62 @@ const localCanvasSettingsBridgeScript = `<script id="local-canvas-settings-bridg
       });
       return panel;
     };
+    const installLocalProxyToggleBridge = () => {
+      if (window.__guanLocalProxyToggleBridgeInstalled) return;
+      window.__guanLocalProxyToggleBridgeInstalled = true;
+      let syncing = false;
+      const pending = new WeakSet();
+      const isLocalProxySwitch = (target) => {
+        if (!(target instanceof Element)) return false;
+        const switchNode = target.closest('[role="switch"]');
+        if (!(switchNode instanceof HTMLElement)) return false;
+        const scope = switchNode.closest('[role="dialog"],[role="tabpanel"]') || switchNode.parentElement;
+        return Boolean(scope && /本地代理/.test(scope.textContent || ""));
+      };
+      const setSwitchState = (target, enabled) => {
+        if (!(target instanceof HTMLElement)) return;
+        if ("checked" in target) target.checked = enabled;
+        target.setAttribute("aria-checked", String(enabled));
+      };
+      const currentSwitchState = (switchNode) => "checked" in switchNode
+        ? Boolean(switchNode.checked)
+        : switchNode.getAttribute("aria-checked") === "true";
+      const syncToggle = (target, desired = null) => {
+        const switchNode = target instanceof Element ? target.closest('[role="switch"]') : null;
+        if (syncing || !(switchNode instanceof HTMLElement) || !isLocalProxySwitch(switchNode) || pending.has(switchNode)) return;
+        pending.add(switchNode);
+        window.setTimeout(async () => {
+          pending.delete(switchNode);
+          const enabled = desired === null ? currentSwitchState(switchNode) : desired;
+          try {
+          const response = await fetch("/local-proxy/toggle", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ enabled }),
+          });
+          const result = await response.json().catch(() => ({}));
+          if (!response.ok) throw new Error(result?.error || (enabled ? "代理启动失败" : "代理停止失败"));
+          syncing = true;
+          switchNode.click();
+          setSwitchState(switchNode, result.running === true);
+          syncing = false;
+        } catch (error) {
+          const message = error instanceof Error ? error.message : "代理状态切换失败";
+          window.dispatchEvent(new CustomEvent("guan-local-proxy-toggle-error", { detail: { message } }));
+        }
+        }, 0);
+      };
+      document.addEventListener("click", (event) => {
+        const switchNode = event.target instanceof Element ? event.target.closest('[role="switch"]') : null;
+        if (!(switchNode instanceof HTMLElement) || !isLocalProxySwitch(switchNode) || syncing) return;
+        event.preventDefault();
+        event.stopPropagation();
+        event.stopImmediatePropagation?.();
+        syncToggle(switchNode, !currentSwitchState(switchNode));
+      }, true);
+      document.addEventListener("change", (event) => syncToggle(event.target), true);
+    };
+    installLocalProxyToggleBridge();
     const makeFallbackPanel = () => {
       const panel = document.createElement("div");
       panel.className = "local-canvas-settings-tabpanel";
@@ -2560,6 +2616,7 @@ const localCanvasSettingsBridgeScript = `<script id="local-canvas-settings-bridg
     const install = () => {
       const dialog = document.querySelector("[role=dialog]");
       if (!(dialog instanceof HTMLElement) || installedDialogs.has(dialog)) return;
+      installLocalProxyToggleBridge();
       const nav = dialog.querySelector(".ant-tabs-nav-list");
       const holder = dialog.querySelector(".ant-tabs-content-holder");
       if (!(nav instanceof HTMLElement) || !(holder instanceof HTMLElement)) return;
@@ -2724,6 +2781,10 @@ const imageRelayProxyAgents = new Map();
 const imageRelayTransportPreferences = new Map();
 let runtimeImageProxySource = null;
 let runtimeImageProxyLastError = "";
+// Keep the last runtime source in memory so the settings switch can stop and
+// start the same local proxy without asking the user to upload the config again.
+let lastRuntimeImageProxySourceOverride = null;
+let lastRuntimeImageProxySourceKind = null;
 
 function configureImageRelayProxyUrl(proxyUrl) {
   if (!explicitImageRelayProxySetting || process.env.IMAGE_RELAY_PROXY_MODE === "sidecar") {
@@ -3141,15 +3202,68 @@ function getLocalProxyStatus() {
     (process.env.IMAGE_RELAY_SUBSTORE_API_URL?.trim() && process.env.IMAGE_RELAY_SUBSCRIPTION_NAME?.trim()),
   );
   const explicitConfigured = Boolean(explicitImageRelayProxySetting);
-  const configured = Boolean(builtInImageProxy || runtimeImageProxySource || envConfigured || explicitConfigured);
+  const configured = Boolean(builtInImageProxy || runtimeImageProxySource || lastRuntimeImageProxySourceOverride || lastRuntimeImageProxySourceKind || envConfigured || explicitConfigured);
   return {
     configured,
     running: Boolean(builtInImageProxy),
     firstRun: !configured,
-    source: runtimeImageProxySource || (builtInImageProxy ? "environment" : explicitConfigured ? "proxy-url" : envConfigured ? "environment" : null),
+    source: runtimeImageProxySource || lastRuntimeImageProxySourceKind || (builtInImageProxy ? "environment" : explicitConfigured ? "proxy-url" : envConfigured ? "environment" : null),
     proxyAvailable: Boolean(getImageRelayProxyUrl()),
     lastError: runtimeImageProxyLastError || null,
   };
+}
+
+async function handleLocalProxyToggle(request, response) {
+  if (!isLocalAppRequest(request)) {
+    response.writeHead(403, { "cache-control": "no-store" });
+    response.end();
+    return;
+  }
+  if (request.method !== "POST") {
+    response.writeHead(405, { allow: "POST", "cache-control": "no-store" });
+    response.end();
+    return;
+  }
+  let payload;
+  try {
+    payload = JSON.parse((await readRequestBody(request, 16 * 1024)).toString("utf8"));
+  } catch {
+    payload = {};
+  }
+  const enabled = payload?.enabled === true;
+  try {
+    if (enabled) {
+      if (!builtInImageProxy) {
+        if (lastRuntimeImageProxySourceOverride) {
+          await startRuntimeBuiltInImageProxy(lastRuntimeImageProxySourceOverride, lastRuntimeImageProxySourceKind);
+        } else {
+          const proxy = await startBuiltInImageProxy({ projectRoot, onProxyReady: configureImageRelayProxyUrl });
+          if (!proxy) throw new Error("请先在网络代理设置中上传配置或填写订阅地址");
+          builtInImageProxy = proxy;
+          runtimeImageProxySource = lastRuntimeImageProxySourceKind || "environment";
+        }
+      }
+    } else {
+      await stopBuiltInImageProxy();
+    }
+    const body = JSON.stringify(getLocalProxyStatus());
+    response.writeHead(200, {
+      "content-type": "application/json; charset=utf-8",
+      "content-length": Buffer.byteLength(body),
+      "cache-control": "no-store",
+    });
+    response.end(body);
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : "代理状态切换失败";
+    runtimeImageProxyLastError = detail;
+    const body = JSON.stringify({ error: detail, ...getLocalProxyStatus() });
+    response.writeHead(400, {
+      "content-type": "application/json; charset=utf-8",
+      "content-length": Buffer.byteLength(body),
+      "cache-control": "no-store",
+    });
+    response.end(body);
+  }
 }
 
 async function handleLocalProxyConfig(request, response) {
@@ -3253,12 +3367,17 @@ async function startRuntimeBuiltInImageProxy(sourceOverride, sourceKind) {
   if (!proxy) throw new Error("没有找到代理配置内容");
   builtInImageProxy = proxy;
   runtimeImageProxySource = sourceKind || "environment";
+  lastRuntimeImageProxySourceOverride = sourceOverride || null;
+  lastRuntimeImageProxySourceKind = sourceKind || "environment";
   return proxy;
 }
 
 const server = createServer(async (request, response) => {
   const method = request.method || "GET";
   const pathname = new URL(request.url || "/", "http://127.0.0.1").pathname.replace(/\/$/, "") || "/";
+  if (pathname === "/local-proxy/toggle") {
+    return handleLocalProxyToggle(request, response);
+  }
   if (pathname === "/local-proxy/status" || pathname === "/local-proxy/config") {
     return handleLocalProxyConfig(request, response);
   }
