@@ -2581,7 +2581,7 @@ const localCanvasSettingsBridgeScript = `<script id="local-canvas-settings-bridg
         Object.entries(customPanels).forEach(([name, panel]) => { panel.hidden = name !== key; });
         customPanels[key]?._renderFallback?.();
       };
-      const restoreOriginal = () => {
+      const restoreOriginal = (originalTab) => {
         holder.querySelectorAll(".ant-tabs-tabpane").forEach((pane) => { pane.hidden = false; });
         Object.values(customPanels).forEach((panel) => { panel.hidden = true; });
         nav.querySelectorAll("[data-local-canvas-tab]").forEach((tab) => {
@@ -2590,11 +2590,25 @@ const localCanvasSettingsBridgeScript = `<script id="local-canvas-settings-bridg
         });
         const inkBar = nav.parentElement?.querySelector(".ant-tabs-ink-bar");
         if (inkBar instanceof HTMLElement) inkBar.style.display = "";
+        const key = originalTab instanceof HTMLElement ? originalTab.dataset.nodeKey : "";
+        if (key) {
+          window.setTimeout(() => {
+            holder.querySelectorAll(".ant-tabs-tabpane").forEach((pane) => {
+              const active = pane.id.endsWith("-panel-" + key);
+              pane.hidden = !active;
+              pane.classList.toggle("ant-tabs-tabpane-hidden", !active);
+              pane.setAttribute("aria-hidden", String(!active));
+            });
+          }, 0);
+        }
       };
       nav.addEventListener("click", (event) => {
         const target = event.target instanceof Element ? event.target.closest("[data-local-canvas-tab]") : null;
         if (target) { event.preventDefault(); event.stopPropagation(); setCustom(target.dataset.localCanvasTab); }
-        else if (event.target instanceof Element && event.target.closest(".ant-tabs-tab")) restoreOriginal();
+        else if (event.target instanceof Element) {
+          const originalTab = event.target.closest(".ant-tabs-tab");
+          if (originalTab instanceof HTMLElement && !originalTab.hasAttribute("data-local-canvas-tab")) restoreOriginal(originalTab);
+        }
       }, true);
       installedDialogs.add(dialog);
     };
