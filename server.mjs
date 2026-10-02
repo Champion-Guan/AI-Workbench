@@ -2558,58 +2558,95 @@ const localCanvasSettingsBridgeScript = `<script id="local-canvas-settings-bridg
       const channelsTab = nav.querySelector("[data-node-key='channels']");
       if (channelsTab instanceof HTMLElement) nav.insertBefore(customTabs[0], channelsTab.nextSibling);
       else nav.appendChild(customTabs[0]);
+      let activeCustomKey = null;
+      const setInkBar = (activeTab) => {
+        const inkBar = nav.parentElement?.querySelector(".ant-tabs-ink-bar");
+        if (!(inkBar instanceof HTMLElement) || !(activeTab instanceof HTMLElement)) return;
+        const inkParent = inkBar.parentElement?.getBoundingClientRect();
+        const tabRect = activeTab.getBoundingClientRect();
+        if (!inkParent) return;
+        inkBar.style.width = tabRect.width + "px";
+        inkBar.style.left = (tabRect.left - inkParent.left + tabRect.width / 2) + "px";
+        inkBar.style.transform = "translateX(-50%)";
+        inkBar.style.display = "";
+      };
+      const applyCustomVisibility = (key) => {
+        const panel = customPanels[key];
+        if (!panel || !holder.contains(panel)) holder.appendChild(panel);
+        holder.querySelectorAll(".ant-tabs-tabpane").forEach((pane) => {
+          pane.hidden = true;
+          pane.classList.add("ant-tabs-tabpane-hidden");
+          pane.setAttribute("aria-hidden", "true");
+        });
+        Object.entries(customPanels).forEach(([name, customPanel]) => {
+          customPanel.hidden = name !== key;
+          if (name === key) customPanel.removeAttribute("aria-hidden");
+        });
+      };
+      const applyOriginalVisibility = (originalTab) => {
+        const key = originalTab instanceof HTMLElement ? originalTab.dataset.nodeKey : "";
+        if (!key) return;
+        holder.querySelectorAll(".ant-tabs-tabpane").forEach((pane) => {
+          const active = pane.id.endsWith("-panel-" + key);
+          pane.hidden = !active;
+          pane.classList.toggle("ant-tabs-tabpane-hidden", !active);
+          pane.setAttribute("aria-hidden", String(!active));
+        });
+        Object.values(customPanels).forEach((panel) => { panel.hidden = true; });
+      };
       const setCustom = (key) => {
+        activeCustomKey = key;
         nav.querySelectorAll(".ant-tabs-tab").forEach((tab) => {
           const active = tab === nav.querySelector("[data-local-canvas-tab='" + key + "']");
           tab.classList.toggle("ant-tabs-tab-active", active);
           const roleTab = tab.querySelector("[role=tab]");
           if (roleTab) roleTab.setAttribute("aria-selected", String(active));
         });
-        const inkBar = nav.parentElement?.querySelector(".ant-tabs-ink-bar");
         const activeTab = nav.querySelector("[data-local-canvas-tab='" + key + "']");
-        if (inkBar instanceof HTMLElement && activeTab instanceof HTMLElement) {
-          const inkParent = inkBar.parentElement?.getBoundingClientRect();
-          const tabRect = activeTab.getBoundingClientRect();
-          if (inkParent) {
-            inkBar.style.width = tabRect.width + "px";
-            inkBar.style.left = (tabRect.left - inkParent.left + tabRect.width / 2) + "px";
-            inkBar.style.transform = "translateX(-50%)";
-            inkBar.style.display = "";
-          }
-        }
-        holder.querySelectorAll(".ant-tabs-tabpane").forEach((pane) => { pane.hidden = true; });
-        Object.entries(customPanels).forEach(([name, panel]) => { panel.hidden = name !== key; });
+        setInkBar(activeTab);
+        applyCustomVisibility(key);
         customPanels[key]?._renderFallback?.();
+        // Ant Tabs may reconcile its children after our handler. Re-apply after
+        // both the current event loop and the next paint so the custom panel
+        // cannot be replaced by the previously active native pane.
+        window.setTimeout(() => { if (activeCustomKey === key) applyCustomVisibility(key); }, 0);
+        window.requestAnimationFrame(() => { if (activeCustomKey === key) applyCustomVisibility(key); });
       };
       const restoreOriginal = (originalTab) => {
+        activeCustomKey = null;
         holder.querySelectorAll(".ant-tabs-tabpane").forEach((pane) => { pane.hidden = false; });
         Object.values(customPanels).forEach((panel) => { panel.hidden = true; });
         nav.querySelectorAll("[data-local-canvas-tab]").forEach((tab) => {
           tab.classList.remove("ant-tabs-tab-active");
           tab.querySelector("[role=tab]")?.setAttribute("aria-selected", "false");
         });
-        const inkBar = nav.parentElement?.querySelector(".ant-tabs-ink-bar");
-        if (inkBar instanceof HTMLElement) inkBar.style.display = "";
+        originalTab?.classList.add("ant-tabs-tab-active");
+        originalTab?.querySelector("[role=tab]")?.setAttribute("aria-selected", "true");
+        setInkBar(originalTab);
         const key = originalTab instanceof HTMLElement ? originalTab.dataset.nodeKey : "";
         if (key) {
-          window.setTimeout(() => {
-            holder.querySelectorAll(".ant-tabs-tabpane").forEach((pane) => {
-              const active = pane.id.endsWith("-panel-" + key);
-              pane.hidden = !active;
-              pane.classList.toggle("ant-tabs-tabpane-hidden", !active);
-              pane.setAttribute("aria-hidden", String(!active));
-            });
-          }, 0);
+          applyOriginalVisibility(originalTab);
+          window.setTimeout(() => applyOriginalVisibility(originalTab), 0);
+          window.requestAnimationFrame(() => applyOriginalVisibility(originalTab));
         }
       };
-      nav.addEventListener("click", (event) => {
+      const handleTabEvent = (event) => {
         const target = event.target instanceof Element ? event.target.closest("[data-local-canvas-tab]") : null;
-        if (target) { event.preventDefault(); event.stopPropagation(); setCustom(target.dataset.localCanvasTab); }
+        if (target) {
+          event.preventDefault();
+          event.stopPropagation();
+          event.stopImmediatePropagation?.();
+          if (event.type === "click") setCustom(target.dataset.localCanvasTab);
+        }
         else if (event.target instanceof Element) {
           const originalTab = event.target.closest(".ant-tabs-tab");
           if (originalTab instanceof HTMLElement && !originalTab.hasAttribute("data-local-canvas-tab")) restoreOriginal(originalTab);
         }
-      }, true);
+      };
+      ["pointerdown", "mousedown", "click"].forEach((type) => nav.addEventListener(type, handleTabEvent, true));
+      new MutationObserver(() => {
+        if (activeCustomKey) applyCustomVisibility(activeCustomKey);
+      }).observe(holder, { childList: true, subtree: true });
       installedDialogs.add(dialog);
     };
     new MutationObserver(install).observe(document.documentElement, { childList: true, subtree: true });
