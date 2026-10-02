@@ -2332,7 +2332,7 @@ const localCanvasSettingsBridgeScript = `<script id="local-canvas-settings-bridg
         .local-canvas-proxy-section{margin-top:16px}
         .local-canvas-settings-card{border:1px solid #e7e5e4;border-radius:8px;padding:12px;background:transparent}
         .local-canvas-settings-card h4{margin:0;color:#17181a;font-size:14px;font-weight:650}
-        .local-canvas-settings-card p{margin:6px 0 0;color:#70757d;font-size:12px;line-height:1.6}
+        .local-canvas-settings-card p{margin:4px 0 0;color:#78716c;font-size:12px;line-height:1rem}
         .local-canvas-settings-field{display:grid;gap:7px;margin-top:16px}
         .local-canvas-settings-field label{font-size:12px;color:#454950;font-weight:600}
         .local-canvas-settings-input-row{display:flex;gap:8px;align-items:center;border:1px solid #d9dce2;border-radius:9px;padding:4px 5px 4px 10px}
@@ -2358,10 +2358,10 @@ const localCanvasSettingsBridgeScript = `<script id="local-canvas-settings-bridg
         .local-canvas-fallback-row{display:flex;align-items:center;gap:10px;border:1px solid #e7e7eb;border-radius:9px;padding:10px 11px}
         .local-canvas-fallback-row label{min-width:0;flex:1;font-size:12px;color:#25272b}.local-canvas-fallback-row small{display:block;margin-top:3px;color:#8b9098;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
         .local-canvas-fallback-row button{border:0;background:transparent;color:#717780;cursor:pointer;font-size:14px;padding:2px 4px}.local-canvas-fallback-row button:disabled{opacity:.35;cursor:not-allowed}
-        .local-canvas-settings-note{margin-top:12px;font-size:12px;color:#70757d}
+        .local-canvas-settings-note{margin-top:12px;font-size:12px;line-height:1rem;color:#78716c}
         html[data-theme="dark"] .local-canvas-settings-card,html.dark .local-canvas-settings-card{border-color:#292524;background:transparent;color:#f4f4f5}
         html[data-theme="dark"] .local-canvas-settings-card h4,html.dark .local-canvas-settings-card h4{color:#f4f4f5}
-        html[data-theme="dark"] .local-canvas-settings-card p,html.dark .local-canvas-settings-card p,html[data-theme="dark"] .local-canvas-settings-note,html.dark .local-canvas-settings-note{color:#aeb4bf}
+        html[data-theme="dark"] .local-canvas-settings-card p,html.dark .local-canvas-settings-card p,html[data-theme="dark"] .local-canvas-settings-note,html.dark .local-canvas-settings-note{color:#78716c}
         html[data-theme="dark"] .local-canvas-settings-field label,html.dark .local-canvas-settings-field label{color:#d8dce3}
         html[data-theme="dark"] .local-canvas-settings-input-row,html.dark .local-canvas-settings-input-row,html[data-theme="dark"] .local-canvas-settings-file,html.dark .local-canvas-settings-file,html[data-theme="dark"] .local-canvas-settings-actions button,html.dark .local-canvas-settings-actions button{border-color:rgba(255,255,255,.14);background:transparent;color:#f4f4f5}
         html[data-theme="dark"] .local-canvas-settings-actions button.primary,html.dark .local-canvas-settings-actions button.primary{border-color:#f4f4f5;background:#f4f4f5;color:#1e2024}
@@ -2373,10 +2373,11 @@ const localCanvasSettingsBridgeScript = `<script id="local-canvas-settings-bridg
         html[data-theme="dark"] .local-canvas-fallback-switch button:hover,html.dark .local-canvas-fallback-switch button:hover{color:#8ab4ff}
         html[data-theme="dark"] .local-canvas-fallback-switch button.is-active,html.dark .local-canvas-fallback-switch button.is-active{background:#44403c;color:#f4f4f5;box-shadow:0 1px 4px rgba(0,0,0,.35)}
         [data-local-canvas-tab] .ant-tabs-tab-btn{color:#60656d}
-        [data-local-canvas-tab]:hover .ant-tabs-tab-btn{color:#1677ff}
-        [data-local-canvas-tab].ant-tabs-tab-active .ant-tabs-tab-btn{color:#1677ff;font-weight:600}
+        [data-local-canvas-tab]:hover .ant-tabs-tab-btn{color:#171717}
+        [data-local-canvas-tab].ant-tabs-tab-active .ant-tabs-tab-btn{color:#171717;font-weight:400}
+        [data-local-canvas-tab].ant-tabs-tab-active{border-bottom:2px solid currentColor}
         html[data-theme="dark"] [data-local-canvas-tab] .ant-tabs-tab-btn,html.dark [data-local-canvas-tab] .ant-tabs-tab-btn{color:#aeb4bf}
-        html[data-theme="dark"] [data-local-canvas-tab]:hover .ant-tabs-tab-btn,html.dark [data-local-canvas-tab]:hover .ant-tabs-tab-btn,html[data-theme="dark"] [data-local-canvas-tab].ant-tabs-tab-active .ant-tabs-tab-btn,html.dark [data-local-canvas-tab].ant-tabs-tab-active .ant-tabs-tab-btn{color:#8ab4ff}
+        html[data-theme="dark"] [data-local-canvas-tab]:hover .ant-tabs-tab-btn,html.dark [data-local-canvas-tab]:hover .ant-tabs-tab-btn,html[data-theme="dark"] [data-local-canvas-tab].ant-tabs-tab-active .ant-tabs-tab-btn,html.dark [data-local-canvas-tab].ant-tabs-tab-active .ant-tabs-tab-btn{color:#fafafa}
         .ant-tabs-nav-list{gap:4px}
       \`;
       document.head.appendChild(style);
