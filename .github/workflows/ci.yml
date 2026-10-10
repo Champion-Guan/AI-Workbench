@@ -36,6 +36,6 @@ jobs:
           go-version: stable
       - name: Independent secret scan (redacted)
         run: |
-          go install github.com/gitleaks/gitleaks/v8@v8.24.3
+          go install github.com/zricethezav/gitleaks/v8@v8.24.3
           "$(go env GOPATH)/bin/gitleaks" git --log-opts=--all --redact --no-banner --exit-code 1 --report-format json --report-path "$RUNNER_TEMP/gitleaks.json" > "$RUNNER_TEMP/gitleaks.log" 2>&1
           "$(go env GOPATH)/bin/gitleaks" dir src/canvas/dist --redact --no-banner --exit-code 1 --report-format json --report-path "$RUNNER_TEMP/gitleaks-build.json" > "$RUNNER_TEMP/gitleaks-build.log" 2>&1

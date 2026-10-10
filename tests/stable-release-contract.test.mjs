@@ -8,6 +8,7 @@ test('ordinary CI does not publish, uses read-only permissions and includes requ
   assert.match(ci, /contents: read/); assert.doesNotMatch(ci, /contents: write|stable:sign|publish-stable|pull_request_target/);
   for (const gate of ['typecheck', 'npm run lint', 'npm test', 'build:canvas', 'secrets:scan', 'secrets:history', 'gitleaks']) assert.ok(ci.includes(gate));
   assert.ok(ci.includes('npm ci --prefix src/canvas --ignore-scripts --legacy-peer-deps'));
+  assert.ok(ci.includes('go install github.com/zricethezav/gitleaks/v8@v8.24.3'));
   for (const action of ci.matchAll(/uses: ([^\s]+)/g)) assert.match(action[1], /@[a-f0-9]{40}$/);
 });
 test('stable publication is manual, native dual architecture and immutable-source-bound with isolated signing job', async () => {
