@@ -26,7 +26,7 @@ test('stable publication is manual, native dual architecture and immutable-sourc
   assert.doesNotMatch(build, /GUAN_STABLE_SIGNING_KEY|contents: write/); assert.match(publish, /GUAN_STABLE_SIGNING_KEY/);
   for (const action of workflow.matchAll(/uses: (actions\/[^\s]+)/g)) assert.match(action[1], /@[a-f0-9]{40}$/);
 });
-test('production trusted key set is fail-closed until user bootstraps a reviewed public key', async () => {
+test('production trusted key set is frozen and never includes private keys', async () => {
   const { STABLE_TRUSTED_KEYS } = await import('../src/server/stable-trust.mjs');
   assert.equal(Object.isFrozen(STABLE_TRUSTED_KEYS), true);
   for (const pem of Object.values(STABLE_TRUSTED_KEYS)) assert.ok(!pem.includes('PRIVATE KEY'));

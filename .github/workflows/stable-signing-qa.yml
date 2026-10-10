@@ -1,0 +1,31 @@
+name: Owner-approved signing key QA (no release)
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: Enter VERIFY-SIGNING-KEY (no release or installation)
+        required: true
+        type: string
+      commit:
+        description: Full 40-character default-branch source commit to verify
+        required: true
+        type: string
+permissions:
+  contents: read
+jobs:
+  verify-key:
+    if: github.repository == 'MrGuAm/guan-ai-workbench' && github.event.repository.private == true && github.repository_owner_id == '87700227' && github.actor_id == '87700227' && github.triggering_actor == 'MrGuAm' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch) && inputs.confirmation == 'VERIFY-SIGNING-KEY' && inputs.commit == github.sha
+    runs-on: macos-15
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 24.16.0
+      - name: Verify Secret matches pinned Ed25519 key (fixed non-release challenge)
+        env:
+          GUAN_STABLE_SIGNING_KEY: ${{ secrets.GUAN_STABLE_SIGNING_KEY }}
+        run: node scripts/verify-stable-signing-key.mjs
