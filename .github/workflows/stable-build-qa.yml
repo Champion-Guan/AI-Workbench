@@ -1,0 +1,64 @@
+name: Build-only native Stable package QA
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: Enter BUILD-ONLY (no signing, release or installation)
+        required: true
+        type: string
+permissions:
+  contents: read
+concurrency:
+  group: stable-build-qa
+  cancel-in-progress: false
+jobs:
+  quality:
+    if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch) && inputs.confirmation == 'BUILD-ONLY'
+    uses: ./.github/workflows/ci.yml
+  build:
+    needs: quality
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-15
+            arch: arm64
+          - runner: macos-15-intel
+            arch: x64
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 40
+    env:
+      GUAN_DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+      GUAN_QA_COMMIT: ${{ github.sha }}
+      EXPECTED_ARCH: ${{ matrix.arch }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 24.16.0
+      - name: Confirm committed build-only source and native architecture
+        run: node scripts/check-stable-build-qa.mjs
+      - run: npm ci --ignore-scripts
+      - run: npm ci --prefix src/canvas --ignore-scripts --legacy-peer-deps
+      - run: npm --prefix src/canvas run typecheck
+      - run: npm run lint
+      - run: npm test
+      - run: npm run secrets:scan
+      - run: npm run build:canvas
+      - run: npm run native:build
+      - run: npm run stable:runtime -- "${{ matrix.arch }}"
+      - run: npm run stable:build
+      - name: Native isolated smoke test using bundled Node
+        run: node scripts/verify-stable-native.mjs
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: stable-build-qa-${{ matrix.arch }}
+          path: |
+            output/stable/*.zip
+            output/stable/package-*.json
+          if-no-files-found: error
+          retention-days: 7
