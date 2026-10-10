@@ -185,6 +185,7 @@
     {
       "fingerprint": "1e1ac0b790dbab38b24ea3c1d727601ad9124801:playground-settings/dist/assets/index.js:generic-api-key:192",
       "commit": "1e1ac0b790dbab38b24ea3c1d727601ad9124801",
+      "localRestoreOnly": true,
       "file": "playground-settings/dist/assets/index.js",
       "line": 192,
       "byteOffset": 61431,

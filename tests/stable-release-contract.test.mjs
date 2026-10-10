@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
 
 test('ordinary CI does not publish, uses read-only permissions and includes required quality gates', async () => {
   const ci = await readFile(new URL('../.github/workflows/ci.yml', import.meta.url), 'utf8');
@@ -39,6 +39,19 @@ test('independent scanner exclusions are exact immutable fingerprints with verif
   for (const e of review.entries) {
     assert.equal(e.file, 'playground-settings/dist/assets/index.js');
     assert.equal(e.fingerprint, `${e.commit}:${e.file}:generic-api-key:${e.line}`);
+    if (e.localRestoreOnly) {
+      // Exactly this reviewed, local restore commit is deliberately not pushed.
+      // Missing remote objects cannot hide findings: Gitleaks still scans every
+      // fetched ref, and a present object must pass the original byte proof.
+      assert.equal(e.commit, '1e1ac0b790dbab38b24ea3c1d727601ad9124801');
+      const present = spawnSync('git', ['cat-file', '-e', `${e.commit}^{commit}`], { stdio: 'pipe' });
+      if (present.status !== 0) {
+        assert.equal(present.status, 128);
+        const refs = execFileSync('git', ['rev-list', '--all'], { encoding: 'utf8' }).trim().split('\n');
+        assert.equal(refs.includes(e.commit), false);
+        continue;
+      }
+    }
     const spec = e.commit + ':' + e.file;
     assert.equal(execFileSync('git', ['rev-parse', spec], { encoding: 'utf8' }).trim(), e.blob);
     const source = execFileSync('git', ['show', spec], { maxBuffer: 32 * 1024 * 1024 }).toString();
