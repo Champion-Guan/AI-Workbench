@@ -5,12 +5,17 @@ import { fetch } from 'undici';
 import { validRepository } from '../src/server/stable-version.mjs';
 import { verifySignedStable } from './lib/signed-stable.mjs';
 import { sha256, verifyStableArchive, verifyStableManifest } from '../src/server/stable-manifest.mjs';
+import { verifyStableOwnerEnvironment } from './lib/stable-owner-approval.mjs';
 
 async function main() {
+  const approval = await verifyStableOwnerEnvironment();
   const [repository, directory] = process.argv.slice(2), token = process.env.GUAN_RELEASE_TOKEN;
   delete process.env.GUAN_RELEASE_TOKEN;
-  if (process.argv.length !== 4 || !validRepository(repository) || !path.isAbsolute(directory) || !token || process.env.GUAN_CONFIRM_RELEASE !== 'RELEASE-STABLE') throw Error('Protected manual release authorization required');
+  if (process.argv.length !== 4 || !validRepository(repository) || repository !== approval.repository
+    || process.env.GUAN_RELEASE_COMMIT !== approval.commit || !path.isAbsolute(directory) || !token
+    || process.env.GUAN_CONFIRM_RELEASE !== 'RELEASE-STABLE') throw Error('Owner manual release authorization required');
   const root = fileURLToPath(new URL('../', import.meta.url)), version = JSON.parse(await readFile(path.join(root, 'package.json'), 'utf8')).version;
+  if (approval.tag !== 'v' + version) throw Error('Approved tag/version mismatch');
   const checked = await verifySignedStable({ directory, repository, version, arch: 'arm64' });
   await verifySignedStable({ directory, repository, version, arch: 'x64' });
   if (checked.manifest.commit !== process.env.GUAN_RELEASE_COMMIT) throw Error('Unexpected release commit');

@@ -1,4 +1,4 @@
-name: Manually approved Stable release
+name: Owner-confirmed Stable release
 on:
   workflow_dispatch:
     inputs:
@@ -10,6 +10,10 @@ on:
         description: Enter RELEASE-STABLE to request publication
         required: true
         type: string
+      commit:
+        description: Full 40-character default-branch commit SHA reviewed for this release
+        required: true
+        type: string
 permissions:
   contents: read
 concurrency:
@@ -17,7 +21,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   quality:
-    if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch) && inputs.confirmation == 'RELEASE-STABLE'
+    if: github.repository == 'MrGuAm/guan-ai-workbench' && github.event.repository.private == true && github.repository_owner_id == '87700227' && github.actor_id == '87700227' && github.triggering_actor == 'MrGuAm' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch) && inputs.confirmation == 'RELEASE-STABLE' && inputs.commit == github.sha
     uses: ./.github/workflows/ci.yml
   build:
     needs: quality
@@ -47,6 +51,7 @@ jobs:
         env:
           EXPECTED_ARCH: ${{ matrix.arch }}
         run: |
+          node scripts/check-stable-owner-approval.mjs
           node -e 'if(process.platform!=="darwin" || process.arch!==process.env.EXPECTED_ARCH) process.exit(1)'
           node scripts/check-stable-source.mjs "$GUAN_RELEASE_TAG"
       - run: npm ci --ignore-scripts
@@ -72,8 +77,8 @@ jobs:
           retention-days: 7
   publish:
     needs: build
+    if: github.repository == 'MrGuAm/guan-ai-workbench' && github.event.repository.private == true && github.repository_owner_id == '87700227' && github.actor_id == '87700227' && github.triggering_actor == 'MrGuAm' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch) && inputs.confirmation == 'RELEASE-STABLE' && inputs.commit == github.sha
     runs-on: macos-15
-    environment: stable-release
     permissions:
       contents: write
     timeout-minutes: 20
@@ -93,6 +98,7 @@ jobs:
       - run: npm ci --ignore-scripts
       - name: Recheck release source
         run: |
+          node scripts/check-stable-owner-approval.mjs
           node scripts/check-stable-source.mjs "$GUAN_RELEASE_TAG"
           echo "GUAN_RELEASE_COMMIT=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
