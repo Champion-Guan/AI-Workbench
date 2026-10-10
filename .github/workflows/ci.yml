@@ -22,7 +22,9 @@ jobs:
             package-lock.json
             src/canvas/package-lock.json
       - run: npm ci --ignore-scripts
-      - run: npm ci --prefix src/canvas --ignore-scripts
+      # Existing Pro Components beta declares antd 5 peers; preserve the tested
+      # locked antd 6 graph explicitly until a separately tested provider upgrade.
+      - run: npm ci --prefix src/canvas --ignore-scripts --legacy-peer-deps
       - run: npm --prefix src/canvas run typecheck
       - run: npm run lint
       - run: npm test

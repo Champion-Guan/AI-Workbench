@@ -7,6 +7,7 @@ test('ordinary CI does not publish, uses read-only permissions and includes requ
   const ci = await readFile(new URL('../.github/workflows/ci.yml', import.meta.url), 'utf8');
   assert.match(ci, /contents: read/); assert.doesNotMatch(ci, /contents: write|stable:sign|publish-stable|pull_request_target/);
   for (const gate of ['typecheck', 'npm run lint', 'npm test', 'build:canvas', 'secrets:scan', 'secrets:history', 'gitleaks']) assert.ok(ci.includes(gate));
+  assert.ok(ci.includes('npm ci --prefix src/canvas --ignore-scripts --legacy-peer-deps'));
   for (const action of ci.matchAll(/uses: ([^\s]+)/g)) assert.match(action[1], /@[a-f0-9]{40}$/);
 });
 test('stable publication is manual, native dual architecture and immutable-source-bound with isolated signing job', async () => {
@@ -14,6 +15,7 @@ test('stable publication is manual, native dual architecture and immutable-sourc
   assert.match(workflow, /workflow_dispatch:/); assert.doesNotMatch(workflow, /pull_request_target|\n  push:|ref: \$\{\{ inputs.tag/);
   assert.equal([...workflow.matchAll(/ref: \$\{\{ github.sha \}\}/g)].length, 2);
   for (const value of ['RELEASE-STABLE', 'macos-15-intel', 'arch: arm64', 'arch: x64', 'environment: stable-release', 'verify-stable-native.mjs', 'cancel-in-progress: false']) assert.ok(workflow.includes(value));
+  assert.ok(workflow.includes('npm ci --prefix src/canvas --ignore-scripts --legacy-peer-deps'));
   const [build, publish] = workflow.split('\n  publish:');
   assert.doesNotMatch(build, /GUAN_STABLE_SIGNING_KEY|contents: write/); assert.match(publish, /GUAN_STABLE_SIGNING_KEY/);
   for (const action of workflow.matchAll(/uses: (actions\/[^\s]+)/g)) assert.match(action[1], /@[a-f0-9]{40}$/);

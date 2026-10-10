@@ -50,7 +50,8 @@ jobs:
           node -e 'if(process.platform!=="darwin" || process.arch!==process.env.EXPECTED_ARCH) process.exit(1)'
           node scripts/check-stable-source.mjs "$GUAN_RELEASE_TAG"
       - run: npm ci --ignore-scripts
-      - run: npm ci --prefix src/canvas --ignore-scripts
+      # Match ordinary CI's existing, explicitly locked peer compatibility graph.
+      - run: npm ci --prefix src/canvas --ignore-scripts --legacy-peer-deps
       - run: npm --prefix src/canvas run typecheck
       - run: npm run lint
       - run: npm test
