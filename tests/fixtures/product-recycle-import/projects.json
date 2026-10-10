@@ -1,0 +1,24 @@
+{
+  "app": "infinite-canvas",
+  "version": 3,
+  "exportedAt": "2026-10-10T07:00:00.000Z",
+  "projects": [
+    {
+      "project": {
+        "id": "qa-import-project",
+        "title": "QA导入产品",
+        "createdAt": "2026-10-10T07:00:00.000Z",
+        "updatedAt": "2026-10-10T07:00:00.000Z",
+        "nodes": [],
+        "connections": [],
+        "chatSessions": [],
+        "activeChatId": null,
+        "backgroundMode": "lines",
+        "showImageInfo": true,
+        "viewport": { "x": 0, "y": 0, "k": 1 },
+        "deletedNodeBatches": []
+      },
+      "files": []
+    }
+  ]
+}

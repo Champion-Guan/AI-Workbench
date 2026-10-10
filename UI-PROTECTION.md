@@ -22,11 +22,10 @@
    明确要求的 UI 变化，应确认受保护文件相对于基准没有非预期差异：
 
    ```bash
-   git diff -- server.mjs \
-     playground-settings/src/settings.css \
-     playground-settings/src/components \
-     playground-settings/dist/assets/index.css \
-     playground-settings/dist/assets/index.js
+   git diff -- src/server/index.mjs \
+     src/canvas/components/layout \
+     src/canvas/styles \
+     public/infinite-canvas/index.html
    ```
 
 6. 如果用户明确要求修改现有 UI，先保留当前回退标签，再在新标签上继续；
@@ -34,10 +33,9 @@
 
 ## 受保护范围
 
-- `server.mjs` 中的工作台布局、侧边栏、设置按钮、生成按钮、主题反色、
+- `src/server/index.mjs` 中的工作台布局、侧边栏、设置按钮、生成按钮、主题反色、
   弹窗层级和动画规则。
-- `playground-settings/src/settings.css` 及设置组件中的现有交互。
-- `playground-settings/dist/assets/index.css` 和 `index.js` 中已构建的设置面板。
-- `archive/` 中的本地页面和媒体资源路径。
+- `src/canvas/components/layout/` 和 `styles/` 中的原生设置面板与画布样式。
+- `public/` 中的本地页面和媒体资源路径。
 
 本文件只记录开发约定，不会被运行时加载，也不会改变页面显示。

@@ -1,6 +1,6 @@
-# Guan A+ 详情页工作台
+# Guan AI 生图工作台
 
-这是一个完全本地的单页面静态工作台，只保留 A+/详情页功能。
+这是一个本地运行的 AI 生图工作台，包含产品画布、提示词工作流、图片生成渠道和本地代理服务。
 
 启动：
 
@@ -10,14 +10,40 @@ npm run dev
 
 默认地址：[http://127.0.0.1:5174](http://127.0.0.1:5174)
 
-项目没有页面别名或其他工具路由。唯一入口是根路径；内部静态资源仅供该页面加载。历史版本和完整备份不放在当前项目运行路径中。
+项目持续开发目标与分阶段验收标准见 [PROJECT-GOAL.md](docs/PROJECT-GOAL.md)。
+当前 GitHub Stable 自动更新系统仍在实施，未签名便携包不等于正式稳定更新包。
 
-目录已经扁平化为：
+工作台入口是根路径；产品画布通过内嵌的 `/canvas/:id` 页面加载。画布源码仍保留部分原有内部路由，详见项目结构说明。历史版本和完整备份不放在当前项目运行路径中。
 
-- `archive/index.html`：唯一页面
-- `archive/assets/_next/static`：页面运行所需的脚本、样式和字体
-- `archive/assets/media`：详情页预览图片
-- `archive/assets/local-brand`：本地 logo 与 favicon
+## 项目结构
+
+项目分为“运行时文件”和“可维护源码”两部分，具体依赖关系见
+[项目结构说明](docs/PROJECT-STRUCTURE.md)。关键目录如下：
+
+- `server.mjs`：稳定的服务启动入口，供 npm 脚本和桌面启动器调用。
+- `src/server/`：HTTP 服务、API 路由、渠道请求和内置代理实现。
+- `public/index.html`、`public/assets/`：当前工作台页面及其静态资源。
+- `public/infinite-canvas/`：当前嵌入画布的页面、版本化构建资源及本地桥接脚本，是主服务实际提供的运行时资源。
+- `src/canvas/`：嵌入画布的 React/Vite 源码；`dist/` 是本地构建产物，可在该目录执行 `npm run build` 重新生成，不作为主服务的静态资源目录。
+- 设置面板：主面板来自画布应用；Fallback、网络代理等工作台扩展由 `src/server/index.mjs` 注入，不再维护独立的 Playground 设置应用。
+- `src/shared/data-contract/`：页面与服务共用的数据契约源码；浏览器路由仍为 `/data-contract/`。
+- `config/`：可公开的默认配置模板，不放个人密钥或代理订阅。
+- `docs/`、`tests/`、`scripts/`：开发说明、回归用例和维护脚本。
+
+`node_modules/`、`output/` 和 `.playwright-cli/` 是本地依赖或检查输出，不属于项目源码；请勿把个人凭据放入仓库。
+
+常用维护命令：`npm test` 检查回归，`npm run build:canvas` 构建画布，
+`npm run publish:canvas` 发布构建并保留旧版备份。
+`npm run audit:canvas-assets` 检查未引用构建文件，
+`npm run clean:canvas-assets` 将它们移入备份目录。
+
+## 迁移与发布
+
+执行 `npm run release` 生成独立 ZIP 发布包（打包工具需有 `zip` 命令）。
+生成文件位于 `output/releases/`，附带 SHA-256 校验文件。
+包内提供 macOS、Windows、Linux 启动脚本，具体见 [迁移说明](docs/MIGRATION.md)。
+发布包不含私人代理配置、浏览器画布数据或渠道凭据；这些要另行迁移。
+可运行 `node scripts/verify-release.mjs /绝对路径/发布包.zip` 验证解压后的独立启动（需要 `unzip`）。
 
 ## UI 保护
 

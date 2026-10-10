@@ -1,0 +1,110 @@
+name: Manually approved Stable release
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing stable tag matching package.json (e.g. v1.0.4)
+        required: true
+        type: string
+      confirmation:
+        description: Enter RELEASE-STABLE to request publication
+        required: true
+        type: string
+permissions:
+  contents: read
+concurrency:
+  group: stable-release
+  cancel-in-progress: false
+jobs:
+  quality:
+    if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch) && inputs.confirmation == 'RELEASE-STABLE'
+    uses: ./.github/workflows/ci.yml
+  build:
+    needs: quality
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-15
+            arch: arm64
+          - runner: macos-15-intel
+            arch: x64
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 40
+    env:
+      GUAN_DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+      GUAN_RELEASE_TAG: ${{ inputs.tag }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 24.16.0
+      - name: Confirm native runner and committed release identity
+        env:
+          EXPECTED_ARCH: ${{ matrix.arch }}
+        run: |
+          node -e 'if(process.platform!=="darwin" || process.arch!==process.env.EXPECTED_ARCH) process.exit(1)'
+          node scripts/check-stable-source.mjs "$GUAN_RELEASE_TAG"
+      - run: npm ci --ignore-scripts
+      - run: npm ci --prefix src/canvas --ignore-scripts
+      - run: npm --prefix src/canvas run typecheck
+      - run: npm run lint
+      - run: npm test
+      - run: npm run secrets:scan
+      - run: npm run build:canvas
+      - run: npm run native:build
+      - run: npm run stable:runtime -- "${{ matrix.arch }}"
+      - run: npm run stable:build
+      - name: Native isolated smoke test using bundled Node
+        run: node scripts/verify-stable-native.mjs
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: stable-${{ matrix.arch }}
+          path: |
+            output/stable/*.zip
+            output/stable/package-*.json
+          if-no-files-found: error
+          retention-days: 7
+  publish:
+    needs: build
+    runs-on: macos-15
+    environment: stable-release
+    permissions:
+      contents: write
+    timeout-minutes: 20
+    env:
+      GUAN_DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+      GUAN_RELEASE_TAG: ${{ inputs.tag }}
+      GUAN_REPOSITORY: ${{ github.repository }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 24.16.0
+      - run: npm ci --ignore-scripts
+      - name: Recheck release source
+        run: |
+          node scripts/check-stable-source.mjs "$GUAN_RELEASE_TAG"
+          echo "GUAN_RELEASE_COMMIT=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          pattern: stable-*
+          merge-multiple: true
+          path: output/stable
+      - name: Sign and verify both packages with pinned Ed25519 key
+        env:
+          GUAN_STABLE_SIGNING_KEY: ${{ secrets.GUAN_STABLE_SIGNING_KEY }}
+        run: npm run stable:sign -- "$GUAN_REPOSITORY" "$GITHUB_WORKSPACE/output/stable"
+      - name: Upload Draft, verify GitHub digests, then publish Stable
+        env:
+          GUAN_RELEASE_TOKEN: ${{ github.token }}
+          GUAN_CONFIRM_RELEASE: ${{ inputs.confirmation }}
+        run: node scripts/publish-stable-release.mjs "$GUAN_REPOSITORY" "$GITHUB_WORKSPACE/output/stable"

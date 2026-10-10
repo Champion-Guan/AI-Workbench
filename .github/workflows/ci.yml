@@ -1,0 +1,39 @@
+name: Source quality gates
+on:
+  push:
+  pull_request:
+  workflow_call:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: macos-15
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 24.16.0
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            src/canvas/package-lock.json
+      - run: npm ci --ignore-scripts
+      - run: npm ci --prefix src/canvas --ignore-scripts
+      - run: npm --prefix src/canvas run typecheck
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build:canvas
+      - run: npm run secrets:scan
+      - run: npm run secrets:history
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff
+        with:
+          go-version: stable
+      - name: Independent secret scan (redacted)
+        run: |
+          go install github.com/gitleaks/gitleaks/v8@v8.24.3
+          "$(go env GOPATH)/bin/gitleaks" git --log-opts=--all --redact --no-banner --exit-code 1 --report-format json --report-path "$RUNNER_TEMP/gitleaks.json" > "$RUNNER_TEMP/gitleaks.log" 2>&1
+          "$(go env GOPATH)/bin/gitleaks" dir src/canvas/dist --redact --no-banner --exit-code 1 --report-format json --report-path "$RUNNER_TEMP/gitleaks-build.json" > "$RUNNER_TEMP/gitleaks-build.log" 2>&1

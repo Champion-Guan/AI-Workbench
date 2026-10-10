@@ -1,0 +1,10 @@
+# Public, credential-free first-run template. Never overwrite a private profile.
+mixed-port: 23210
+allow-lan: false
+bind-address: 127.0.0.1
+mode: rule
+log-level: warning
+proxies: []
+proxy-groups: []
+rules:
+  - MATCH,DIRECT

@@ -31,7 +31,7 @@ tar -czf "$archive" \
   --exclude='./node_modules' \
   --exclude='./output' \
   --exclude='./.playwright-cli' \
-  --exclude='./playground-settings/node_modules' \
+  --exclude='./src/canvas/node_modules' \
   -C "$project_root" .
 
 printf 'Created backup: %s\n' "$archive"

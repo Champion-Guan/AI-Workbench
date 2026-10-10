@@ -1,9 +1,25 @@
 # Local runtime and browser-inspection artifacts
 node_modules/
-/playground-settings/node_modules
 .playwright-cli/
 output/
+/src/canvas/dist/
 *.log
 .DS_Store
 .env.local
 .env.*.local
+.env
+.env.*
+!.env.example
+!.env.*.example
+
+# Private profiles and runtime state must never become software release inputs.
+/config/default-proxy.yaml
+/.image-relay-transports.json
+/personal-config/
+/proxy-runtime/
+/user-data/
+/backups/
+*.personal.zip
+*-personal-*.zip
+*.pem
+*.key

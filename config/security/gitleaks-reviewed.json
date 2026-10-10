@@ -1,0 +1,222 @@
+{
+  "version": 1,
+  "scanner": "gitleaks 8.24.3",
+  "entries": [
+    {
+      "fingerprint": "69da97791e6ffdc84d6eb6b6254fd29614de92ec:playground-settings/dist/assets/index.js:generic-api-key:195",
+      "commit": "69da97791e6ffdc84d6eb6b6254fd29614de92ec",
+      "file": "playground-settings/dist/assets/index.js",
+      "line": 195,
+      "byteOffset": 69632,
+      "blob": "9836b7fcca1b51fdac1dd47ecff19d108d98b87d",
+      "reason": "Exact historical useNewApiKey: <object>.useNewApiKey === void 0 ? default expression, not a literal credential. No working-tree, future commit, path or generic-rule exemption."
+    },
+    {
+      "fingerprint": "e1a031cdcccaf67692347fb3345c368a30c089f1:playground-settings/dist/assets/index.js:generic-api-key:195",
+      "commit": "e1a031cdcccaf67692347fb3345c368a30c089f1",
+      "file": "playground-settings/dist/assets/index.js",
+      "line": 195,
+      "byteOffset": 69632,
+      "blob": "4adfc02b31db27e00abd1feeb9e1499f609b39d8",
+      "reason": "Exact historical useNewApiKey: <object>.useNewApiKey === void 0 ? default expression, not a literal credential. No working-tree, future commit, path or generic-rule exemption."
+    },
+    {
+      "fingerprint": "14aba44823d836ab7093fcdeac3e3dc72c7d24ae:playground-settings/dist/assets/index.js:generic-api-key:192",
+      "commit": "14aba44823d836ab7093fcdeac3e3dc72c7d24ae",
+      "file": "playground-settings/dist/assets/index.js",
+      "line": 192,
+      "byteOffset": 69632,
+      "blob": "706000fb7850f22a7685ec98bf74a22aa78ac71f",
+      "reason": "Exact historical useNewApiKey: <object>.useNewApiKey === void 0 ? default expression, not a literal credential. No working-tree, future commit, path or generic-rule exemption."
+    },
+    {
+      "fingerprint": "6e273dcf6ad124b0ace77c76514e9f4f78796ffb:playground-settings/dist/assets/index.js:generic-api-key:192",
+      "commit": "6e273dcf6ad124b0ace77c76514e9f4f78796ffb",
+      "file": "playground-settings/dist/assets/index.js",
+      "line": 192,
+      "byteOffset": 69632,
+      "blob": "f3b3578768048e9c094077eb2c726e11f10de370",
+      "reason": "Exact historical useNewApiKey: <object>.useNewApiKey === void 0 ? default expression, not a literal credential. No working-tree, future commit, path or generic-rule exemption."
+    },
+    {
+      "fingerprint": "66f5dfe309efb434728d20bdd2b359193a67726e:playground-settings/dist/assets/index.js:generic-api-key:195",
+      "commit": "66f5dfe309efb434728d20bdd2b359193a67726e",
+      "file": "playground-settings/dist/assets/index.js",
+      "line": 195,
+      "byteOffset": 69632,
+      "blob": "2c686cac734359c2d08a62b9152a68684acdfaa5",
+      "reason": "Exact historical useNewApiKey: <object>.useNewApiKey === void 0 ? default expression, not a literal credential. No working-tree, future commit, path or generic-rule exemption."
+    },
+    {
+      "fingerprint": "8a1b828ee18f9ea20bf629ebad239e6e6fffac25:playground-settings/dist/assets/index.js:generic-api-key:195",
+      "commit": "8a1b828ee18f9ea20bf629ebad239e6e6fffac25",
+      "file": "playground-settings/dist/assets/index.js",
+      "line": 195,
+      "byteOffset": 69632,
+      "blob": "4cb4bc2ba5c56c394060189e17d4749aadc70170",
+      "reason": "Exact historical useNewApiKey: <object>.useNewApiKey === void 0 ? default expression, not a literal credential. No working-tree, future commit, path or generic-rule exemption."
+    },
+    {
+      "fingerprint": "0ece0a58aca10ba8a27edfe62a38a02a8d1fd009:playground-settings/dist/assets/index.js:generic-api-key:195",
+      "commit": "0ece0a58aca10ba8a27edfe62a38a02a8d1fd009",
+      "file": "playground-settings/dist/assets/index.js",
+      "line": 195,
+      "byteOffset": 69538,
+      "blob": "54b852ee7551f954ca07b8ab86bc9ac514e4443d",
+      "reason": "Exact historical useNewApiKey: <object>.useNewApiKey === void 0 ? default expression, not a literal credential. No working-tree, future commit, path or generic-rule exemption."
+    },
+    {
+      "fingerprint": "c67d6f6897930aa22388cdf0dcc3e58b46cc6677:playground-settings/dist/assets/index.js:generic-api-key:195",
+      "commit": "c67d6f6897930aa22388cdf0dcc3e58b46cc6677",
+      "file": "playground-settings/dist/assets/index.js",
+      "line": 195,
+      "byteOffset": 69538,
+      "blob": "270ca336fedd0a94f3cb1a04811869f24670f5de",
+      "reason": "Exact historical useNewApiKey: <object>.useNewApiKey === void 0 ? default expression, not a literal credential. No working-tree, future commit, path or generic-rule exemption."
+    },
+    {
+      "fingerprint": "2afbda9dd9b7bf840778751decb1aae92d217aba:playground-settings/dist/assets/index.js:generic-api-key:192",
+      "commit": "2afbda9dd9b7bf840778751decb1aae92d217aba",
+      "file": "playground-settings/dist/assets/index.js",
+      "line": 192,
+      "byteOffset": 69538,
+      "blob": "7591ff37349f6650435051f2d7c8942250dae2a9",
+      "reason": "Exact historical useNewApiKey: <object>.useNewApiKey === void 0 ? default expression, not a literal credential. No working-tree, future commit, path or generic-rule exemption."
+    },
+    {
+      "fingerprint": "dfe850cf21ef01cabbe440ba24f39b3b4da7e36a:playground-settings/dist/assets/index.js:generic-api-key:192",
+      "commit": "dfe850cf21ef01cabbe440ba24f39b3b4da7e36a",
+      "file": "playground-settings/dist/assets/index.js",
+      "line": 192,
+      "byteOffset": 69518,
+      "blob": "78c2caf9307d4683e27f53a6920ee6e0909957ff",
+      "reason": "Exact historical useNewApiKey: <object>.useNewApiKey === void 0 ? default expression, not a literal credential. No working-tree, future commit, path or generic-rule exemption."
+    },
+    {
+      "fingerprint": "573a3fcbb86346cee14fdb056f7dad73c95ab66b:playground-settings/dist/assets/index.js:generic-api-key:192",
+      "commit": "573a3fcbb86346cee14fdb056f7dad73c95ab66b",
+      "file": "playground-settings/dist/assets/index.js",
+      "line": 192,
+      "byteOffset": 66813,
+      "blob": "c984c1ac67f7f1d728bdb51ad76b4bba475b4c86",
+      "reason": "Exact historical useNewApiKey: <object>.useNewApiKey === void 0 ? default expression, not a literal credential. No working-tree, future commit, path or generic-rule exemption."
+    },
+    {
+      "fingerprint": "3537b023d0354b0a9e9257c586aa6798a1ac639f:playground-settings/dist/assets/index.js:generic-api-key:192",
+      "commit": "3537b023d0354b0a9e9257c586aa6798a1ac639f",
+      "file": "playground-settings/dist/assets/index.js",
+      "line": 192,
+      "byteOffset": 67486,
+      "blob": "391cf0b1dbb602e145f57d64336596132386cda1",
+      "reason": "Exact historical useNewApiKey: <object>.useNewApiKey === void 0 ? default expression, not a literal credential. No working-tree, future commit, path or generic-rule exemption."
+    },
+    {
+      "fingerprint": "2d3c5aad5ad4ea67b8e1902dda65bad47821af27:playground-settings/dist/assets/index.js:generic-api-key:192",
+      "commit": "2d3c5aad5ad4ea67b8e1902dda65bad47821af27",
+      "file": "playground-settings/dist/assets/index.js",
+      "line": 192,
+      "byteOffset": 67188,
+      "blob": "edd39b7ed450de9c47c5ee6642985e8d63056887",
+      "reason": "Exact historical useNewApiKey: <object>.useNewApiKey === void 0 ? default expression, not a literal credential. No working-tree, future commit, path or generic-rule exemption."
+    },
+    {
+      "fingerprint": "4b8ed4caec8aead8075654f129d69f043a52ec9e:playground-settings/dist/assets/index.js:generic-api-key:192",
+      "commit": "4b8ed4caec8aead8075654f129d69f043a52ec9e",
+      "file": "playground-settings/dist/assets/index.js",
+      "line": 192,
+      "byteOffset": 65975,
+      "blob": "0560127e661a81d53d91690e23ca6f3d2fbfab31",
+      "reason": "Exact historical useNewApiKey: <object>.useNewApiKey === void 0 ? default expression, not a literal credential. No working-tree, future commit, path or generic-rule exemption."
+    },
+    {
+      "fingerprint": "d3f40e90b0d6c4a1744c35a13d606e1c4e6447ac:playground-settings/dist/assets/index.js:generic-api-key:192",
+      "commit": "d3f40e90b0d6c4a1744c35a13d606e1c4e6447ac",
+      "file": "playground-settings/dist/assets/index.js",
+      "line": 192,
+      "byteOffset": 64995,
+      "blob": "1c6fb831ffda4434d749f3c462e76bb61725c2f1",
+      "reason": "Exact historical useNewApiKey: <object>.useNewApiKey === void 0 ? default expression, not a literal credential. No working-tree, future commit, path or generic-rule exemption."
+    },
+    {
+      "fingerprint": "28be647bcbd1a543c743e237d2b1353509c731b0:playground-settings/dist/assets/index.js:generic-api-key:192",
+      "commit": "28be647bcbd1a543c743e237d2b1353509c731b0",
+      "file": "playground-settings/dist/assets/index.js",
+      "line": 192,
+      "byteOffset": 63334,
+      "blob": "aa5a1eee950f00280c71018437208c298bbbdfc6",
+      "reason": "Exact historical useNewApiKey: <object>.useNewApiKey === void 0 ? default expression, not a literal credential. No working-tree, future commit, path or generic-rule exemption."
+    },
+    {
+      "fingerprint": "8ac44ad8bb4bff684f46dde56ac2eab7f644f36d:playground-settings/dist/assets/index.js:generic-api-key:192",
+      "commit": "8ac44ad8bb4bff684f46dde56ac2eab7f644f36d",
+      "file": "playground-settings/dist/assets/index.js",
+      "line": 192,
+      "byteOffset": 60966,
+      "blob": "a66b87cc2010320364d128d39053169a4a4e4715",
+      "reason": "Exact historical useNewApiKey: <object>.useNewApiKey === void 0 ? default expression, not a literal credential. No working-tree, future commit, path or generic-rule exemption."
+    },
+    {
+      "fingerprint": "c0fba919c8893fcb29b0804d740cd4afea17efc1:playground-settings/dist/assets/index.js:generic-api-key:192",
+      "commit": "c0fba919c8893fcb29b0804d740cd4afea17efc1",
+      "file": "playground-settings/dist/assets/index.js",
+      "line": 192,
+      "byteOffset": 60966,
+      "blob": "3a0e66af0b741dd60524452da8e2a02e1ebad342",
+      "reason": "Exact historical useNewApiKey: <object>.useNewApiKey === void 0 ? default expression, not a literal credential. No working-tree, future commit, path or generic-rule exemption."
+    },
+    {
+      "fingerprint": "01969634a78607e7e303021e6472f254eb8e9403:playground-settings/dist/assets/index.js:generic-api-key:192",
+      "commit": "01969634a78607e7e303021e6472f254eb8e9403",
+      "file": "playground-settings/dist/assets/index.js",
+      "line": 192,
+      "byteOffset": 60894,
+      "blob": "1c2873aa4adf720420d21913acc987eedf76ac0a",
+      "reason": "Exact historical useNewApiKey: <object>.useNewApiKey === void 0 ? default expression, not a literal credential. No working-tree, future commit, path or generic-rule exemption."
+    },
+    {
+      "fingerprint": "7a31e450c24073208279a308917dd291d343c4c1:playground-settings/dist/assets/index.js:generic-api-key:192",
+      "commit": "7a31e450c24073208279a308917dd291d343c4c1",
+      "file": "playground-settings/dist/assets/index.js",
+      "line": 192,
+      "byteOffset": 61431,
+      "blob": "e40a6bed9ab421d9d92087bfd3a468388b63ab08",
+      "reason": "Exact historical useNewApiKey: <object>.useNewApiKey === void 0 ? default expression, not a literal credential. No working-tree, future commit, path or generic-rule exemption."
+    },
+    {
+      "fingerprint": "1e1ac0b790dbab38b24ea3c1d727601ad9124801:playground-settings/dist/assets/index.js:generic-api-key:192",
+      "commit": "1e1ac0b790dbab38b24ea3c1d727601ad9124801",
+      "file": "playground-settings/dist/assets/index.js",
+      "line": 192,
+      "byteOffset": 61431,
+      "blob": "e40a6bed9ab421d9d92087bfd3a468388b63ab08",
+      "reason": "Exact historical useNewApiKey: <object>.useNewApiKey === void 0 ? default expression, not a literal credential. No working-tree, future commit, path or generic-rule exemption."
+    },
+    {
+      "fingerprint": "cdb6dc5cbf6871d8973ad593876873330e3b1039:playground-settings/dist/assets/index.js:generic-api-key:192",
+      "commit": "cdb6dc5cbf6871d8973ad593876873330e3b1039",
+      "file": "playground-settings/dist/assets/index.js",
+      "line": 192,
+      "byteOffset": 60889,
+      "blob": "67aede1c8f74625d569bd4b32be7c06881a5e4c6",
+      "reason": "Exact historical useNewApiKey: <object>.useNewApiKey === void 0 ? default expression, not a literal credential. No working-tree, future commit, path or generic-rule exemption."
+    },
+    {
+      "fingerprint": "d183fcf6312f5c2f71546147ce1ad159cf4daa95:playground-settings/dist/assets/index.js:generic-api-key:192",
+      "commit": "d183fcf6312f5c2f71546147ce1ad159cf4daa95",
+      "file": "playground-settings/dist/assets/index.js",
+      "line": 192,
+      "byteOffset": 61408,
+      "blob": "9d7a84a287f1e5f93989395506a960c3088c6ac6",
+      "reason": "Exact historical useNewApiKey: <object>.useNewApiKey === void 0 ? default expression, not a literal credential. No working-tree, future commit, path or generic-rule exemption."
+    },
+    {
+      "fingerprint": "a635f5c3c269b93a3015bf89d36b8eadc0395757:playground-settings/dist/assets/index.js:generic-api-key:192",
+      "commit": "a635f5c3c269b93a3015bf89d36b8eadc0395757",
+      "file": "playground-settings/dist/assets/index.js",
+      "line": 192,
+      "byteOffset": 61066,
+      "blob": "157b5a2ccce833f579a9f6e478c1044963081635",
+      "reason": "Exact historical useNewApiKey: <object>.useNewApiKey === void 0 ? default expression, not a literal credential. No working-tree, future commit, path or generic-rule exemption."
+    }
+  ]
+}

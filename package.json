@@ -1,17 +1,41 @@
 {
-  "name": "guan-detail-page-static",
+  "name": "guan-ai-workbench",
   "private": true,
-  "version": "1.0.0",
-  "description": "Single-page local A+ detail-page workspace.",
+  "version": "1.0.3",
+  "description": "Local AI image workbench with an embedded infinite canvas.",
   "scripts": {
     "start": "node server.mjs",
     "dev": "node server.mjs",
-    "backup": "bash scripts/create-backup.sh"
+    "backup": "bash scripts/create-backup.sh",
+    "build:canvas": "npm --prefix src/canvas run build",
+    "publish:canvas": "node scripts/publish-canvas.mjs",
+    "audit:canvas-assets": "node scripts/audit-canvas-assets.mjs",
+    "clean:canvas-assets": "node scripts/audit-canvas-assets.mjs --quarantine",
+    "test": "node --test tests/*.test.mjs",
+    "verify:phase2": "node scripts/verify-phase2.mjs",
+    "native:build": "node scripts/build-keychain-helper.mjs",
+    "native:install": "node scripts/install-keychain-helper.mjs",
+    "verify:credentials": "node scripts/verify-credential-browser.mjs",
+    "updates:authorize": "node scripts/authorize-updates.mjs",
+    "lint": "eslint src/server src/shared src/canvas scripts tests server.mjs",
+    "stable:runtime": "node scripts/prepare-stable-runtime.mjs",
+    "stable:build": "node scripts/create-stable-release.mjs",
+    "stable:sign": "node scripts/sign-stable-release.mjs",
+    "secrets:scan": "node scripts/scan-secrets.mjs",
+    "secrets:staged": "node scripts/scan-secrets.mjs --staged",
+    "secrets:history": "node scripts/scan-secrets.mjs --history",
+    "secrets:install-hooks": "node scripts/install-git-hooks.mjs",
+    "release": "node scripts/create-release.mjs",
+    "start:portable": "node scripts/start-portable.mjs"
   },
   "engines": {
     "node": ">=18"
   },
   "dependencies": {
     "undici": "^6.29.0"
+  },
+  "devDependencies": {
+    "eslint": "10.12.0",
+    "@typescript-eslint/parser": "8.71.1"
   }
 }
