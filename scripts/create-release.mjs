@@ -32,6 +32,8 @@ for (const entry of entries) {
   await mkdir(path.dirname(path.join(stage, entry)), { recursive: true });
   await cp(path.join(root, entry), path.join(stage, entry), { recursive: true, filter, dereference: false });
 }
+// Ship the current approval boundaries and version-specific notes, not private QA records.
+for (const entry of ['docs/STABLE-UPDATES-SINGLE-OWNER.md', 'docs/RELEASE-NOTES.md']) await cp(path.join(root, entry), path.join(stage, entry));
 const canvasBuild = useBuiltCanvas ? await copyVerifiedCanvasBuild(root, path.join(root, 'src/canvas/dist'), path.join(stage, 'public/infinite-canvas')) : null;
 if (nativeBuild) {
   if (nativeBuild.manifest.arch !== process.arch || process.platform !== 'darwin') throw Error('Native package architecture mismatch');

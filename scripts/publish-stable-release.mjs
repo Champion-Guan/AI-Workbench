@@ -6,6 +6,7 @@ import { validRepository } from '../src/server/stable-version.mjs';
 import { verifySignedStable } from './lib/signed-stable.mjs';
 import { sha256, verifyStableArchive, verifyStableManifest } from '../src/server/stable-manifest.mjs';
 import { verifyStableOwnerEnvironment } from './lib/stable-owner-approval.mjs';
+import { stableReleaseNotes } from './lib/stable-release-notes.mjs';
 
 async function main() {
   const approval = await verifyStableOwnerEnvironment();
@@ -45,8 +46,10 @@ async function main() {
   await verifyRemoteTag();
   const notes = await request(api + '/generate-notes', 'POST', { tag_name: 'v' + version, target_commitish: checked.manifest.commit });
   if (typeof notes.body !== 'string' || notes.body.includes(token)) throw Error('Unsafe release notes');
+  const approvedNotes = stableReleaseNotes(await readFile(path.join(root, 'docs/RELEASE-NOTES.md'), 'utf8'), version);
+  if (approvedNotes.includes(token)) throw Error('Unsafe release notes');
   const release = await request(api, 'POST', { tag_name: 'v' + version, target_commitish: checked.manifest.commit,
-    name: 'Guan AI Workbench ' + version, body: notes.body, draft: true, prerelease: false });
+    name: 'Guan AI Workbench ' + version, body: approvedNotes + '\n\n---\n\n' + notes.body, draft: true, prerelease: false });
   if (!Number.isSafeInteger(release.id) || release.id < 1 || release.draft !== true) throw Error('Invalid draft identity');
   const assets = [...checked.manifest.packages.map(p => p.name), 'guan-stable-manifest.json', 'guan-stable-manifest.sig', 'SHA256SUMS.txt'];
   for (const name of assets) {
