@@ -43,7 +43,7 @@ export async function signedUpdateFixture(parent, signing, version, executable =
   await writeFile(path.join(directory, 'package.zip'), archive);
   const descriptor = { platform: 'darwin', arch: 'arm64', name: name + '.zip', sha256: sha256(archive), size: archive.length,
     nodeVersion: 'v24.16.0', runtimeSha256: sha256(runtime), runtimeSize: runtime.length };
-  const manifest = { format: 1, app: 'guan-ai-workbench', channel: 'stable', version, repository: 'owner/repo', commit,
+  const manifest = { format: 1, app: 'guan-ai-workbench', channel: 'stable', version, repository: executable?.repository || 'owner/repo', commit,
     builtAt: '2026-10-11T00:00:00.000Z', keyId: signing.id, packages: [descriptor] };
   const bytes = Buffer.from(JSON.stringify(manifest, null, 2) + '\n');
   await writeFile(path.join(directory, 'guan-stable-manifest.json'), bytes);

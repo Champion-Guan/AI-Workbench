@@ -71,9 +71,26 @@ export class UpdateManager {
       } else if (state === 'idle' && journal) {
         state = ['committed', 'rolled-back'].includes(journal.phase) ? 'activation-required' : 'recovery-required';
         error = state === 'activation-required' ? 'update_activation_unconfirmed' : 'update_recovery_required';
+        if (state === 'activation-required' && this.service?.inspectOwned) {
+          try {
+            const owned = await this.service.inspectOwned();
+            const expected = journal.phase === 'committed' ? journal.next : journal.previous;
+            if (!owned.stopped && owned.active === true && owned.maintenance === false
+              && ['id', 'version', 'commit', 'buildId'].every(key => owned.pointer[key] === current?.[key] && current[key] === expected[key])) {
+              state = journal.phase; error = null;
+            }
+          } catch { /* Unknown owner/health retains activation-required. */ }
+        }
       } else if (!current && ['idle', 'staged'].includes(state)) {
         state = 'bootstrap-required'; error = 'update_bootstrap_required';
       } else if (!error && !this.coordinator) error = 'install_coordination_unavailable';
+      if (current && this.operator && !['recovery-required', 'activation-required', 'blocked'].includes(state)) {
+        const consent = await this.operator.read();
+        if (consent?.state === 'approved') { state = 'awaiting-browser-exit'; error = null; }
+        else if (consent?.state === 'deferred') { state = 'deferred'; error = null; }
+        else if (!consent || consent.state === 'completed') { error = 'install_operator_confirmation_required'; }
+      }
+      if (this.scheduler?.state.state === 'blocked') { state = 'blocked'; error = this.scheduler.state.error; }
       return { state, error, version: this.state.version || journal?.next.version || null,
         currentVersion: current?.version || null, installAllowed: false };
     } catch {
@@ -370,6 +387,7 @@ export class UpdateManager {
         await this.journal(j, 'committed');
         await lease.assertValid();
         if (this.service.activate) await this.service.activate(next);
+        await lease.assertValid();
         return { state: 'committed', version: next.version };
       } catch {
         if (j.phase === 'committed') {

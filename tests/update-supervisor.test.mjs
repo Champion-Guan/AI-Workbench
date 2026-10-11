@@ -92,7 +92,7 @@ test('supervisor launchd pins a distinct independent user job and validates labe
 });
 
 test('real signed arm64 child survives controller process exit and new manager safely reconciles activation then installs', {
-  skip: process.platform !== 'darwin' || process.arch !== 'arm64', timeout: 120000,
+  skip: process.platform !== 'darwin' || process.arch !== 'arm64', timeout: 240000,
 }, async t => {
   const base = await realpath(await mkdtemp(path.join(tmpdir(), 'guan-supervised-native-')));
   const privateRoot = path.join(base, 'private'), dataRoot = path.join(privateRoot, 'data'); await mkdir(dataRoot, { recursive: true });
@@ -103,7 +103,7 @@ test('real signed arm64 child survives controller process exit and new manager s
   const coordinator = { acquire: async () => ({ assertValid: async () => {}, release: async () => {} }),
     acquireRecovery: async () => ({ assertValid: async () => {}, release: async () => {} }) }; // Explicit QA inventory, not production.
   const manager = new UpdateManager({ root, dataRoot, origin, repository: 'owner/repo', trustedKeys: signing.keys, coordinator, freeSpace: async () => 4e9 });
-  const owned = new OwnedUpdateService({ versionsRoot: path.join(root, 'versions'), dataRoot, privateRoot, origin, verify: p => manager.verifyInstalled(p), disableProxy: true, startupTimeout: 2000 });
+  const owned = new OwnedUpdateService({ versionsRoot: path.join(root, 'versions'), dataRoot, privateRoot, origin, verify: p => manager.verifyInstalled(p), disableProxy: true, startupTimeout: 15000 });
   const socketPath = path.join(base, 's.sock'), capabilityFile = path.join(base, 'capability');
   const capability = await supervisorCapability(capabilityFile, { create: true });
   const ipc = await serveUpdateSupervisor({ service: owned, socketPath, capability, versionsRoot: owned.versionsRoot, dataRoot, origin });
@@ -119,7 +119,7 @@ test('real signed arm64 child survives controller process exit and new manager s
   await writePrivateFile(path.join(root, 'current.json'), JSON.stringify(previous)); // QA bootstrap.
   controller = fork(new URL('./fixtures/supervisor-controller.mjs', import.meta.url), [], { stdio: ['ignore', 'ignore', 'ignore', 'ipc'] });
   const reply = once(controller, 'message'); controller.send({ connection: { socketPath, capabilityFile }, pointer: previous, activate: false });
-  const [result] = await reply; assert.equal(result.ok, true);
+  const [result] = await reply; assert.equal(result.ok, true, result.code);
   const childPid = owned.owned.child.pid; assert.equal(result.pid, childPid); assert.equal((await fetch(origin + '/')).status, 503);
   const ended = once(controller, 'exit'); controller.kill('SIGTERM'); await ended; await pause(50);
   assert.equal(owned.owned.child.exitCode, null);

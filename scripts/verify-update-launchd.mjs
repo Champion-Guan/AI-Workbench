@@ -8,6 +8,7 @@ import { randomUUID } from 'node:crypto';
 import net from 'node:net';
 import { constants } from 'node:fs';
 import { updateManagerLaunchAgent, updateSupervisorLaunchAgent } from '../src/server/update-launchd.mjs';
+import { UserLaunchdJobs } from '../src/server/update-deployment.mjs';
 import { supervisorCapability, SupervisedUpdateService } from '../src/server/update-supervisor.mjs';
 import { verifyStableRuntime } from './lib/stable-runtime.mjs';
 import { fileURLToPath } from 'node:url';
@@ -64,6 +65,9 @@ async function main() {
     for (let i = 0; i < 80; i++) { try { reply = await status(socketPath); break; } catch {} await pause(50); }
     if (!reply?.ok || reply.result.installAllowed !== false || ((await lstat(socketPath)).mode & 0o777) !== 0o600) throw Error('QA status invalid');
     await run('/bin/launchctl', ['print', target], { timeout: 5000 });
+    const jobVerifier = new UserLaunchdJobs();
+    if (!await jobVerifier.inspect(label, { plist, node, entry, directory })
+      || !await jobVerifier.inspect(supervisorLabel, { plist: supervisorPlist, node, entry: path.join(directory, 'scripts/run-update-supervisor.mjs'), directory })) throw Error('QA job identity invalid');
     verificationStep = 'manager-bootout';
     await run('/bin/launchctl', ['bootout', target], { timeout: 5000 }); bootstrapped = false;
     for (let i = 0; i < 80; i++) {

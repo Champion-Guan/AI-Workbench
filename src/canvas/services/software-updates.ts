@@ -1,4 +1,4 @@
-export type UpdatePreferences = { version: 1; repository: string; autoCheck: boolean; autoDownload: boolean; autoInstall: false; network: "auto" | "direct" | "proxy" };
+export type UpdatePreferences = { version: 1; repository: string; autoCheck: boolean; autoDownload: boolean; autoInstall: boolean; network: "auto" | "direct" | "proxy" };
 export type SoftwareUpdateStatus = {
     currentVersion: string; channel: string; preferences: UpdatePreferences; state: string; checking: boolean;
     authorization: string; hasNewVersion: boolean; lastCheckedAt: string | null; error: string | null;
@@ -15,7 +15,7 @@ export const updateMessages: Record<string, string> = {
     authorization_denied: "GitHub 权限不足，需要指定仓库 Contents 只读权限", repository_unavailable: "仓库不存在或授权不可访问",
     rate_limited: "GitHub 限流，请稍后重试", github_network_failed: "GitHub 网络请求失败，请检查网络或代理",
     github_unavailable: "GitHub 暂时不可用", proxy_unavailable: "本地代理不可用，请启动代理或选择直连",
-    keychain_unavailable: "Keychain 不可访问，请检查本机授权", invalid_update_preferences: "仓库或更新设置无效，自动安装尚未开放",
+    keychain_unavailable: "Keychain 不可访问，请检查本机授权", invalid_update_preferences: "仓库或更新设置无效",
     update_storage_invalid: "更新配置读取失败，原文件保留", auth_storage_invalid: "更新授权记录读取失败，原文件保留",
     update_history_invalid: "更新检查记录读取或保存失败，原文件保留",
     "trust-not-configured": "尚未配置可信签名公钥", idle: "尚未下载", "verifying-manifest": "正在验证签名清单", downloading: "正在下载", verified: "签名和文件完整性已验证（未安装）",
@@ -34,14 +34,21 @@ export const updateMessages: Record<string, string> = {
     update_activation_unconfirmed: "版本激活尚未确认，不开放新任务或自动降级", update_state_invalid: "更新状态记录读取失败，原记录保留",
     install_permit_invalid: "任务空闲许可无效，未进行版本切换", update_failed_rolled_back: "新版本启动失败，已恢复旧版",
     update_rollback_failed: "回滚未能确认，已停止后续安装并保留数据",
+    install_disabled: "请先开启确认后自动安装",
+    install_operator_confirmation_required: "此版本需要重新确认已保存且全部任务结束",
+    install_operator_record_invalid: "安装确认记录损坏，已保留并停止安装",
+    install_tasks_pending: "存在未决任务、失败保存或未确认记录，不能安装",
+    install_browsers_running: "请退出所有浏览器后再安装",
+    install_evidence_changed: "确认之后活动或保存状态改变，请重新核实",
 };
 export const installationMessages: Record<string, string> = {
     unavailable: "更新器未启动", disabled: "安装关闭", idle: "更新器已就绪", staged: "已暂存并再次验签（未执行）",
     "bootstrap-required": "等待首次安全接管", "activation-required": "等待确认激活", "recovery-required": "需要安全恢复",
     blocked: "安装被安全阻止", prepared: "已准备版本事务", stopping: "正在停止受控服务", switching: "正在切换版本",
     starting: "正在隔离启动", committed: "版本事务已提交", "rolling-back": "正在恢复旧版", "rolled-back": "已恢复旧版",
+    "awaiting-browser-exit": "已确认，等待全部浏览器退出", "confirmation-required": "等待本次更新确认", deferred: "已选择稍后安装",
 };
-export async function updateRequest(operation: "status" | "check" | "download" | "stage" | "preferences", input?: Partial<UpdatePreferences>): Promise<SoftwareUpdateStatus> {
+export async function updateRequest(operation: "status" | "check" | "download" | "stage" | "preferences" | "approve" | "defer", input?: Partial<UpdatePreferences> | { acknowledgement: "saved-and-all-tasks-ended" }): Promise<SoftwareUpdateStatus> {
     const response = await fetch(`/local-app/updates/${operation}`, {
         method: operation === "status" ? "GET" : "POST", cache: "no-store", signal: AbortSignal.timeout(40000),
         ...(operation === "status" ? {} : { headers: { "content-type": "application/json" }, body: JSON.stringify(input || {}) }),

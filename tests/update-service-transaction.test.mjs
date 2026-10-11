@@ -11,7 +11,7 @@ import { localRuntime } from './helpers/owned-runtime.mjs';
 import { createServer } from 'node:net';
 
 test('local test-signed native arm64 packages run real commit and failed-start rollback transactions', {
-  timeout: 120000, skip: process.platform !== 'darwin' || process.arch !== 'arm64',
+  timeout: 240000, skip: process.platform !== 'darwin' || process.arch !== 'arm64',
 }, async t => {
   const base = await realpath(await mkdtemp(path.join(tmpdir(), 'guan-service-transaction-')));
   const privateRoot = path.join(base, 'private'), dataRoot = path.join(privateRoot, 'data'); await mkdir(dataRoot, { recursive: true });

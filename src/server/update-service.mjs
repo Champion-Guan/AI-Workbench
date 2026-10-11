@@ -161,6 +161,18 @@ export class OwnedUpdateService {
   }
   async isStopped() { return !alive(this.owned?.child) && await portFree(this.port); }
   canDetach() { return this.owned === null && !this.busy; }
+  async inspectOwned() {
+    return this.exclusive(async () => {
+      const owned = this.owned;
+      if (!owned) {
+        if (!await this.isStopped()) throw Error('service_ownership_lost');
+        return { stopped: true };
+      }
+      const report = await this.report(owned, !owned.active);
+      return { stopped: false, pointer: Object.fromEntries(['id', 'version', 'commit', 'buildId'].map(key => [key, owned.pointer[key]])), instance: report.instanceId,
+        active: owned.active, maintenance: report.maintenance };
+    });
+  }
   async recoverySafe() {
     if (!this.owned) return this.isStopped();
     if (!alive(this.owned.child)) return this.isStopped();

@@ -38,7 +38,7 @@ export class SoftwareUpdates {
       if (raw === null) return defaults();
       const p = JSON.parse(raw);
       if (p.version !== 1 || p.repository !== '' && !validRepository(p.repository) || ['autoCheck', 'autoDownload', 'autoInstall'].some(k => typeof p[k] !== 'boolean')
-        || p.autoInstall !== false || !['auto', 'direct', 'proxy'].includes(p.network) || Object.keys(p).some(k => !Object.hasOwn(defaults(), k))) throw Error();
+        || !['auto', 'direct', 'proxy'].includes(p.network) || Object.keys(p).some(k => !Object.hasOwn(defaults(), k))) throw Error();
       return p;
     } catch { throw new UpdateError('update_storage_invalid'); }
   }
@@ -64,8 +64,8 @@ export class SoftwareUpdates {
       if (!input || typeof input !== 'object' || Array.isArray(input) || Object.keys(input).some(k => !['repository', 'autoCheck', 'autoDownload', 'autoInstall', 'network'].includes(k))
         || input.repository !== undefined && input.repository !== '' && !validRepository(input.repository)
         || ['autoCheck', 'autoDownload', 'autoInstall'].some(k => input[k] !== undefined && typeof input[k] !== 'boolean')
-        || input.autoInstall === true || input.network !== undefined && !['auto', 'direct', 'proxy'].includes(input.network)) throw new UpdateError('invalid_update_preferences');
-      const old = await this.preferences(), next = { ...old, ...input, autoInstall: false };
+        || input.network !== undefined && !['auto', 'direct', 'proxy'].includes(input.network)) throw new UpdateError('invalid_update_preferences');
+      const old = await this.preferences(), next = { ...old, ...input };
       await this.history(old.repository); // Bad history is preserved, not silently reset.
       await writePrivateJson(this.file, next);
       if (next.repository !== old.repository) {
@@ -147,6 +147,19 @@ export class SoftwareUpdates {
       this.stageResult = { repository: p.repository, error: e instanceof UpdateError ? e.code : 'update_stage_failed' };
     }).finally(() => { this.staging = null; });
     return this.status();
+  }
+  async approve(acknowledgement) {
+    if (this.stopped || !this.manager?.approve || !this.downloader?.stageIdentity || this.staging) throw new UpdateError('update_stage_unavailable');
+    const p = await this.preferences();
+    if (!p.autoInstall) throw new UpdateError('install_disabled');
+    if (acknowledgement !== 'saved-and-all-tasks-ended') throw new UpdateError('install_operator_confirmation_required');
+    const identity = this.downloader.stageIdentity(p.repository);
+    if (compareVersions(identity.version, this.currentVersion) <= 0) throw new UpdateError('version_not_newer');
+    await this.manager.approve(identity, acknowledgement); return this.status();
+  }
+  async defer() {
+    if (!this.manager?.defer) throw new UpdateError('update_manager_unavailable');
+    await this.manager.defer(); return this.status();
   }
   start({ setIntervalFn = setInterval } = {}) {
     if (this.timer) return;

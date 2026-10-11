@@ -116,10 +116,10 @@ test('simultaneous cached iframe checks coalesce, throttle repeat and serialized
   assert.equal(calls, 1); assert.equal((await f.updates.status()).latest, null);
   await f.updates.check(); assert.equal(calls, 1); assert.equal((await f.updates.status()).error, 'authorization_required');
 });
-test('proxy-only unavailable rejects safely, direct ignores local proxy, no installation preference accepted', async t => {
+test('proxy-only unavailable rejects safely; installation preference alone never grants an install', async t => {
   const f = await fixture(t); await f.updates.configure({ repository: 'owner/repo', network: 'proxy' }); await f.auth.authorize('owner/repo', secret);
   await f.updates.check(); assert.equal((await f.updates.status()).error, 'proxy_unavailable'); assert.equal(f.calls(), 0);
-  await assert.rejects(f.updates.configure({ autoInstall: true }), /invalid_update_preferences/);
+  await f.updates.configure({ autoInstall: true }); assert.equal((await f.updates.status()).install.allowed, false);
   await assert.rejects(f.updates.configure({ token: secret }), /invalid_update_preferences/);
   let supplied = 'unset'; const g = await fixture(t, { proxyUrl: () => 'http://127.0.0.1:7890', readRelease: async opts => { supplied = opts.proxyUrl; return null; } });
   await g.updates.configure({ repository: 'owner/repo', network: 'direct' }); await g.auth.authorize('owner/repo', secret); await g.updates.check(); assert.equal(supplied, null);
@@ -134,7 +134,7 @@ test('real HTTP handler enforces Origin/Host/JSON/size/method, refuses token and
   assert.equal((await fetch(origin + '/local-app/updates/status')).status, 403);
   assert.equal((await post('check', {}, { origin: 'https://evil.example' })).status, 403);
   assert.equal((await post('preferences', { token: secret })).status, 409);
-  assert.equal((await post('preferences', { autoInstall: true })).status, 409);
+  assert.equal((await post('preferences', { autoInstall: true })).status, 200);
   assert.equal((await post('check', 'x'.repeat(4097))).status, 409);
   assert.equal((await post('check', '{bad')).status, 409);
   assert.equal((await post('check', { command: 'exec' })).status, 409);

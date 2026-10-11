@@ -36,7 +36,15 @@ export async function serveUpdateManager({ manager, socketPath, downloadsDirecto
         const input = JSON.parse(raw.subarray(0, newline).toString('utf8'));
         let result;
         if (exact(input, ['op']) && input.op === 'status') result = manager.inspectStatus ? await manager.inspectStatus() : manager.status();
-        else if (exact(input, ['op', 'downloadId', 'version']) && input.op === 'stage'
+        else if (exact(input, ['op']) && input.op === 'service-ready' && manager.service?.inspectOwned) {
+          const current = await manager.readCurrent(), owned = await manager.service.inspectOwned();
+          const verified = current && !owned.stopped && owned.active === true && owned.maintenance === false
+            && ['id', 'version', 'commit', 'buildId'].every(key => current[key] === owned.pointer[key]);
+          result = { owned: Boolean(verified), currentVersion: verified ? current.version : null };
+        }
+        else if ((exact(input, ['op', 'downloadId', 'version']) && input.op === 'stage'
+          || exact(input, ['op', 'downloadId', 'version', 'acknowledgement']) && input.op === 'approve'
+            && input.acknowledgement === 'saved-and-all-tasks-ended' && manager.operator)
           && typeof input.downloadId === 'string' && /^verified-[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/.test(input.downloadId)
           && parseVersion(input.version) && !parseVersion(input.version).pre.length) {
           const directory = path.join(downloadsDirectory, input.downloadId);
@@ -47,6 +55,9 @@ export async function serveUpdateManager({ manager, socketPath, downloadsDirecto
           // total bounded operation deadline. Manager locking prevents overlap.
           socket.setTimeout(0);
           result = await manager.stage({ directory, version: input.version });
+          if (input.op === 'approve') result = await manager.locked(() => manager.operator.approve(result, input.acknowledgement));
+        } else if (exact(input, ['op']) && input.op === 'defer' && manager.operator) {
+          result = await manager.locked(() => manager.operator.defer());
         } else throw Error();
         socket.end(JSON.stringify({ ok: true, result }) + '\n');
       } catch { socket.end('{"ok":false,"error":"update_request_failed"}\n'); }

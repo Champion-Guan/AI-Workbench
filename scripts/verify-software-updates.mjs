@@ -17,8 +17,13 @@ import { UpdateManager } from '../src/server/update-manager.mjs';
 import { UpdateManagerClient } from '../src/server/update-manager-client.mjs';
 import { serveUpdateManager } from '../src/server/update-manager-ipc.mjs';
 import { signedUpdateFixture } from '../tests/helpers/signed-update.mjs';
-if (process.argv.slice(2).some(x => !['--signed', '--manager'].includes(x)) || process.argv.length > 3) throw Error('QA server does not accept data roots or service targets');
-const managerMode = process.argv.includes('--manager'), signedMode = process.argv.includes('--signed') || managerMode;
+import { randomUUID } from 'node:crypto';
+import { writePrivateFile } from '../src/server/runtime-paths.mjs';
+import { UpdateTaskLedger } from '../src/server/update-task-ledger.mjs';
+import { createBackendControl } from '../src/server/update-backend-control.mjs';
+import { OperatorUpdateAuthority } from '../src/server/update-operator-authority.mjs';
+if (process.argv.slice(2).some(x => !['--signed', '--manager', '--operator'].includes(x)) || process.argv.length > 3) throw Error('QA server does not accept data roots or service targets');
+const operatorMode = process.argv.includes('--operator'), managerMode = process.argv.includes('--manager') || operatorMode, signedMode = process.argv.includes('--signed') || managerMode;
 const repository = managerMode ? 'owner/repo' : 'qa-owner/qa-workbench';
 const root = path.resolve(fileURLToPath(new URL('../src/canvas/dist/', import.meta.url))); await stat(path.join(root, 'index.html'));
 const directory = await realpath(await mkdtemp(managerMode ? '/tmp/guan-update-browser-' : path.join(tmpdir(), 'guan-update-browser-')));
@@ -40,6 +45,18 @@ if (managerMode) {
   manager = new UpdateManager({ root: path.join(directory, 'installation'), dataRoot, repository, trustedKeys: { [id]: pem },
     platform: 'darwin', arch: 'arm64', freeSpace: async () => 1e9 });
   await manager.initialize();
+  if (operatorMode) {
+    const previous = await manager.stage(await signedUpdateFixture(directory, { privateKey: pair.privateKey, id, keys: { [id]: pem } }, '1.0.4'));
+    // Explicit synthetic UI baseline, never executed or used for installation.
+    await writePrivateFile(path.join(manager.root, 'current.json'), JSON.stringify(previous));
+    const ledger = new UpdateTaskLedger({ file: path.join(directory, 'ledger.json'), version: '1.0.4' }); await ledger.initialize();
+    const instance = randomUUID(), control = createBackendControl({ gate, ledger, ready: true, instance, version: '1.0.4',
+      writes: () => ({ revision: 0, pending: 0, failed: 0 }), flushWrites: async () => {} });
+    const service = { isStopped: async () => false, backendControl: command => control.command(command),
+      inspectOwned: async () => ({ stopped: false, pointer: previous, instance, active: true, maintenance: false }) };
+    manager.operator = new OperatorUpdateAuthority({ file: path.join(directory, 'consent.json'), manager, service, ledger });
+    manager.service = service;
+  }
   ipc = await serveUpdateManager({ manager, socketPath, downloadsDirectory: path.join(directory, 'packages') });
   managerClient = new UpdateManagerClient({ socketPath, repository });
 }

@@ -1,7 +1,7 @@
 {
   "name": "guan-ai-workbench",
   "private": true,
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "Local AI image workbench with an embedded infinite canvas.",
   "scripts": {
     "start": "node server.mjs",
@@ -11,7 +11,7 @@
     "publish:canvas": "node scripts/publish-canvas.mjs",
     "audit:canvas-assets": "node scripts/audit-canvas-assets.mjs",
     "clean:canvas-assets": "node scripts/audit-canvas-assets.mjs --quarantine",
-    "test": "node --test tests/*.test.mjs",
+    "test": "node --test --test-concurrency=4 tests/*.test.mjs",
     "verify:phase2": "node scripts/verify-phase2.mjs",
     "verify:phase5": "node scripts/verify-phase5.mjs",
     "native:build": "node scripts/build-keychain-helper.mjs",

@@ -5,9 +5,14 @@ import { parseVersion } from './stable-version.mjs';
 import { UpdateError } from './update-auth.mjs';
 
 const states = new Set(['idle', 'staged', 'prepared', 'stopping', 'switching', 'starting', 'committed',
-  'rolling-back', 'rolled-back', 'blocked', 'recovery-required', 'activation-required', 'bootstrap-required']);
+  'rolling-back', 'rolled-back', 'blocked', 'recovery-required', 'activation-required', 'bootstrap-required', 'awaiting-browser-exit', 'confirmation-required', 'deferred']);
 const reasons = new Set(['update_bootstrap_required', 'install_coordination_unavailable', 'update_recovery_required',
-  'update_activation_unconfirmed', 'update_state_invalid', 'install_permit_invalid', 'update_failed_rolled_back', 'update_rollback_failed']);
+  'update_activation_unconfirmed', 'update_state_invalid', 'install_permit_invalid', 'update_failed_rolled_back', 'update_rollback_failed',
+  'install_operator_confirmation_required', 'install_operator_record_invalid', 'install_tasks_pending', 'install_browsers_running',
+  'install_evidence_changed', 'install_evidence_unconfirmed', 'install_closure_evidence_unavailable', 'install_coordination_busy',
+  'install_backend_not_idle', 'install_backend_not_frozen', 'install_service_identity_invalid',
+  'update_storage_invalid', 'service_ownership_lost', 'service_port_occupied', 'service_backend_outcome_unknown',
+  'service_supervisor_outcome_unknown', 'service_supervisor_path_invalid', 'service_health_invalid']);
 const stable = v => typeof v === 'string' && parseVersion(v) && !parseVersion(v).pre.length;
 
 // Backend-only bridge. Fixed private socket; never accepts URLs, paths, tokens,
@@ -76,5 +81,19 @@ export class UpdateManagerClient {
       || typeof p.buildId !== 'string' || !/^[a-f0-9]{24}$/.test(p.buildId)
       || !p.id.startsWith(version + '-' + p.commit.slice(0, 12) + '-')) throw new UpdateError('update_manager_invalid');
     return { version: p.version }; // No filesystem identity/path enters HTTP.
+  }
+  async approve({ downloadId, version, repository }, acknowledgement) {
+    if (repository !== this.repository || typeof downloadId !== 'string'
+      || !/^verified-[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/.test(downloadId) || !stable(version)
+      || acknowledgement !== 'saved-and-all-tasks-ended') throw new UpdateError('install_operator_confirmation_required');
+    const result = await this.request({ op: 'approve', downloadId, version, acknowledgement }, this.stageTimeoutMs);
+    if (!result || Object.keys(result).sort().join(',') !== 'state,targetVersion' || result.state !== 'awaiting-browser-exit'
+      || result.targetVersion !== version) throw new UpdateError('update_manager_invalid');
+    return result;
+  }
+  async defer() {
+    const result = await this.request({ op: 'defer' }, this.timeoutMs);
+    if (!result || Object.keys(result).join(',') !== 'state' || result.state !== 'deferred') throw new UpdateError('update_manager_invalid');
+    return result;
   }
 }

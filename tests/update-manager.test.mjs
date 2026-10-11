@@ -68,7 +68,7 @@ test('read-only status distinguishes bootstrap, durable unfinished/terminal tran
 });
 test('successful transaction checks permit, stops before pointer switch and commits only after exact health', async t => {
   const f = await fixture(t); assert.deepEqual(await f.manager.install(f.next), { state: 'committed', version: '1.0.5' });
-  assert.deepEqual(f.calls, ['stop', 'start:1.0.5', 'release']); assert.equal(f.assertions(), 5);
+  assert.deepEqual(f.calls, ['stop', 'start:1.0.5', 'release']); assert.equal(f.assertions(), 6, 'also revalidate after activation, before releasing admission');
   assert.deepEqual(await f.manager.readCurrent(), f.next); assert.equal((await f.manager.readJournal()).phase, 'committed');
   assert.equal((await f.manager.verifyInstalled(f.previous)).signatureVerified, true);
 });

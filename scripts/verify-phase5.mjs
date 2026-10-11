@@ -116,9 +116,10 @@ try {
     productionVersion: afterHealth?.version || null, productionObserved: Boolean(afterHealth),
     automaticInstallAllowed: false, steps,
     // No test fixture or fresh browser context can attest these actual gates.
-    installationPolicy: 'closed-browsers-only',
-    remaining: ['closed-browser-continuous-permit-and-saved-sync-evidence', 'legacy-remote-task-reconciliation-and-native-coverage-verification',
-      'signed-protocol1-bootstrap-and-independent-manager-upgrade',
+    installationPolicy: 'operator-confirmed-closed-browsers',
+    remaining: ['formal-v1.0.5-protocol1-signature-and-private-download',
+      'fresh-maintenance-confirmation-and-complete-offline-backup',
+      'original-chrome-data-readback-and-native-evidence-baseline',
       'confirmed-maintenance-handoff-and-production-proxy-helper-compatibility'],
     excluded: ['production-install-or-restart', 'real-browser-storage-mutation', 'formal-release', 'physical-power-loss', 'two-physical-Macs'] };
   process.exitCode = 2; // Passed local QA is deliberately not whole-phase acceptance.

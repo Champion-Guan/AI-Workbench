@@ -75,7 +75,7 @@ export class ActivityGate {
     this.invalidateInventory();
   }
   beginQuiescence() {
-    if (this.draining) throw new Error('update_quiescing');
+    if (this.draining || this.backendEpoch) throw new Error('update_quiescing');
     const status = this.status();
     if (status.unknown) throw new Error('Activity coverage is unknown');
     this.draining = true;

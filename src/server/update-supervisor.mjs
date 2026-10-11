@@ -89,6 +89,7 @@ export async function serveUpdateSupervisor({ service, socketPath, capability, v
           && request.value.every(identity)) { await service.stop({ allowed: request.value }); result = true; }
         else if (request.op === 'isStopped' && request.value === null) result = await service.isStopped();
         else if (request.op === 'recoverySafe' && request.value === null) result = await service.recoverySafe();
+        else if (request.op === 'inspectOwned' && request.value === null) result = await service.inspectOwned();
         else if (request.op === 'backendControl' && validBackendCommand(request.value)) result = await service.backendControl(request.value);
         else throw Error('service_supervisor_request_invalid');
         reply({ ok: true, incarnation, session, sequence, result });
@@ -189,6 +190,14 @@ export class SupervisedUpdateService {
   async activate(pointer) { return this.call('activate', Object.fromEntries(identityKeys.map(k => [k, pointer[k]]))); }
   async isStopped() { const value = await this.call('isStopped', null); if (typeof value !== 'boolean') throw Error('service_supervisor_response_invalid'); return value; }
   async recoverySafe() { const value = await this.call('recoverySafe', null); if (typeof value !== 'boolean') throw Error('service_supervisor_response_invalid'); return value; }
+  async inspectOwned() {
+    const value = await this.call('inspectOwned', null);
+    if (exact(value, ['stopped']) && value.stopped === true) return value;
+    if (!exact(value, ['stopped', 'pointer', 'instance', 'active', 'maintenance']) || value.stopped !== false
+      || !identity(value.pointer) || !uuid(value.instance) || typeof value.active !== 'boolean'
+      || value.maintenance !== !value.active) throw Error('service_supervisor_response_invalid');
+    return value;
+  }
   async backendControl(command) {
     if (!validBackendCommand(command)) throw Error('service_backend_request_invalid');
     const value = await this.call('backendControl', structuredClone(command));
