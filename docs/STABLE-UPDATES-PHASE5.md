@@ -57,6 +57,7 @@
 - 原已发布v1.0.4 arm64签名包经新manager实际stage与目标复核，347文件、buildId`61fc653824dc4e84e1716ee8`，current仍null，未执行其payload，未安装。脱敏结果在`output/phase5/real-arm64-staging.json`。
 - 本轮未签名便携样包352文件、7个HTTP路由的隔离启动验证通过；直接从解压包启动独立daemon，独立临时私人根的Unix status正常且installAllowed=false，随后正常停止。该样包形成于最后文档加入前，不是新Stable；最终原生QA将从提交源码重新构建。
 - 已运行源码/历史扫描，原精确历史占位例外保留；发布前仍需独立扫描、暂存扫描和实际CI。规则扫描不是所有秘密绝不存在的保证。
+- 代码提交`8d9707bd9ddfa1b0f5083fff4471790dedac032a`已推送私有main。普通质量CI [38104370214](https://github.com/MrGuAm/guan-ai-workbench/actions/runs/38104370214)通过；arm64-only Build-QA [38104395187](https://github.com/MrGuAm/guan-ai-workbench/actions/runs/38104395187)的quality及唯一`build (macos-15, arm64)`均成功，包含实际内置Node/资源/更新状态启动验证。没有Intel任务、签名Secret或发布任务。旧Actions Node20强制Node24、Go缓存缺少go.sum及arm64队列提示仍在，不影响本次通过。
 
 ## 下一批必须完成后才能验收阶段5
 
@@ -73,3 +74,5 @@
 本轮不提升版本、不创建/修改标签、不发布Release、不迁移数据库、不安装LaunchAgent、不启动真实manager、不重启生产、不写原浏览器或私人配置。当前生产仍v1.0.3/PID10088、Origin不变、代理正常；v1.0.4历史Intel资产保留。
 
 更改前源码归档`pre-phase5-arm64-20261011.tar.gz`，SHA256`fd43f90a68f785bf8faa3c3e277d8815ca2fb790182e9d3e17226a9b6eef6f85`。原完整项目/代理/浏览器备份持续保留；本轮源码检查点不是新增完整用户数据备份，也不是离线灾备。
+
+改动后提交源码归档`phase5-arm64-core-8d9707b.tar.gz`，SHA256`fb01374f8fc25f27a4c0b9d5385375e4b19578409ab54c19cca7fffe27db3a68`。改动前522文件、改动后532文件均解压与对应Git提交逐文件比较一致。该归档固定功能提交，不包含本节随后加入的CI验收说明；不移动v1.0.4标签或改写旧Release。
