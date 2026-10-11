@@ -1,10 +1,18 @@
-// No tabs permission, content scripts, page injection or other-site contents.
+// No tabs permission or other-site contents. The approved isolated relay
+// exchanges only bounded control/status fields on the fixed workbench Origin.
 // Browser-level inventory is observational until the independent coordinator
 // additionally proves every profile, task root and persistence checkpoint.
 const ORIGIN = 'http://127.0.0.1:5174';
 const HOST = 'com.guanaiworkbench.browser';
 let port = null, timer = null, scanning = false, dirty = true, revision = 0, sequence = 0;
 let session = crypto.randomUUID(), lastSnapshot = null;
+// Chrome supplies these identities, not window.postMessage or page input.
+// Page data are diagnostic until full roots and native inventory are proven.
+const pages = new Map();
+const exact = (v, keys) => v && typeof v === 'object' && !Array.isArray(v)
+  && Object.keys(v).length === keys.length && keys.every(k => Object.hasOwn(v, k));
+const uuid = v => typeof v === 'string' && /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/.test(v);
+const pageErrors = ['managed_page_already_paused', 'managed_page_flush_unconfirmed', 'managed_page_epoch_mismatch', 'managed_page_checkpoint_invalid'];
 const isWorkbench = value => {
   try { return new URL(value).origin === ORIGIN; } catch { return false; }
 };
@@ -22,6 +30,62 @@ async function badge(text, color) {
   await chrome.action.setBadgeText({ text });
   await chrome.action.setBadgeBackgroundColor({ color });
 }
+function pageUnknown(entry) {
+  entry.unknown = true; entry.acknowledged = false;
+  entry.port?.disconnect(); entry.port = null;
+  // Retain disconnected observations; closing a page isn't remote terminal.
+}
+function sendPageCommand(entry, op, epoch = null) {
+  if (!entry.port || entry.unknown || !entry.session || !['probe', 'pause', 'assert', 'resume'].includes(op)
+    || (op === 'probe' ? epoch !== null : !uuid(epoch)) || entry.pending.size >= 8
+    || entry.sequence >= Number.MAX_SAFE_INTEGER - 1) throw Error('managed_page_command_unavailable');
+  const sequence = ++entry.sequence;
+  entry.pending.set(sequence, { op, epoch });
+  try { entry.port.postMessage({ protocol: 1, session: entry.session, sequence, op, epoch }); }
+  catch { pageUnknown(entry); }
+}
+chrome.runtime.onConnect.addListener(connection => {
+  const sender = connection.sender, documentId = documentIdentity(sender?.documentId);
+  if (connection.name !== 'guan-managed-page-v1' || sender?.id !== chrome.runtime.id || !isWorkbench(sender.url)
+    || !documentId || !Number.isSafeInteger(sender.tab?.id) || sender.tab.id < 0
+    || !Number.isSafeInteger(sender.frameId) || sender.frameId < 0 || pages.size >= 256 || pages.has(documentId)) {
+    connection.disconnect(); return;
+  }
+  const entry = { port: connection, session: null, sequence: -1, pending: new Map(), unknown: true,
+    documentId, tabId: sender.tab.id, frameId: sender.frameId, receivedAt: 0, appliedSequence: -1, acknowledged: false, state: null };
+  pages.set(documentId, entry);
+  connection.onDisconnect.addListener(() => { void chrome.runtime.lastError; entry.port = null; entry.unknown = true; entry.acknowledged = false; });
+  connection.onMessage.addListener(value => {
+    if (entry.port !== connection) return;
+    if (exact(value, ['protocol', 'op', 'session', 'version', 'fullRootCoverage', 'installAllowed'])
+      && value.protocol === 1 && value.op === 'page-ready' && uuid(value.session)
+      && typeof value.version === 'string' && /^(?:dev|[0-9]{1,4}\.[0-9]{1,4}\.[0-9]{1,4})$/.test(value.version)
+      && value.fullRootCoverage === false && value.installAllowed === false && entry.session === null) {
+      entry.session = value.session; entry.unknown = false; entry.receivedAt = Date.now();
+      sendPageCommand(entry, 'probe'); return;
+    }
+    if (!exact(value, ['protocol', 'op', 'session', 'sequence', 'epoch', 'phase', 'counts', 'revision', 'acknowledged', 'fullRootCoverage', 'installAllowed', 'error'])
+      || value.protocol !== 1 || value.op !== 'page-state' || value.session !== entry.session
+      || !Number.isSafeInteger(value.sequence) || !entry.pending.has(value.sequence)
+      || value.fullRootCoverage !== false || value.installAllowed !== false
+      || !['active', 'draining', 'paused', 'blocked'].includes(value.phase)
+      || value.epoch !== null && !uuid(value.epoch) || typeof value.acknowledged !== 'boolean'
+      || !Number.isSafeInteger(value.revision) || value.revision < 0
+      || !exact(value.counts, ['canvas', 'workbench', 'agent', 'webdav', 'storage'])
+      || Object.values(value.counts).some(count => !Number.isSafeInteger(count) || count < 0)
+      || value.error !== null && !pageErrors.includes(value.error)) { pageUnknown(entry); return; }
+    entry.pending.delete(value.sequence);
+    // A slow pause can return after a newer probe/resume. It must not revive
+    // an old checkpoint or overwrite a newer activity observation.
+    if (value.sequence <= entry.appliedSequence) return;
+    if (entry.state && value.revision < entry.state.revision
+      || value.acknowledged && (value.phase !== 'paused' || !uuid(value.epoch) || Object.values(value.counts).some(count => count !== 0))) {
+      pageUnknown(entry); return;
+    }
+    entry.appliedSequence = value.sequence; entry.receivedAt = Date.now();
+    entry.state = JSON.parse(JSON.stringify(value)); entry.acknowledged = value.acknowledged;
+  });
+});
 function changed() { revision++; dirty = true; }
 chrome.tabs.onCreated.addListener(changed);
 chrome.tabs.onRemoved.addListener(changed);
@@ -61,6 +125,14 @@ async function scan() {
     lastSnapshot = fingerprint;
     if (new TextEncoder().encode(fingerprint).length > 60000) throw Error();
     port.postMessage({ protocol: 1, op: 'inventory', session, sequence: sequence++, revision, windows });
+    // Probes only. Native read-only observation does not issue pause/install.
+    for (const entry of pages.values()) {
+      if (!entry.port || entry.unknown || !entry.session) continue;
+      if (Date.now() - entry.receivedAt > 6000) { pageUnknown(entry); continue; }
+      // Keep observing while pause waits for old tasks/writes. Do not resend
+      // the state-changing command, and allow only one outstanding probe.
+      if (![...entry.pending.values()].some(request => request.op === 'probe')) sendPageCommand(entry, 'probe');
+    }
     dirty = false;
   } catch {
     dirty = true;

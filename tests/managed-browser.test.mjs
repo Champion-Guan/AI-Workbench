@@ -60,7 +60,7 @@ test('actual extension uses existing-profile fixed Origin, filtered Chrome inven
     query: async input => { queries.push(input); return [{ id: 1, windowId: 2, url: 'http://127.0.0.1:5174/private?key=not-a-real-key', title: 'private title' }]; } },
     webNavigation: { onCommitted: event(), onHistoryStateUpdated: event(), onErrorOccurred: event(), getAllFrames: async () => [{ frameId: 0, parentFrameId: -1, documentId: frameDocument, documentLifecycle: 'active', url: 'http://127.0.0.1:5174/private' }, { frameId: 1, parentFrameId: 0, url: 'https://example.invalid/private' }] },
     action: { setBadgeText: async value => { badges.push(value.text); }, setBadgeBackgroundColor: async () => {}, onClicked: event() },
-    windows: { create: async value => created.push(value) }, runtime: { connectNative: name => { assert.equal(name, 'com.guanaiworkbench.browser'); return native; }, onStartup: event(), onInstalled: event() } };
+    windows: { create: async value => created.push(value) }, runtime: { connectNative: name => { assert.equal(name, 'com.guanaiworkbench.browser'); return native; }, onConnect: event(), onStartup: event(), onInstalled: event() } };
   const context = vm.createContext({ chrome, crypto: webcrypto, URL, TextEncoder, setInterval: fn => { timer = fn; return 1; }, clearInterval() {} });
   vm.runInContext(readFileSync(new URL('../browser/managed-workbench/background.js', import.meta.url), 'utf8'), context);
   await new Promise(resolve => setImmediate(resolve));
@@ -80,5 +80,6 @@ test('actual extension uses existing-profile fixed Origin, filtered Chrome inven
   }
   const manifest = JSON.parse(readFileSync(new URL('../browser/managed-workbench/manifest.json', import.meta.url)));
   assert.deepEqual(manifest.host_permissions, ['http://127.0.0.1:5174/*']); assert.ok(!manifest.permissions.includes('tabs'));
-  assert.ok(!manifest.content_scripts && !manifest.externally_connectable);
+  assert.deepEqual(manifest.content_scripts, [{ matches: ['http://127.0.0.1:5174/*'], js: ['page-relay.js'], all_frames: true, run_at: 'document_start', world: 'ISOLATED' }]);
+  assert.ok(!manifest.externally_connectable);
 });

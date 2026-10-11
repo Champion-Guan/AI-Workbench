@@ -134,3 +134,9 @@ manager 只读读取持久 current/journal，冷启动终态显示 activation-re
 上述 Chrome 观测仍仅一个 profile：`inventoryVerified=false/profileOnly=true/installAllowed=false`。安装器要求实际扩展 ID 且仅允许该 extension origin；完整多 profile/普通浏览器/旧页库存、全根编辑和延后插件排空、签名稳定桥接、持续协调器尚未接入，不能把零 tab 或 stdio 格式检查当作授权。真实旧 Agent/视频任务需要首次维护基线及协议/历史验证，不自动根据当前 UI 状态清掉未知记录。
 
 本轮新增源代码检查点 `pre-phase5-supervisor-dd76a76-20261011.tar.gz`，SHA256 `e8884a1e8eda224372804db4fc8ec7b7d4e290d65b3c5aeb49a2fbe8c0634190`、0600。不是新完整用户数据备份，原完整项目/代理/浏览器/加密签名备份仍保留。最终全量类型/测试/扫描/双 job launchd/本地包验证以 `output/phase5/latest-verification.json` 为准；源码专项或 Chrome mock 不能冒充真实扩展安装后的全窗口验收。
+
+## 已授权的受限页面暂停与保存确认通信
+
+用户明确授权仅原 Origin 的受限内容脚本。已实现 MessageChannel 发现/握手、单 session/递增请求序号、四类控制操作及严格脱敏状态，复用真实任务准入与保存屏障。不增加任意命令或安装入口，不改 UI。普通编辑/Excel/所有 profile 仍未证明全覆盖，故 `fullRootCoverage=false/installAllowed=false` 固定保留。
+
+专项 17/17 通过；独立 Playwright 使用离线路由、新临时 profile 和真实 IndexedDB，验证旧任务/保存等待、新根拒绝、保存后确认、ABA 失效及明确恢复。Chrome API 为夹具，不冒充实际扩展世界或全局协调器；用户生产页面、新扩展代码尚未部署。完整权限、代码、启用顺序与卸载说明见 `MANAGED-BROWSER.md`。最终集中验证以随后报告为准，不借用此前 464 项报告证明新源码。
