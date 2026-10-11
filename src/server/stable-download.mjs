@@ -15,6 +15,10 @@ export class StableDownload {
     this.state = { state: 'idle', progress: 0, error: null }; this.pending = null; this.controller = null;
   }
   status(repository) { return this.state.repository === repository ? { state: this.state.state, progress: this.state.progress, error: this.state.error, version: this.state.version } : { state: Object.keys(this.keys).length ? 'idle' : 'trust-not-configured', progress: 0, error: null }; }
+  stageIdentity(repository) {
+    if (this.state.state !== 'verified' || this.state.repository !== repository || !this.verified) throw new UpdateError('update_stage_unavailable');
+    return { repository, version: this.verified.manifest.version, downloadId: path.basename(this.verified.directory) };
+  }
   cancel() { this.controller?.abort(); }
   failure(repository, error) { if (!this.pending) this.state = { repository, state: 'error', progress: 0, error }; }
   download(options) {

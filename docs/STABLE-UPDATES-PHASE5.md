@@ -110,3 +110,13 @@
 因此新增由签名ZIP绑定的内部`RELEASE.json.startupProtocol=1`声明；便携/Stable构建携带声明，验签器返回经验证的协议能力。真实服务在spawn前必须核对1，manager还必须在停止旧版之前证明**旧版和新版**都支持隔离启动，保证回滚路径兼容。没有声明的历史包继续可验签、可只读暂存，但不能自动接管、启动或充当回滚基线。原正式v1.0.4资产/签名/标签完全不变；首次bootstrap需单独发布包含此协议的新正式版本并通过安全引导，不把当前旧服务冒充已支持无人值守更新。
 
 Build-QA的真实内置Node smoke现在先验证maintenance=true和业务503，再通过继承IPC激活、复核maintenance=false，最后检查原资源和autoInstall=false；签名能力声明不能只靠普通启动测试。最新源码完整434/434回归、Lint/扫描及launchd隔离演练通过。此补丁的远端CI及原生Build-QA以其后续提交结果单独记录，不借用fa742b8的通过结果。
+
+## 集中验收和受限 UI 桥接
+
+最新集中结论见 `PHASE5-ACCEPTANCE.md`：不是阶段 5 整体通过。用户已批准受管理窗口方向，但完整库存/协调器、持久远端任务证据、独立 supervisor、稳定 bootstrap 和首次生产接管仍未实现/验收。
+
+新增 `update-manager-client.mjs`，后端通过固定、规范化、本人所有的 0600 Unix socket 读取严格脱敏状态，只能传下载器产生的 downloadId/version 暂存，不接受网页指定路径、URL、Token 或命令；输入/响应有界及总超时。设置页复用原组件，展示更新器/首次接管/恢复原因与目标版本、增加仅解包复核的暂存操作，不开放 install/recover，不部署 production public。
+
+manager 只读读取持久 current/journal，冷启动终态显示 activation-required 而非安全 idle，坏记录保留并显示 blocked；重复暂存仅对完整同身份版本重新验证后复用，不覆盖部分或损坏目录。SoftwareUpdates 对并发 iframe 暂存请求在异步读取后再次检查，保证任务合并。
+
+新增 `npm run verify:phase5` 固定集中检查，报告明确 localChecksPassed 与 fullPhase5Accepted 不同，当前本地通过时退出 2 表示整体条件未满足。首轮 441/441、Typecheck、Lint 0 错误/4 原警告、扫描、真实 launchd 和 350 文件/7 路由包运行通过；最后源码复核以报告为准。实际独立浏览器 QA 接入真实后端/Unix/验签暂存，但 GitHub、Keychain 与不可执行包为明确夹具，不冒充可信生产任务库存。

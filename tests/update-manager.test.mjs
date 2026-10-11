@@ -42,6 +42,30 @@ test('arm64 staging re-verifies real signatures, exact files and stable identity
   assert.equal(await readFile(path.join(f.options.dataRoot, 'private-settings'), 'utf8'), 'retain exact business data');
   assert.equal(await f.manager.readJournal(), null);
 });
+test('repeat stage reuses only an exactly verified immutable version; partial/tampered versions remain blocked', async t => {
+  const f = await fixture(t);
+  assert.deepEqual(await f.manager.stage(f.nextInput), f.next);
+  assert.deepEqual(await f.manager.readCurrent(), f.previous);
+  await writeFile(path.join(f.options.root, 'versions', f.next.id, 'server.mjs'), 'tampered');
+  await assert.rejects(f.manager.stage(f.nextInput));
+  assert.equal(await readFile(path.join(f.options.root, 'versions', f.next.id, 'server.mjs'), 'utf8'), 'tampered');
+});
+test('read-only status distinguishes bootstrap, durable unfinished/terminal transactions and corrupt state after restart', async t => {
+  const f = await fixture(t, { bootstrap: false });
+  assert.equal((await f.manager.inspectStatus()).state, 'bootstrap-required');
+  await writePrivateFile(path.join(f.options.root, 'current.json'), JSON.stringify(f.previous));
+  for (const phase of ['starting', 'committed', 'rolled-back']) {
+    await writePrivateFile(path.join(f.options.root, 'transaction.json'), JSON.stringify({ format: 1, phase, previous: f.previous, next: f.next }));
+    const restarted = new UpdateManager(f.options);
+    const status = await restarted.inspectStatus();
+    assert.equal(status.state, phase === 'starting' ? 'recovery-required' : 'activation-required');
+    assert.equal(status.installAllowed, false); assert.equal(status.currentVersion, '1.0.4');
+    assert.deepEqual(f.calls, []);
+  }
+  await writeFile(path.join(f.options.root, 'transaction.json'), 'bad');
+  assert.equal((await new UpdateManager(f.options).inspectStatus()).error, 'update_state_invalid');
+  assert.equal(await readFile(path.join(f.options.root, 'transaction.json'), 'utf8'), 'bad');
+});
 test('successful transaction checks permit, stops before pointer switch and commits only after exact health', async t => {
   const f = await fixture(t); assert.deepEqual(await f.manager.install(f.next), { state: 'committed', version: '1.0.5' });
   assert.deepEqual(f.calls, ['stop', 'start:1.0.5', 'release']); assert.equal(f.assertions(), 5);

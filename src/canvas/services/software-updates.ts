@@ -4,7 +4,9 @@ export type SoftwareUpdateStatus = {
     authorization: string; hasNewVersion: boolean; lastCheckedAt: string | null; error: string | null;
     latest: { version: string; publishedAt: string; notes: string; verification: string } | null;
     history: { at: string; state: string; version: string | null; error: string | null }[];
-    download: { state: string; progress: number; error?: string | null }; install: { allowed: false; state: string };
+    download: { state: string; progress: number; error?: string | null };
+    install: { allowed: false; state: string; currentVersion?: string | null; targetVersion?: string | null;
+        reason?: string | null; staging?: boolean; stageError?: string | null };
 };
 export const updateMessages: Record<string, string> = {
     unconfigured: "尚未配置仓库", unchecked: "尚未检查", available: "有新的稳定版本（签名结果见下载状态）", "up-to-date": "没有更高的稳定版本",
@@ -25,8 +27,21 @@ export const updateMessages: Record<string, string> = {
     asset_redirect_rejected: "下载重定向不受信任", asset_access_denied: "更新文件访问失败或受到限流",
     asset_size_invalid: "下载文件超出安全大小限制", download_storage_failed: "暂存失败，当前版本和用户数据保留",
     release_not_available: "请先检查并获得更高的稳定版本", download_in_progress: "另一项更新下载尚未结束，请稍后重试",
+    update_manager_unavailable: "独立更新管理器未就绪，当前工作台不受影响", update_manager_invalid: "更新器通信结果无效，已安全停止",
+    update_stage_unavailable: "尚无已验证的更新包可暂存", update_stage_invalid: "更新包身份不符合固定渠道",
+    update_stage_failed: "暂存复核失败，原版本及用户数据保留", update_bootstrap_required: "尚未完成首次安全接管，仅允许暂存，不执行安装",
+    install_coordination_unavailable: "可信窗口与任务协调器尚未就绪，禁止安装", update_recovery_required: "上次版本事务未结束，需要安全恢复",
+    update_activation_unconfirmed: "版本激活尚未确认，不开放新任务或自动降级", update_state_invalid: "更新状态记录读取失败，原记录保留",
+    install_permit_invalid: "任务空闲许可无效，未进行版本切换", update_failed_rolled_back: "新版本启动失败，已恢复旧版",
+    update_rollback_failed: "回滚未能确认，已停止后续安装并保留数据",
 };
-export async function updateRequest(operation: "status" | "check" | "download" | "preferences", input?: Partial<UpdatePreferences>): Promise<SoftwareUpdateStatus> {
+export const installationMessages: Record<string, string> = {
+    unavailable: "更新器未启动", disabled: "安装关闭", idle: "更新器已就绪", staged: "已暂存并再次验签（未执行）",
+    "bootstrap-required": "等待首次安全接管", "activation-required": "等待确认激活", "recovery-required": "需要安全恢复",
+    blocked: "安装被安全阻止", prepared: "已准备版本事务", stopping: "正在停止受控服务", switching: "正在切换版本",
+    starting: "正在隔离启动", committed: "版本事务已提交", "rolling-back": "正在恢复旧版", "rolled-back": "已恢复旧版",
+};
+export async function updateRequest(operation: "status" | "check" | "download" | "stage" | "preferences", input?: Partial<UpdatePreferences>): Promise<SoftwareUpdateStatus> {
     const response = await fetch(`/local-app/updates/${operation}`, {
         method: operation === "status" ? "GET" : "POST", cache: "no-store", signal: AbortSignal.timeout(40000),
         ...(operation === "status" ? {} : { headers: { "content-type": "application/json" }, body: JSON.stringify(input || {}) }),

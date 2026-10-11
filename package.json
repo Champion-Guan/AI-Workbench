@@ -13,6 +13,7 @@
     "clean:canvas-assets": "node scripts/audit-canvas-assets.mjs --quarantine",
     "test": "node --test tests/*.test.mjs",
     "verify:phase2": "node scripts/verify-phase2.mjs",
+    "verify:phase5": "node scripts/verify-phase5.mjs",
     "native:build": "node scripts/build-keychain-helper.mjs",
     "native:install": "node scripts/install-keychain-helper.mjs",
     "verify:credentials": "node scripts/verify-credential-browser.mjs",

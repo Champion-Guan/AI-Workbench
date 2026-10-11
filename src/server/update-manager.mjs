@@ -59,6 +59,24 @@ export class UpdateManager {
     this.state = { state: 'idle', error: null }; this.busy = false;
   }
   status() { return { ...this.state, installAllowed: false }; }
+  async inspectStatus() {
+    // Read durable state after a daemon restart without executing or repairing
+    // anything. A terminal journal is not evidence of acknowledged activation.
+    try {
+      const current = await this.readCurrent(), journal = await this.readJournal();
+      let state = this.state.state, error = this.state.error;
+      if (state === 'idle' && journal) {
+        state = ['committed', 'rolled-back'].includes(journal.phase) ? 'activation-required' : 'recovery-required';
+        error = state === 'activation-required' ? 'update_activation_unconfirmed' : 'update_recovery_required';
+      } else if (!current && ['idle', 'staged'].includes(state)) {
+        state = 'bootstrap-required'; error = 'update_bootstrap_required';
+      } else if (!error && !this.coordinator) error = 'install_coordination_unavailable';
+      return { state, error, version: this.state.version || journal?.next.version || null,
+        currentVersion: current?.version || null, installAllowed: false };
+    } catch {
+      return { state: 'blocked', error: 'update_state_invalid', version: null, currentVersion: null, installAllowed: false };
+    }
+  }
   async initialize() {
     await privateDirectory(this.root);
     // Reject symlink ancestors, wrong owner or group/world-writable storage.
@@ -148,6 +166,14 @@ export class UpdateManager {
           pointer = { id: `${version}-${checked.manifest.commit.slice(0, 12)}-${checked.selected.sha256.slice(0, 12)}`,
             version, commit: checked.manifest.commit, buildId: checked.buildId };
           const destination = path.join(this.root, 'versions', pointer.id), record = path.join(this.root, 'records', pointer.id);
+          // Retries after an HTTP timeout must not make another merged copy.
+          // Reuse only a complete, exactly verified immutable version. Partial
+          // directories remain untouched and continue to fail closed.
+          try {
+            await lstat(destination);
+            await this.verifyInstalled(pointer);
+            return;
+          } catch (e) { if (e.code !== 'ENOENT') throw e; }
           // Never merge/overwrite an interrupted or existing version. Retain it
           // for inspection; explicit recovery/cleanup is a separate operation.
           await mkdir(destination, { mode: 0o700 }); await mkdir(record, { mode: 0o700 });

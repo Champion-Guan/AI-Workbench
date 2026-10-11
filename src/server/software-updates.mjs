@@ -7,8 +7,9 @@ import { UpdateError } from './update-auth.mjs';
 export const UPDATE_INTERVAL_MS = 6 * 60 * 60 * 1000;
 const defaults = () => ({ version: 1, repository: '', autoCheck: true, autoDownload: true, autoInstall: false, network: 'auto' });
 export class SoftwareUpdates {
-  constructor({ directory, auth, currentVersion, downloader = null, proxyUrl = () => null, readRelease = readGitHubStable, now = Date.now }) {
+  constructor({ directory, auth, currentVersion, downloader = null, manager = null, proxyUrl = () => null, readRelease = readGitHubStable, now = Date.now }) {
     this.downloader = downloader;
+    this.manager = manager; this.staging = null; this.stageResult = null;
     this.stopped = false;
     this.file = path.join(directory, 'preferences.json'); this.auth = auth; this.currentVersion = currentVersion;
     this.historyFile = path.join(directory, 'check-history.json');
@@ -53,7 +54,9 @@ export class SoftwareUpdates {
       return { ...result, latest, history, lastCheckedAt: result.lastCheckedAt || history.at(-1)?.at || null, currentVersion: this.currentVersion, preferences: p, channel: 'GitHub Private / Stable',
         authorization: bound ? 'configured-not-verified' : 'required', checking: Boolean(this.inFlight),
         hasNewVersion: Boolean(result.latest && compareVersions(result.latest.version, this.currentVersion) > 0),
-        download, install: { allowed: false, state: 'disabled' } };
+        download, install: this.manager ? { ...(await this.manager.status()),
+          staging: Boolean(this.staging), stageError: this.stageResult?.repository === p.repository ? this.stageResult.error : null }
+          : { allowed: false, state: 'disabled' } };
     } catch (e) { return { ...this.result, latest: null, currentVersion: this.currentVersion, preferences: defaults(), channel: 'GitHub Private / Stable', authorization: 'unavailable', checking: false, hasNewVersion: false, error: e.code || 'update_storage_invalid', state: 'error', download: { state: 'not-implemented', progress: 0 }, install: { allowed: false, state: 'disabled' } }; }
   }
   configure(input) {
@@ -126,6 +129,23 @@ export class SoftwareUpdates {
     const p = await this.preferences();
     if (!this.downloader || this.result.repository !== p.repository || this.result.state !== 'available') throw new UpdateError('release_not_available');
     await this.beginDownload(p);
+    return this.status();
+  }
+  async stage() {
+    if (this.stopped || !this.manager || !this.downloader?.stageIdentity) throw new UpdateError('update_stage_unavailable');
+    if (this.staging) return this.status();
+    const p = await this.preferences(), identity = this.downloader.stageIdentity(p.repository);
+    // Concurrent iframe requests can both pass the first check before the
+    // preferences read resolves. Recheck immediately before acquiring the job.
+    if (this.stopped) throw new UpdateError('update_stage_unavailable');
+    if (this.staging) return this.status();
+    // No caller-supplied identity is accepted. The downloader is the only
+    // source, and the independent manager verifies all bytes again.
+    if (compareVersions(identity.version, this.currentVersion) <= 0) throw new UpdateError('version_not_newer');
+    this.stageResult = { repository: p.repository, error: null };
+    this.staging = this.manager.stage(identity).catch(e => {
+      this.stageResult = { repository: p.repository, error: e instanceof UpdateError ? e.code : 'update_stage_failed' };
+    }).finally(() => { this.staging = null; });
     return this.status();
   }
   start({ setIntervalFn = setInterval } = {}) {

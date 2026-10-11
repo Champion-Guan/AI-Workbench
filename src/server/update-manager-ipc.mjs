@@ -33,13 +33,17 @@ export async function serveUpdateManager({ manager, socketPath, downloadsDirecto
       try {
         const input = JSON.parse(raw.subarray(0, newline).toString('utf8'));
         let result;
-        if (exact(input, ['op']) && input.op === 'status') result = manager.status();
+        if (exact(input, ['op']) && input.op === 'status') result = manager.inspectStatus ? await manager.inspectStatus() : manager.status();
         else if (exact(input, ['op', 'downloadId', 'version']) && input.op === 'stage'
           && typeof input.downloadId === 'string' && /^verified-[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/.test(input.downloadId)
           && parseVersion(input.version) && !parseVersion(input.version).pre.length) {
           const directory = path.join(downloadsDirectory, input.downloadId);
           const info = await lstat(directory);
           if (!info.isDirectory() || info.isSymbolicLink()) throw Error();
+          // Input admission has completed. Verification/extraction can take
+          // longer than the five-second input deadline; client has its own
+          // total bounded operation deadline. Manager locking prevents overlap.
+          socket.setTimeout(0);
           result = await manager.stage({ directory, version: input.version });
         } else throw Error();
         socket.end(JSON.stringify({ ok: true, result }) + '\n');

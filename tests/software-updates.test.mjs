@@ -142,6 +142,9 @@ test('real HTTP handler enforces Origin/Host/JSON/size/method, refuses token and
   assert.equal((await post('download', { token: secret })).status, 409);
   assert.equal((await post('download', {})).status, 409);
   assert.equal((await post('install', {})).status, 405);
+  assert.equal((await post('stage', { downloadId: 'caller-cannot-choose', version: '1.0.5' })).status, 409);
+  assert.equal((await post('stage', { directory: '/private/data', command: 'arbitrary' })).status, 409);
+  assert.equal((await post('stage', {})).status, 409);
   const configured = await post('preferences', { repository: 'owner/repo' }); assert.equal(configured.status, 200);
   await f.auth.authorize('owner/repo', secret);
   const checked = await post('check', {}); assert.equal(checked.status, 200); assert.ok(!(await checked.text()).includes(secret));
