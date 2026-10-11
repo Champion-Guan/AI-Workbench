@@ -1,5 +1,6 @@
 import i18n from "@/i18n";
 import { observeActivity } from "@/lib/update-activity";
+import { remoteAgentJournal } from "@/lib/remote-task-journal";
 import type { CanvasAgentSnapshot } from "@/lib/canvas/canvas-agent-ops";
 import type { AgentReasoningEffort } from "@/stores/use-agent-store";
 
@@ -117,7 +118,44 @@ export function setCodexSkillEnabled(endpoint: string, token: string, skill: Pic
 }
 
 export async function fetchAgentJson<T>(endpoint: string, token: string, path: string, init?: RequestInit) {
-    return observeActivity("agent", () => fetchAgentJsonImpl<T>(endpoint, token, path, init));
+    return observeActivity("agent", async () => {
+        if (path === "/agent/codex/turn" && init?.method === "POST") {
+            const body = typeof init.body === "string" ? JSON.parse(init.body) as { messageId?: unknown } : null;
+            if (typeof body?.messageId !== "string" || !body.messageId || body.messageId.length > 256) throw Error("Agent 任务缺少可靠的请求标识。");
+            const key = await agentRequestKey(endpoint, token, body.messageId);
+            const intent = remoteAgentJournal.begin();
+            remoteAgentJournal.bind(intent, key);
+        }
+        const data = await fetchAgentJsonImpl<T>(endpoint, token, path, init);
+        // The accepted turn response has no reliable turnId. Correlate the
+        // server's persisted clientMessageId only with explicit settledTurnIds;
+        // ready/idle, interrupt, disconnect and HTTP success do not clear it.
+        if (/^\/agent\/codex\/threads\/[^/?]+$/.test(path) && (!init?.method || init.method === "GET")) {
+            await reconcileAgentRequestHistory(endpoint, token, data);
+        }
+        return data;
+    });
+}
+
+async function agentRequestKey(endpoint: string, token: string, messageId: string) {
+    const bytes = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(JSON.stringify([endpoint, token, messageId])));
+    return Array.from(new Uint8Array(bytes), byte => byte.toString(16).padStart(2, "0")).join("");
+}
+
+async function reconcileAgentRequestHistory(endpoint: string, token: string, data: unknown) {
+    if (!data || typeof data !== "object") return;
+    const history = data as { ok?: boolean; settledTurnIds?: unknown; messages?: unknown };
+    if (history.ok !== true || !Array.isArray(history.settledTurnIds) || !Array.isArray(history.messages)
+        || history.settledTurnIds.length > 5000 || history.messages.length > 5000) return;
+    const settled = new Set(history.settledTurnIds.filter((id): id is string => typeof id === "string" && id.length > 0 && id.length <= 256));
+    for (const value of history.messages) {
+        if (!value || typeof value !== "object") continue;
+        const item = value as { role?: unknown; turnId?: unknown; clientMessageId?: unknown };
+        if (item.role !== "user" || typeof item.turnId !== "string" || !settled.has(item.turnId)
+            || typeof item.clientMessageId !== "string" || !item.clientMessageId || item.clientMessageId.length > 256) continue;
+        try { remoteAgentJournal.terminal(await agentRequestKey(endpoint, token, item.clientMessageId)); }
+        catch { /* Keep the durable row; a hash failure isn't terminal proof. */ }
+    }
 }
 
 async function fetchAgentJsonImpl<T>(endpoint: string, token: string, path: string, init?: RequestInit) {

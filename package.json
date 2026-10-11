@@ -18,7 +18,7 @@
     "native:install": "node scripts/install-keychain-helper.mjs",
     "verify:credentials": "node scripts/verify-credential-browser.mjs",
     "updates:authorize": "node scripts/authorize-updates.mjs",
-    "lint": "eslint src/server src/shared src/canvas scripts tests server.mjs",
+    "lint": "eslint src/server src/shared src/canvas scripts tests browser server.mjs",
     "stable:runtime": "node scripts/prepare-stable-runtime.mjs",
     "stable:build": "node scripts/create-stable-release.mjs",
     "stable:sign": "node scripts/sign-stable-release.mjs",

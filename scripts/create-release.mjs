@@ -33,10 +33,12 @@ for (const entry of entries) {
   await cp(path.join(root, entry), path.join(stage, entry), { recursive: true, filter, dereference: false });
 }
 // Independent updater's verified extraction dependencies, explicitly allowlisted.
-for (const entry of ['scripts/run-update-manager.mjs', 'scripts/lib/signed-stable.mjs', 'scripts/lib/release-validation.mjs', 'scripts/lib/stable-runtime.mjs', 'scripts/lib/secret-scan.mjs']) {
+for (const entry of ['scripts/run-update-manager.mjs', 'scripts/run-update-supervisor.mjs', 'scripts/run-browser-bridge.mjs', 'scripts/lib/signed-stable.mjs', 'scripts/lib/release-validation.mjs', 'scripts/lib/stable-runtime.mjs', 'scripts/lib/secret-scan.mjs']) {
   await mkdir(path.dirname(path.join(stage, entry)), { recursive: true });
   await cp(path.join(root, entry), path.join(stage, entry));
 }
+await cp(path.join(root, 'browser/managed-workbench'), path.join(stage, 'browser/managed-workbench'), { recursive: true });
+await cp(path.join(root, 'docs/MANAGED-BROWSER.md'), path.join(stage, 'docs/MANAGED-BROWSER.md'));
 // Ship the current approval boundaries and version-specific notes, not private QA records.
 for (const entry of ['docs/STABLE-UPDATES-SINGLE-OWNER.md', 'docs/STABLE-UPDATES-PHASE5.md', 'docs/PHASE5-ACCEPTANCE.md', 'docs/RELEASE-NOTES.md']) await cp(path.join(root, entry), path.join(stage, entry));
 const canvasBuild = useBuiltCanvas ? await copyVerifiedCanvasBuild(root, path.join(root, 'src/canvas/dist'), path.join(stage, 'public/infinite-canvas')) : null;

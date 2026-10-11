@@ -6,6 +6,7 @@ import { webcrypto } from 'node:crypto';
 import ts from '../src/canvas/node_modules/typescript/lib/typescript.js';
 import { BrowserActivityReports } from '../src/server/browser-activity.mjs';
 import { createPersistenceFixture } from './helpers/persistence-checkpoint.mjs';
+import { journalFixture } from './helpers/remote-task-journal.mjs';
 
 function load(file, bindings = {}, expose = '') {
   const source = readFileSync(new URL('../src/canvas/' + file, import.meta.url), 'utf8');
@@ -83,6 +84,41 @@ test('Agent JSON request remains busy while the response body is still being rea
   assert.equal(r.snapshot().agent, 0);
 });
 
+function durableAgentFixture() {
+  const r = registry(), durable = journalFixture(r, { domain: 'agent', namespace: 'agent' });
+  let response = {}, failure;
+  const ctx = load('services/api/canvas-agent.ts', {
+    observeActivity: (domain, fn) => r.run(domain, fn), remoteAgentJournal: durable.journal, crypto: webcrypto, i18n: { t: key => key },
+    fetch: async () => { if (failure) throw failure; return { ok: true, json: async () => response }; },
+  });
+  return { r, durable, ctx, response: value => { response = value; }, failure: value => { failure = value; },
+    create: (token = 'fixture-token', messageId = 'fixture-message') => ctx.fetchAgentJson('http://example.invalid', token, '/agent/codex/turn', { method: 'POST', body: JSON.stringify({ messageId, prompt: 'private user text' }) }),
+    history: (token = 'fixture-token') => ctx.fetchAgentJson('http://example.invalid', token, '/agent/codex/threads/fixture-thread') };
+}
+test('Agent pre-request journal survives response loss and HTTP accepted/ready never clears it', async () => {
+  const f = durableAgentFixture(); f.failure(Error('lost accepted response'));
+  await assert.rejects(f.create(), /lost accepted response/); assert.equal(f.r.snapshot().agent, 1);
+  assert.equal(f.durable.rows.size, 1); assert.ok(!JSON.stringify([...f.durable.rows]).includes('fixture-token'));
+  assert.ok(!JSON.stringify([...f.durable.rows]).includes('private user text'));
+  const cold = registry(), restored = journalFixture(cold, { rows: f.durable.rows, domain: 'agent', namespace: 'agent' });
+  restored.journal.restore(); assert.equal(cold.snapshot().agent, 1);
+  f.failure(undefined); f.response({ ok: true, conversation: { status: 'ready' }, messages: [], settledTurnIds: [] });
+  await f.history(); assert.equal(f.r.snapshot().agent, 1);
+});
+test('only explicit settled history with correlated user message releases the matching Agent account', async () => {
+  const f = durableAgentFixture(); await f.create();
+  const history = { ok: true, settledTurnIds: ['turn-1'], messages: [{ role: 'user', turnId: 'turn-1', clientMessageId: 'fixture-message' }] };
+  f.response({ ...history, messages: [{ ...history.messages[0], role: 'assistant' }] }); await f.history(); assert.equal(f.r.snapshot().agent, 1);
+  f.response({ ...history, settledTurnIds: [] }); await f.history(); assert.equal(f.r.snapshot().agent, 1);
+  f.response(history); await f.history('different-fixture-account'); assert.equal(f.r.snapshot().agent, 1);
+  await f.history(); assert.equal(f.r.snapshot().agent, 0); assert.equal(f.durable.rows.size, 0);
+});
+test('never-used/unconnected Agent has no durable blocker and invalid request identity does not dispatch', async () => {
+  const f = durableAgentFixture(); f.durable.journal.restore(); assert.equal(f.r.snapshot().agent, 0);
+  await f.ctx.fetchAgentJson('http://example.invalid', 'fixture-token', '/agent/codex/models'); assert.equal(f.r.snapshot().agent, 0);
+  await assert.rejects(f.create('fixture-token', ''), /请求标识/); assert.equal(f.durable.rows.size, 0);
+});
+
 test('WebDAV download holds a lease after headers and even after body timeout until settlement', async () => {
   const r = registry(), body = deferred();
   const timers = new Map(); let next = 0;
@@ -140,7 +176,9 @@ test('reporter observes Agent/task lifetimes without resetting on disconnect, tr
   let nextTimer = 0;
   const flushTimers = () => { const pending = [...timers.values()]; timers.clear(); for (const fn of pending) fn(); };
   const ctx = load('services/update-activity-reporter.ts', {
-    frontendActivity: r, useAgentStore: agent, useWorkbenchAgentStore: tasks, useCanvasSaveStore: canvasSave, crypto: webcrypto,
+    frontendActivity: r, remoteVideoJournal: journalFixture(r).journal,
+    remoteAgentJournal: journalFixture(r, { domain: 'agent', namespace: 'agent' }).journal,
+    useAgentStore: agent, useWorkbenchAgentStore: tasks, useCanvasSaveStore: canvasSave, crypto: webcrypto,
     window: { setInterval(fn) { intervals.add(fn); return fn; }, clearInterval(fn) { intervals.delete(fn); },
       setTimeout(fn) { const id = ++nextTimer; timers.set(id, fn); return id; }, clearTimeout(id) { timers.delete(id); },
       addEventListener(name, fn) { events.set(name, fn); }, removeEventListener(name) { events.delete(name); } },

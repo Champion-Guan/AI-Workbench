@@ -159,6 +159,7 @@ export class OwnedUpdateService {
     });
   }
   async isStopped() { return !alive(this.owned?.child) && await portFree(this.port); }
+  canDetach() { return this.owned === null && !this.busy; }
   async recoverySafe() {
     if (!this.owned) return this.isStopped();
     if (!alive(this.owned.child)) return this.isStopped();

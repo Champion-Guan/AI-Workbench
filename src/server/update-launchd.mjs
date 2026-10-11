@@ -25,3 +25,16 @@ export function updateManagerLaunchAgent({ node, entry, directory, dataRoot, log
 </dict></plist>
 `;
 }
+
+// Distinct stable user job: restarting/upgrading the manager does not destroy
+// service ownership. Generation only, never installs or mutates launchd.
+export function updateSupervisorLaunchAgent(options) {
+  const label = options.label || 'com.guanaiworkbench.supervisor';
+  if (!options.entry?.endsWith('/scripts/run-update-supervisor.mjs')
+    || label !== 'com.guanaiworkbench.supervisor' && !/^com\.guanaiworkbench\.supervisor\.qa\.[a-f0-9-]{36}$/.test(label)) throw Error('update_launchd_invalid');
+  const managerLabel = label.replace('com.guanaiworkbench.supervisor', 'com.guanaiworkbench.updater');
+  return updateManagerLaunchAgent({ ...options, entry: options.entry.replace(/run-update-supervisor\.mjs$/, 'run-update-manager.mjs'), label: managerLabel })
+    .replaceAll('run-update-manager.mjs', 'run-update-supervisor.mjs')
+    .replaceAll(xml(managerLabel), xml(label))
+    .replaceAll('updater.log', 'supervisor.log').replaceAll('updater-error.log', 'supervisor-error.log');
+}

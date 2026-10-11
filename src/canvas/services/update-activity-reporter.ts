@@ -2,9 +2,12 @@ import { frontendActivity } from "@/lib/update-activity";
 import { useAgentStore } from "@/stores/use-agent-store";
 import { useWorkbenchAgentStore } from "@/stores/use-workbench-agent-store";
 import { useCanvasSaveStore } from "@/stores/canvas/use-canvas-store";
+import { remoteVideoJournal, remoteAgentJournal } from "@/lib/remote-task-journal";
 
 export function startUpdateActivityReporter() {
     if (typeof window === "undefined") return () => {};
+    remoteVideoJournal.restore();
+    remoteAgentJournal.restore();
     const pageId = crypto.randomUUID();
     let sequence = 0, stopped = false, inFlight = false, dirty = false;
     let reportTimer: number | undefined;
@@ -69,15 +72,19 @@ export function startUpdateActivityReporter() {
             void report();
         }, 100);
     });
-    const timer = window.setInterval(() => { void report(); }, 5000);
-    const pageshow = () => { void report(); };
+    const restoreRemoteTasks = () => { remoteVideoJournal.restore(); remoteAgentJournal.restore(); };
+    const timer = window.setInterval(() => { restoreRemoteTasks(); void report(); }, 5000);
+    const pageshow = () => { restoreRemoteTasks(); void report(); };
+    const storageChanged = () => { restoreRemoteTasks(); void report(); };
     window.addEventListener("pageshow", pageshow);
+    window.addEventListener("storage", storageChanged);
     void report();
     return () => {
         stopped = true;
         if (reportTimer !== undefined) window.clearTimeout(reportTimer);
         window.clearInterval(timer);
         window.removeEventListener("pageshow", pageshow);
+        window.removeEventListener("storage", storageChanged);
         unsubAgent(); unsubTasks(); unsubCanvasSave(); unsubActivity();
         // No zero-count unload beacon: lost heartbeats must become unknown.
     };

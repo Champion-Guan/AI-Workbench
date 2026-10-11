@@ -88,7 +88,8 @@ try {
   await command('staged-secret-scan', 'npm', ['run', 'secrets:staged']);
   const launchd = JSON.parse(await command('real-isolated-user-launchd', process.execPath, ['scripts/verify-update-launchd.mjs']));
   if (launchd.userModeLaunchd !== true || launchd.gracefulBootout !== true || launchd.productionChanged !== false
-    || launchd.installationEnabled !== false) throw Error('launchd-proof-unconfirmed');
+    || launchd.installationEnabled !== false || launchd.supervisorVerified !== true
+    || launchd.managerRestartPreservedSupervisor !== true) throw Error('launchd-proof-unconfirmed');
   await command('current-source-canvas-build', 'npm', ['run', 'build:canvas']);
   const build = await verifyCanvasBuild(root, path.join(root, 'src/canvas/dist'));
   const packed = JSON.parse(await command('unsigned-current-source-package', process.execPath, ['scripts/create-release.mjs', '--canvas-build']));
@@ -101,12 +102,13 @@ try {
   if (sourceHash !== await sourceSnapshot() || !privateFilesUnchanged || !productionIdentityUnchanged) throw Error('baseline-changed-during-verification');
   report = { format: 1, checkedAt: new Date().toISOString(), localChecksPassed: true, fullPhase5Accepted: false,
     sourceHash, totalTests, version: build.version, packageSha256: packed.sha256, packageFiles: verified.files, packageRoutes: verified.routes,
-    userModeLaunchdVerified: true, privateFilesUnchanged, productionIdentityUnchanged,
+    userModeLaunchdVerified: true, independentSupervisorVerified: true,
+    managerRestartPreservedSupervisor: true, privateFilesUnchanged, productionIdentityUnchanged,
     productionVersion: afterHealth?.version || null, productionObserved: Boolean(afterHealth),
     automaticInstallAllowed: false, steps,
     // No test fixture or fresh browser context can attest these actual gates.
-    remaining: ['managed-browser-authority-and-full-root-admission', 'durable-unresolved-remote-task-inventory',
-      'signed-protocol1-bootstrap-and-independent-manager-upgrade', 'cross-manager-restart-owned-supervisor',
+    remaining: ['managed-browser-all-profile-authority-and-full-root-admission', 'legacy-remote-task-reconciliation-and-agent-protocol-verification',
+      'signed-protocol1-bootstrap-and-independent-manager-upgrade',
       'confirmed-maintenance-handoff-and-production-proxy-helper-compatibility'],
     excluded: ['production-install-or-restart', 'real-browser-storage-mutation', 'formal-release', 'physical-power-loss', 'two-physical-Macs'] };
   process.exitCode = 2; // Passed local QA is deliberately not whole-phase acceptance.

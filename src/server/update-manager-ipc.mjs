@@ -15,7 +15,9 @@ export async function serveUpdateManager({ manager, socketPath, downloadsDirecto
   catch (e) { if (e.code !== 'ENOENT') throw e; }
   const sockets = new Set();
   let ready = false, active = 0;
-  const server = net.createServer(socket => {
+  // A client may half-close its request after the newline. Keep the response
+  // side open while the admitted async inspection/staging operation completes.
+  const server = net.createServer({ allowHalfOpen: true }, socket => {
     if (!ready || sockets.size >= 16) { socket.destroy(); return; }
     sockets.add(socket); socket.once('close', () => sockets.delete(socket)); socket.on('error', () => {});
     socket.setTimeout(5000, () => socket.destroy());

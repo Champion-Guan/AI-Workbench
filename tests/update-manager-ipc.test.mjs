@@ -7,10 +7,10 @@ import { spawnSync } from 'node:child_process';
 import { serveUpdateManager } from '../src/server/update-manager-ipc.mjs';
 import { updateManagerLaunchAgent } from '../src/server/update-launchd.mjs';
 
-function request(socketPath, raw) {
+function request(socketPath, raw, halfClose = false) {
   return new Promise((resolve, reject) => {
     const socket = net.connect(socketPath), chunks = [];
-    socket.once('connect', () => socket.write(raw)); socket.on('data', b => chunks.push(b));
+    socket.once('connect', () => halfClose ? socket.end(raw) : socket.write(raw)); socket.on('data', b => chunks.push(b));
     socket.once('error', reject); socket.once('end', () => resolve(Buffer.concat(chunks).toString('utf8')));
   });
 }
@@ -20,12 +20,17 @@ async function fixture(t) {
   await mkdir(downloadsDirectory);
   const manager = { status: () => ({ state: 'idle', installAllowed: false }), stage: async input => { calls.push(input); return { version: input.version }; } };
   const server = await serveUpdateManager({ manager, socketPath, downloadsDirectory }); t.after(() => server.close());
-  return { root, socketPath, downloadsDirectory, calls };
+  return { root, socketPath, downloadsDirectory, calls, manager };
 }
 test('Unix IPC is user-private and accepts status without any installation rights', async t => {
   const f = await fixture(t);
   assert.equal((await stat(f.socketPath)).mode & 0o777, 0o600);
   assert.deepEqual(JSON.parse(await request(f.socketPath, '{"op":"status"}\n')), { ok: true, result: { state: 'idle', installAllowed: false } });
+});
+test('half-closed client receives the complete asynchronous durable status response', async t => {
+  const f = await fixture(t);
+  f.manager.inspectStatus = async () => { await new Promise(resolve => setTimeout(resolve, 30)); return { state: 'bootstrap-required', installAllowed: false }; };
+  assert.deepEqual(JSON.parse(await request(f.socketPath, '{"op":"status"}\n', true)), { ok: true, result: { state: 'bootstrap-required', installAllowed: false } });
 });
 test('IPC accepts only strict download identity/version; never a caller-supplied path or URL', async t => {
   const f = await fixture(t), downloadId = 'verified-00000000-0000-0000-0000-000000000000';

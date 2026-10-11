@@ -120,3 +120,17 @@ Build-QA的真实内置Node smoke现在先验证maintenance=true和业务503，�
 manager 只读读取持久 current/journal，冷启动终态显示 activation-required 而非安全 idle，坏记录保留并显示 blocked；重复暂存仅对完整同身份版本重新验证后复用，不覆盖部分或损坏目录。SoftwareUpdates 对并发 iframe 暂存请求在异步读取后再次检查，保证任务合并。
 
 新增 `npm run verify:phase5` 固定集中检查，报告明确 localChecksPassed 与 fullPhase5Accepted 不同，当前本地通过时退出 2 表示整体条件未满足。首轮 441/441、Typecheck、Lint 0 错误/4 原警告、扫描、真实 launchd 和 350 文件/7 路由包运行通过；最后源码复核以报告为准。实际独立浏览器 QA 接入真实后端/Unix/验签暂存，但 GitHub、Keychain 与不可执行包为明确夹具，不冒充可信生产任务库存。
+
+## 独立服务 supervisor、持久远端意图和 Chrome 接入（本轮最新源码）
+
+- 新增 `update-supervisor.mjs`、`run-update-supervisor.mjs`，独立用户 job 持有真实 ChildProcess/继承 IPC；manager 改成受限客户端，不再随 manager 退出失去服务控制。用户私有 0600 capability、0700 socket 父目录、独占 controller session/incarnation/递增序号、有界输入/输出与总时限；不向 Web 暴露控制 capability、路径或命令。断线不取消已接纳操作，不提前释放锁，不自动重试不确定的启动/停止。
+- 同时修复控制心跳与 stop 竞态：客户端序列化心跳/业务请求，防止一次 ping 导致有效安装假失败。停止 supervisor 前必须正常停止其确切自有服务；未接管任何服务时可以退出，不信号/领养原 5174 监听进程。supervisor 自身崩溃后的孤儿仍拒绝领养；稳定签名首次 bootstrap/升级仍需实现和验证。
+- 实际本机测试签名 arm64 Node 服务：controller 子进程退出后同一 Web child 保留；新 manager 重连。提交后断线保留新指针、业务维持503；新 manager 经明确 QA recovery lease 幂等激活；后续新版本启动失败回滚，测试业务 sentinel 完全一致。这里 coordinator 仍为明确测试夹具，不冒充真实业务库存。
+- `verify-update-launchd` 现在实际启动两个随机 QA 用户 job、bootout/再次 bootstrap manager，核对 supervisor incarnation/session 持续保留，最后两个 job graceful bootout；不安装生产 job。修复旧 IPC 半关闭客户端在异步 status 返回前被提前 FIN 的竞态，并增加实际 socket 回归。
+- `remote-task-journal.ts`：独立每请求 localStorage key，仅存随机 opaque ID 和 SHA-256 归属，无 endpoint/Key/Token/提示词/媒体；发送视频/Agent 创建请求前必须持久写入并读回。视频本地参数/素材准备失败不记录假远端任务；真正派发后的错误/丢响应、超时/取消/删历史不清除证据。冷页面恢复、storage 事件及周期重新观察；损坏/配额/读写异常有界保留阻断，不删除原数据。
+- 视频明确上游 terminal 才清已绑定证据；过期插件内存结果不是远端终态。Agent 接受回复仍无可靠 turnId，改以现有 clientMessageId 的账户哈希关联明确 settledTurnIds + user history message；ready/idle/interrupt/断线不释放。未连接且未使用 Agent 的正常存储不会添加 Agent 阻断。现有 Agent URL-token 风险未被本轮改造消除。
+- 用户再次明确批准现有 Chrome 的受限扩展/本机桥接。新增实际 MV3 扩展、原生 stdio 桥接、严格式观测器、只读 QA host 接入脚本及 `MANAGED-BROWSER.md` 权限/卸载说明。固定原 Origin、现有 profile 打开窗口；Chrome API 取工作台 tabs/frames，不读取其他网站内容、不转发 URL/标题/提示词/凭据；拓扑 revision/心跳/不明帧保持保守。本轮没有静默安装扩展、修改 Chrome Preferences、写业务数据库或接管生产。
+
+上述 Chrome 观测仍仅一个 profile：`inventoryVerified=false/profileOnly=true/installAllowed=false`。安装器要求实际扩展 ID 且仅允许该 extension origin；完整多 profile/普通浏览器/旧页库存、全根编辑和延后插件排空、签名稳定桥接、持续协调器尚未接入，不能把零 tab 或 stdio 格式检查当作授权。真实旧 Agent/视频任务需要首次维护基线及协议/历史验证，不自动根据当前 UI 状态清掉未知记录。
+
+本轮新增源代码检查点 `pre-phase5-supervisor-dd76a76-20261011.tar.gz`，SHA256 `e8884a1e8eda224372804db4fc8ec7b7d4e290d65b3c5aeb49a2fbe8c0634190`、0600。不是新完整用户数据备份，原完整项目/代理/浏览器/加密签名备份仍保留。最终全量类型/测试/扫描/双 job launchd/本地包验证以 `output/phase5/latest-verification.json` 为准；源码专项或 Chrome mock 不能冒充真实扩展安装后的全窗口验收。

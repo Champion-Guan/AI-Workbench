@@ -5,6 +5,7 @@ import vm from 'node:vm';
 import { webcrypto } from 'node:crypto';
 import ts from '../src/canvas/node_modules/typescript/lib/typescript.js';
 import { createActivityFixture } from './helpers/frontend-activity.mjs';
+import { journalFixture } from './helpers/remote-task-journal.mjs';
 
 const tick = () => new Promise(resolve => setImmediate(resolve));
 function deferred() { let resolve, reject; const promise = new Promise((a, b) => { resolve = a; reject = b; }); return { promise, resolve, reject }; }
@@ -25,27 +26,28 @@ function unresolved(registry, domain = 'canvas', maximum = 4096) {
 function videoFixture() {
   const activity = createActivityFixture();
   const pending = unresolved(activity.registry);
+  const durable = journalFixture(activity.registry);
   let state = { status: 'pending' }, failure;
   const task = { provider: 'openai', id: 'fixture-task', model: 'fixture-model' };
   const ctx = evaluate('services/api/video.ts', {
-    ...activity, unresolvedVideoActivity: pending, resolveModelRequestConfig: config => config,
-    createVideoGenerationTaskImpl: async () => task,
+    ...activity, unresolvedVideoActivity: pending, remoteVideoJournal: durable.journal, pluginVideoResults: new Map(), resolveModelRequestConfig: config => config,
+    createVideoGenerationTaskImpl: async (_config, _prompt, _references, _options, beforeRequest) => { beforeRequest(); return task; },
     pollVideoGenerationTaskImpl: async () => { if (failure) throw failure; return state; },
   }, ['createVideoGenerationTask', 'rememberVideoActivity', 'pollVideoGenerationTask']);
   const config = { model: 'fixture-model', baseUrl: 'https://example.invalid', apiKey: 'fixture-account' };
-  return { ...activity, pending, ctx, task, config, setState: next => { state = next; }, fail: error => { failure = error; } };
+  return { ...activity, pending, durable, ctx, task, config, setState: next => { state = next; }, fail: error => { failure = error; } };
 }
 
 test('created video task stays busy between polls, on timeout/abort and until confirmed terminal result', async () => {
   const f = videoFixture();
   assert.equal(await f.ctx.createVideoGenerationTask(f.config, 'fixture prompt'), f.task);
-  assert.equal(f.registry.snapshot().canvas, 1, 'no request is active but upstream is still working');
+  assert.equal(f.registry.snapshot().canvas, 2, 'durable request intent and upstream task remain independently protected');
   await Promise.all([f.ctx.pollVideoGenerationTask(f.config, f.task), f.ctx.pollVideoGenerationTask(f.config, f.task)]);
-  assert.equal(f.registry.snapshot().canvas, 1, 'duplicate polls do not duplicate lifetime blockers');
+  assert.equal(f.registry.snapshot().canvas, 2, 'duplicate polls do not duplicate lifetime blockers');
   for (const message of ['network unavailable', 'Aborted', 'query timeout']) {
     f.fail(Error(message));
     await assert.rejects(f.ctx.pollVideoGenerationTask(f.config, f.task), error => error.message === message);
-    assert.equal(f.registry.snapshot().canvas, 1);
+    assert.equal(f.registry.snapshot().canvas, 2);
   }
   f.fail(undefined);
   const result = { status: 'completed', result: { url: 'https://example.invalid/fixture.mp4' } };
@@ -68,14 +70,33 @@ test('resumed videos acquire blockers, account identities are isolated and plain
   assert.equal(f.registry.snapshot().canvas, 0);
 });
 
+test('lost video create response retains durable pre-request evidence after a cold realm', async () => {
+  const f = videoFixture();
+  f.ctx.createVideoGenerationTaskImpl = async (_config, _prompt, _references, _options, beforeRequest) => {
+    beforeRequest(); throw Error('create response lost');
+  };
+  await assert.rejects(f.ctx.createVideoGenerationTask(f.config, 'private prompt'), /response lost/);
+  assert.equal(f.durable.rows.size, 1); assert.equal(f.registry.snapshot().canvas, 1);
+  assert.deepEqual([...f.durable.rows.values()], ['{"format":1,"taskKey":null}']);
+  const cold = createActivityFixture(), restored = journalFixture(cold.registry, { rows: f.durable.rows });
+  restored.journal.restore(); assert.equal(cold.registry.snapshot().canvas, 1);
+});
+
+test('video create preflight failure does not create a false unknown remote task', async () => {
+  const f = videoFixture();
+  f.ctx.createVideoGenerationTaskImpl = async () => { throw Error('invalid reference before dispatch'); };
+  await assert.rejects(f.ctx.createVideoGenerationTask(f.config, 'private prompt'), /before dispatch/);
+  assert.equal(f.durable.rows.size, 0); assert.equal(f.registry.snapshot().canvas, 0);
+});
+
 test('attribution failure and capacity limits keep bounded unknown blockers without breaking business calls', async () => {
   const f = videoFixture();
   f.ctx.crypto = { subtle: { digest: async () => { throw Error('unsupported crypto'); } } };
   assert.equal(await f.ctx.createVideoGenerationTask(f.config, 'fixture'), f.task);
-  assert.equal(f.registry.snapshot().canvas, 1);
+  assert.equal(f.registry.snapshot().canvas, 3, 'durable intent plus two independent attribution uncertainty blockers');
   f.setState({ status: 'completed', result: {} });
   await f.ctx.pollVideoGenerationTask(f.config, f.task);
-  assert.equal(f.registry.snapshot().canvas, 1, 'unknown attribution cannot be erased by an unrelated terminal report');
+  assert.equal(f.registry.snapshot().canvas, 3, 'unknown attribution cannot be erased by an unrelated terminal report');
   const r = createActivityFixture().registry, pending = unresolved(r, 'canvas', 2);
   for (const letter of ['a', 'b', 'c', 'd']) pending.remember(letter.repeat(64));
   assert.equal(pending.releases.size, 2);
