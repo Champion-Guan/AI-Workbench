@@ -117,7 +117,7 @@ try {
     automaticInstallAllowed: false, steps,
     // No test fixture or fresh browser context can attest these actual gates.
     installationPolicy: 'closed-browsers-only',
-    remaining: ['closed-browser-continuous-permit-saved-sync-evidence-and-backend-freeze', 'legacy-remote-task-reconciliation-and-native-coverage-verification',
+    remaining: ['closed-browser-continuous-permit-and-saved-sync-evidence', 'legacy-remote-task-reconciliation-and-native-coverage-verification',
       'signed-protocol1-bootstrap-and-independent-manager-upgrade',
       'confirmed-maintenance-handoff-and-production-proxy-helper-compatibility'],
     excluded: ['production-install-or-restart', 'real-browser-storage-mutation', 'formal-release', 'physical-power-loss', 'two-physical-Macs'] };

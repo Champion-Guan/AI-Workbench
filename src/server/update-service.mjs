@@ -5,6 +5,7 @@ import { spawn } from 'node:child_process';
 import { createConnection } from 'node:net';
 import { get } from 'node:http';
 import { randomUUID } from 'node:crypto';
+import { validBackendCommand, validBackendEvidence } from './update-control-protocol.mjs';
 
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
 const same = (a, b) => a && b && ['id', 'version', 'commit', 'buildId'].every(k => a[k] === b[k]);
@@ -123,7 +124,7 @@ export class OwnedUpdateService {
       const child = spawn(path.join(directory, 'runtime/node'), ['server.mjs'], {
         cwd: directory, env, shell: false, stdio: ['ignore', 'ignore', 'ignore', 'ipc'], detached: false,
       });
-      const owned = { child, nonce, pointer: Object.freeze({ ...pointer }), instanceId: null, active: false, spawnError: false };
+      const owned = { child, nonce, pointer: Object.freeze({ ...pointer }), instanceId: null, active: false, spawnError: false, controlSequence: 0, controlUnknown: false };
       this.owned = owned;
       child.on('error', () => { owned.spawnError = true; });
       child.on('exit', () => {}); // Retain ownership evidence until explicit stop.
@@ -187,6 +188,44 @@ export class OwnedUpdateService {
         // On failure preserve the child and committed pointer; never downgrade.
         const report = await this.report(owned, false); owned.active = true; return report;
       } finally { owned.child.off('message', receive); }
+    });
+  }
+  async backendControl(command) {
+    if (!validBackendCommand(command)) throw Error('service_backend_request_invalid');
+    // Capture before awaits, and reject commands rather than silently queuing
+    // them across a service replacement.
+    const input = structuredClone(command);
+    return this.exclusive(async () => {
+      const owned = this.owned;
+      if (!owned || owned.controlUnknown) throw Error('service_backend_outcome_unknown');
+      const report = await this.report(owned, !owned.active);
+      if (report.backendControlProtocol !== 1) throw Error('service_backend_protocol_incompatible');
+      const sequence = ++owned.controlSequence;
+      return new Promise((resolve, reject) => {
+        let settled = false;
+        const finish = (error, value) => {
+          if (settled) return; settled = true;
+          clearTimeout(timer); owned.child.off('message', receive); owned.child.off('exit', lost); owned.child.off('disconnect', lost);
+          if (error) reject(error); else resolve(value);
+        };
+        const lost = () => { owned.controlUnknown = true; finish(Error('service_backend_outcome_unknown')); };
+        const receive = m => {
+          if (m?.op !== 'guan-update-backend-result') return;
+          const keys = m.ok === true ? 'evidence,instance,nonce,ok,op,sequence' : 'error,instance,nonce,ok,op,sequence';
+          if (Object.keys(m).sort().join(',') !== keys || m.nonce !== owned.nonce || m.instance !== owned.instanceId
+            || m.sequence !== sequence || typeof m.ok !== 'boolean' || this.owned !== owned || !alive(owned.child)) { lost(); return; }
+          if (!m.ok) {
+            if (!/^service_backend_[a-z_]{1,40}$/.test(m.error || '')) { lost(); return; }
+            finish(Error(m.error)); return;
+          }
+          if (!validBackendEvidence(m.evidence) || m.evidence.instance !== owned.instanceId || m.evidence.version !== owned.pointer.version) { lost(); return; }
+          finish(null, m.evidence);
+        };
+        const timer = setTimeout(lost, this.activationTimeout);
+        owned.child.on('message', receive); owned.child.once('exit', lost); owned.child.once('disconnect', lost);
+        try { owned.child.send({ op: 'guan-update-backend', nonce: owned.nonce, instance: owned.instanceId, sequence, command: input }, error => { if (error) lost(); }); }
+        catch { lost(); }
+      });
     });
   }
 }

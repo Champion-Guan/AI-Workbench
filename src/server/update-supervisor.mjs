@@ -5,6 +5,7 @@ import { chmod, lstat, open, realpath, unlink } from 'node:fs/promises';
 import { randomBytes, randomUUID, timingSafeEqual } from 'node:crypto';
 import { writePrivateFile } from './runtime-paths.mjs';
 import { parseVersion } from './stable-version.mjs';
+import { validBackendCommand, validBackendEvidence } from './update-control-protocol.mjs';
 
 const exact = (v, keys) => v && typeof v === 'object' && !Array.isArray(v)
   && Object.keys(v).length === keys.length && keys.every(k => Object.hasOwn(v, k));
@@ -88,6 +89,7 @@ export async function serveUpdateSupervisor({ service, socketPath, capability, v
           && request.value.every(identity)) { await service.stop({ allowed: request.value }); result = true; }
         else if (request.op === 'isStopped' && request.value === null) result = await service.isStopped();
         else if (request.op === 'recoverySafe' && request.value === null) result = await service.recoverySafe();
+        else if (request.op === 'backendControl' && validBackendCommand(request.value)) result = await service.backendControl(request.value);
         else throw Error('service_supervisor_request_invalid');
         reply({ ok: true, incarnation, session, sequence, result });
       } catch (e) { reply({ ok: false, incarnation, session, sequence, error: publicError(e) }); }
@@ -187,4 +189,10 @@ export class SupervisedUpdateService {
   async activate(pointer) { return this.call('activate', Object.fromEntries(identityKeys.map(k => [k, pointer[k]]))); }
   async isStopped() { const value = await this.call('isStopped', null); if (typeof value !== 'boolean') throw Error('service_supervisor_response_invalid'); return value; }
   async recoverySafe() { const value = await this.call('recoverySafe', null); if (typeof value !== 'boolean') throw Error('service_supervisor_response_invalid'); return value; }
+  async backendControl(command) {
+    if (!validBackendCommand(command)) throw Error('service_backend_request_invalid');
+    const value = await this.call('backendControl', structuredClone(command));
+    if (!validBackendEvidence(value)) throw Error('service_supervisor_response_invalid');
+    return value;
+  }
 }

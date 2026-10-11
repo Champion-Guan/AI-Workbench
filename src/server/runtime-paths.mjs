@@ -134,12 +134,32 @@ export async function readProxyState(file) {
 
 // Serialize snapshots: concurrent toggles/route learning must not restore an older value.
 const writes = new Map();
+const failedWrites = new Set();
+const writeGenerations = new Map();
+let writeRevision = 0;
+export function privateWriteStatus() {
+  return { revision: writeRevision, pending: writes.size, failed: failedWrites.size };
+}
 export function writePrivateJson(file, value) {
-  const serialized = JSON.stringify(value, null, 2);
+  const generation = ++writeRevision;
+  writeGenerations.set(file, generation);
+  let serialized;
+  try { serialized = JSON.stringify(value, null, 2); }
+  catch (error) { failedWrites.add(file); writeRevision++; throw error; }
   const previous = writes.get(file) || Promise.resolve();
-  const next = previous.catch(() => undefined).then(() => writePrivateFile(file, serialized));
+  const next = previous.catch(() => undefined).then(() => writePrivateFile(file, serialized))
+    .then(result => {
+      if (writeGenerations.get(file) === generation) { failedWrites.delete(file); writeGenerations.delete(file); }
+      writeRevision++; return result;
+    }, error => {
+      failedWrites.add(file); writeRevision++; throw error;
+    });
   writes.set(file, next);
   return next.finally(() => { if (writes.get(file) === next) writes.delete(file); });
 }
 
-export async function flushPrivateWrites() { await Promise.all([...writes.values()]); }
+export async function flushPrivateWrites() {
+  // Wait for all started siblings, including writes queued during the wait.
+  while (writes.size) await Promise.allSettled([...writes.values()]);
+  if (failedWrites.size) throw Error('private_write_unconfirmed');
+}

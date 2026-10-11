@@ -18,20 +18,24 @@ export class ActivityGate {
     this.frozen = false;
     this.epoch = null;
     this.changedAt = now();
+    this.backendRevision = 0;
+    this.backendEpoch = null;
   }
   acquire(category) {
     if (!categories.has(category)) throw new Error('Unknown activity category');
     // During root drain, old tasks must still be able to send child requests
     // and persist their results. Freeze only after every participant is paused.
-    if (this.frozen) throw new Error('update_quiescing');
+    if (this.frozen || this.backendEpoch) throw new Error('update_quiescing');
     const id = randomUUID();
     this.operations.set(id, category);
+    this.backendRevision++;
     this.changedAt = this.now();
     let released = false;
     return () => {
       if (released) return;
       released = true;
       this.operations.delete(id);
+      this.backendRevision++;
       this.changedAt = this.now();
     };
   }
@@ -92,6 +96,22 @@ export class ActivityGate {
     // No await between checking activity and closing admission.
     this.frozen = true;
     this.changedAt = this.now();
+  }
+  // Backend-only admission. This deliberately does not verify browser
+  // inventory, acknowledge participants or grant canInstall.
+  backendSnapshot() {
+    return { revision: this.backendRevision, active: this.operations.size,
+      frozen: this.backendEpoch !== null, epoch: this.backendEpoch };
+  }
+  freezeBackend(revision) {
+    if (this.draining || this.frozen || this.backendEpoch || this.operations.size
+      || revision !== this.backendRevision || !Number.isSafeInteger(revision)) throw Error('backend_not_idle');
+    this.backendEpoch = randomUUID();
+    return this.backendEpoch;
+  }
+  resumeBackend(epoch) {
+    if (!this.backendEpoch || epoch !== this.backendEpoch) throw Error('backend_epoch_invalid');
+    this.backendEpoch = null; this.backendRevision++;
   }
   status() {
     const now = this.now(), covered = new Set(), reasons = new Set();

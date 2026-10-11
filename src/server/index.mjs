@@ -9,7 +9,7 @@ import { fileURLToPath } from "node:url";
 import { fetch, ProxyAgent } from "undici";
 import { startBuiltInImageProxy } from "./proxy-service.mjs";
 import { stopAllProxyProcesses } from "./proxy-process.mjs";
-import { prepareRuntimePaths, readProxyState, writePrivateJson, flushPrivateWrites } from "./runtime-paths.mjs";
+import { prepareRuntimePaths, readProxyState, writePrivateJson, flushPrivateWrites, privateWriteStatus } from "./runtime-paths.mjs";
 import { loadPrivateRuntimeEnv } from "./private-env.mjs";
 import { ActivityGate } from "./activity-gate.mjs";
 import { BrowserActivityReports } from "./browser-activity.mjs";
@@ -24,6 +24,7 @@ import { createUpdateHttpHandler } from "./update-http.mjs";
 import { UpdateManagerClient } from "./update-manager-client.mjs";
 import { UpdateTaskLedger } from "./update-task-ledger.mjs";
 import { createUpdateTaskHttpHandler } from "./update-task-http.mjs";
+import { createBackendControl } from "./update-backend-control.mjs";
 
 const projectRoot = fileURLToPath(new URL("../../", import.meta.url));
 
@@ -4059,7 +4060,12 @@ async function activityRequest(category, response, operation) {
   finally { release(); }
 }
 
-const updateStartup = createUpdateStartup({ onActivate: () => softwareUpdates.start() });
+const backendControl = createBackendControl({ gate: activityGate, ledger: updateTaskLedger, ready: updateTaskLedgerReady,
+  instance: applicationInstanceId, version: applicationVersion, writes: privateWriteStatus, flushWrites: flushPrivateWrites,
+  backgroundBusy: () => Boolean(softwareUpdates.inFlight || softwareUpdates.staging || softwareUpdates.downloader?.pending),
+  pauseBackground: () => softwareUpdates.stop(),
+  resumeBackground: () => { if (!updateStartup.quarantined()) softwareUpdates.start(); } });
+const updateStartup = createUpdateStartup({ onActivate: () => softwareUpdates.start(), backendControl, instance: applicationInstanceId });
 const server = createServer(async (request, response) => {
   const method = request.method || "GET";
   const pathname = new URL(request.url || "/", "http://127.0.0.1").pathname.replace(/\/$/, "") || "/";
@@ -4093,6 +4099,7 @@ const server = createServer(async (request, response) => {
     response.end(JSON.stringify({ app: "guan-ai-workbench", version: applicationVersion, buildId: applicationBuildId,
       instanceId: applicationInstanceId, pid: process.pid, ready: !shutdownStarted, maintenance: updateStartup.quarantined(), origin: `http://127.0.0.1:${port}`, dataLayout: 1,
       taskEvidenceProtocol: updateTaskLedgerReady ? 1 : 0,
+      backendControlProtocol: 1,
       proxy: { running: Boolean(builtInImageProxy), stateReadable: !proxyStateReadFailed } }));
     return;
   }

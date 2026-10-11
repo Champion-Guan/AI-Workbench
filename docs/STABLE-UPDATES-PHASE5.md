@@ -154,3 +154,15 @@ manager 只读读取持久 current/journal，冷启动终态显示 activation-re
 - `browser-process-census.mjs` 固定`/bin/ps`只读取进程可执行名称，不读取可能含Token的argv；常见浏览器、后台helper、WebKit和未知renderer均有否决。空/坏/超大输出、系统不支持或检查失败不能当作已退出。它只是安装否决条件，`inventoryVerified=false`，不能独自发放许可。
 
 上述新代码未部署到生产，没有开启安装或发布v1.0.5。还需闭浏览器连续协调器与后端冻结、完整持久覆盖/旧任务核对、独立签名runtime实际安装/升级、条件正式发布与新的维护确认后首次生产接管；两实体Mac属于阶段6。
+
+## 后端冻结控制链接通（2026-10-11）
+
+新增 `update-control-protocol.mjs` 和 `update-backend-control.mjs`，经独立 supervisor 的认证 controller 及真实 ChildProcess 继承 IPC 接入后端，而非网页 HTTP 控制。请求绑定 nonce、精确 service instance、单调 sequence 和有限字段；只有 snapshot/freeze/resume，无路径、命令、凭据或安装参数。
+
+后端 gate 具有独立 backendRevision；活动即使回到零，旧 revision 也不能冻结。冻结在任何 await 前同步关闭后端准入，再冻结持久任务账本、核对私人写入和后台检查/下载/暂存状态。冻结期间除 GET health 外全部路由503。失败或确认丢失不自动解冻；只有正确 epoch 的明确恢复才释放。服务适配器超时/失联后保留 outcome-unknown，不自动重试；manager controller 重连不抹掉 supervisor 中的 freeze 和子进程拥有权。
+
+私人 JSON 保存新增失败检查点、revision 和 pending/failed 脱敏计数；已结束失败仍阻断 flush，另一个文件的成功以及较旧的异步成功均不能抹掉较新的序列化失败。flush 等待所有已启动兄弟及期间排队的写入。这是进程内证据，不冒充冷启动后完整的持久失败库存，也不涵盖任意直接文件写入。
+
+真实复制项目后端 + 独立本机 Node + 认证 Unix socket + 继承 IPC 验证：冻结后业务503/health200、错误epoch拒绝、controller重连保留冻结、明确恢复后业务200、实际执行但丢失ack时保留冻结且禁止重试。专项包含native pending、活动ABA、后台任务、坏账本、晚到写入、flush失败、重放/错误nonce/instance；均使用独立数据根，不写生产配置。
+
+这一链路只证明后端冻结，回复固定 `fullCoverage=false/installAllowed=false`，不伪造原 ActivityGate 的 browser inventory。闭浏览器持续许可、页面保存/同步及旧远端证据、自身安装/升级和生产接管仍待完成。未开放网页freeze/install，未部署当前用户资源、重启生产、打开自动安装或发布v1.0.5。最终集中检查与源码身份见最新 `output/phase5/latest-verification.json`，不借用上一批506项的报告。

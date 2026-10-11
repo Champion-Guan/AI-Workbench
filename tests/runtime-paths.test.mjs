@@ -3,7 +3,7 @@ import test from 'node:test';
 import { mkdtemp, mkdir, readFile, writeFile, stat, symlink, readdir, rm } from 'node:fs/promises';
 import path from 'node:path';
 import { tmpdir } from 'node:os';
-import { runtimePaths, prepareRuntimePaths, readPrivateFile, writePrivateFile, readProxyState, writePrivateJson, flushPrivateWrites } from '../src/server/runtime-paths.mjs';
+import { runtimePaths, prepareRuntimePaths, readPrivateFile, writePrivateFile, readProxyState, writePrivateJson, flushPrivateWrites, privateWriteStatus } from '../src/server/runtime-paths.mjs';
 
 async function fixture(t) {
   const root = await mkdtemp(path.join(tmpdir(), 'guan-private-path-test-'));
@@ -103,4 +103,23 @@ test('bounded private reads preserve UTF8 and reject oversized records without t
   await assert.rejects(readPrivateFile(file, { maxBytes: 0 }));
   assert.equal(await readPrivateFile(file), text);
   assert.equal(await readPrivateFile(file + '.missing', { maxBytes: 1 }), null);
+});
+test('ended private write failure stays visible until same-file success; unrelated success cannot clear it', async t => {
+  const f = await fixture(t), file = path.join(f.root, 'missing', 'value.json');
+  await mkdir(file, { recursive: true });
+  await assert.rejects(writePrivateJson(file, { version: 1 }));
+  assert.equal(privateWriteStatus().pending, 0); assert.equal(privateWriteStatus().failed, 1);
+  await writePrivateJson(path.join(f.root, 'other.json'), {});
+  await assert.rejects(flushPrivateWrites(), /unconfirmed/);
+  await rm(file, { recursive: true }); await writePrivateJson(file, { version: 2 });
+  await flushPrivateWrites(); assert.equal(privateWriteStatus().failed, 0);
+});
+test('older asynchronous success cannot erase a newer serialization failure', async t => {
+  const f = await fixture(t), file = path.join(f.root, 'value.json'), cycle = {}; cycle.self = cycle;
+  const pending = writePrivateJson(file, { first: true });
+  assert.throws(() => writePrivateJson(file, cycle)); await pending;
+  await assert.rejects(flushPrivateWrites(), /unconfirmed/);
+  assert.deepEqual(JSON.parse(await readFile(file)), { first: true });
+  await writePrivateJson(file, { recovered: true }); await flushPrivateWrites();
+  assert.equal(privateWriteStatus().failed, 0);
 });

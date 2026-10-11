@@ -9,6 +9,7 @@ import { createHash } from 'node:crypto';
 import { once } from 'node:events';
 import { OwnedUpdateService } from '../src/server/update-service.mjs';
 import { localRuntime } from './helpers/owned-runtime.mjs';
+import { serveUpdateSupervisor, SupervisedUpdateService, supervisorCapability } from '../src/server/update-supervisor.mjs';
 
 const project = new URL('../', import.meta.url);
 async function fixture(t, mode = 'normal', realBackend = false) {
@@ -44,7 +45,10 @@ async function fixture(t, mode = 'normal', realBackend = false) {
   }
   const sentinel = path.join(dataRoot, 'sentinel'); await writeFile(sentinel, 'retain local business data');
   let verified = 0;
-  const options = { versionsRoot, dataRoot, privateRoot, origin, disableProxy: true, startupTimeout: 2000, stopTimeout: 500, activationTimeout: 150,
+  // Full regression runs several native runtimes concurrently. These are QA
+  // deadlines only; keep the deliberately nonresponsive stop fixture short.
+  const options = { versionsRoot, dataRoot, privateRoot, origin, disableProxy: true, startupTimeout: 10000,
+    stopTimeout: mode === 'ignore-stop' ? 500 : 3000, activationTimeout: 150,
     verify: async p => { verified++; assert.equal(p.id, pointer.id); return { directory, startupProtocol: 1 }; } };
   const service = new OwnedUpdateService(options);
   t.after(async () => {
@@ -68,7 +72,7 @@ test('real owned Node child quarantines business traffic, validates exact health
   await f.service.stop({ allowed: [f.pointer] }); assert.equal(await f.service.isStopped(), true);
   assert.equal(await readFile(f.sentinel, 'utf8'), 'retain local business data');
 });
-test('actual copied project backend uses owned native Node, private root and inherited activation IPC', { timeout: 15000 }, async t => {
+test('actual copied project backend uses owned native Node, private root and inherited activation IPC', { timeout: 30000 }, async t => {
   const f = await fixture(t, 'normal', true);
   const before = await readFile(path.join(f.options.dataRoot, 'proxy/state.json'));
   const report = await f.service.start(f.pointer); assert.equal(report.proxy.running, false); assert.equal(report.maintenance, true);
@@ -78,6 +82,58 @@ test('actual copied project backend uses owned native Node, private root and inh
   assert.equal(status.install.allowed, false); assert.equal(status.preferences.autoInstall, false);
   await f.service.stop({ allowed: [f.pointer] });
   assert.deepEqual(await readFile(path.join(f.options.dataRoot, 'proxy/state.json')), before);
+  assert.equal(await readFile(f.sentinel, 'utf8'), 'retain local business data');
+});
+test('actual backend freeze goes through authenticated supervisor and inherited IPC, blocks HTTP, and requires exact resume epoch', { timeout: 40000 }, async t => {
+  const f = await fixture(t, 'normal', true);
+  f.service.activationTimeout = 1000;
+  const capabilityFile = path.join(f.root, 'capability'), socketPath = path.join(f.root, 's.sock');
+  const capability = await supervisorCapability(capabilityFile, { create: true });
+  const ipc = await serveUpdateSupervisor({ service: f.service, socketPath, capability, versionsRoot: f.options.versionsRoot,
+    dataRoot: f.options.dataRoot, origin: f.pointer.origin });
+  const client = new SupervisedUpdateService({ socketPath, capabilityFile, timeout: 5000 });
+  t.after(async () => { client.disconnect(); if (f.service.owned) await f.service.stop({ allowed: [f.pointer] }); await ipc.close(); });
+  await client.start(f.pointer); await client.activate(f.pointer);
+  let state;
+  for (let i = 0; i < 50; i++) {
+    state = await client.backendControl({ action: 'snapshot', value: null });
+    if (!state.backgroundBusy) break;
+    await new Promise(resolve => setTimeout(resolve, 10));
+  }
+  assert.equal(state.instance, f.service.owned.instanceId);
+  const frozen = await client.backendControl({ action: 'freeze', value: {
+    backendRevision: state.backend.revision, ledgerRevision: state.ledger.revision, writeRevision: state.writes.revision } });
+  assert.equal(frozen.backend.frozen, true); assert.equal(frozen.ledger.frozen, true);
+  assert.equal(frozen.installAllowed, false); assert.equal(frozen.fullCoverage, false);
+  for (const route of ['/', '/local-app/activity', '/local-app/updates/status', '/local-app/update-tasks/begin', '/local-proxy/toggle'])
+    assert.equal((await fetch(f.pointer.origin + route)).status, 503);
+  assert.equal((await fetch(f.pointer.origin + '/local-app/health')).status, 200);
+  await assert.rejects(client.backendControl({ action: 'resume', value: '00000000-0000-0000-0000-000000000000' }), /epoch_invalid/);
+  assert.equal((await fetch(f.pointer.origin + '/')).status, 503);
+  // Controller reconnect preserves freeze and exact child/IPC ownership.
+  client.disconnect(); await new Promise(resolve => setTimeout(resolve, 30));
+  assert.equal((await client.backendControl({ action: 'snapshot', value: null })).backend.epoch, frozen.backend.epoch);
+  const resumed = await client.backendControl({ action: 'resume', value: frozen.backend.epoch });
+  assert.equal(resumed.backend.frozen, false); assert.equal((await fetch(f.pointer.origin + '/')).status, 200);
+  for (let i = 0; i < 50; i++) {
+    state = await client.backendControl({ action: 'snapshot', value: null });
+    if (!state.backgroundBusy) break;
+    await new Promise(resolve => setTimeout(resolve, 10));
+  }
+  // Drop only the acknowledgement from this exact test-owned child. The
+  // backend still executes freeze; timeout must not silently thaw or retry it.
+  const child = f.service.owned.child, emit = child.emit;
+  let dropped = false;
+  child.emit = function (event, ...args) {
+    if (event === 'message' && args[0]?.op === 'guan-update-backend-result') { dropped = true; return true; }
+    return emit.call(this, event, ...args);
+  };
+  await assert.rejects(client.backendControl({ action: 'freeze', value: {
+    backendRevision: state.backend.revision, ledgerRevision: state.ledger.revision, writeRevision: state.writes.revision } }), /outcome_unknown/);
+  child.emit = emit;
+  assert.equal(dropped, true); assert.equal((await fetch(f.pointer.origin + '/')).status, 503);
+  await assert.rejects(client.backendControl({ action: 'snapshot', value: null }), /outcome_unknown/);
+  await client.stop({ allowed: [Object.fromEntries(['id', 'version', 'commit', 'buildId'].map(k => [k, f.pointer[k]]))] });
   assert.equal(await readFile(f.sentinel, 'utf8'), 'retain local business data');
 });
 test('foreign occupied listener is not adopted, signalled, or displaced', async t => {
