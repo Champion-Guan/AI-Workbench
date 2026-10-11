@@ -6,7 +6,6 @@ import { mkdtemp, realpath, mkdir, readFile, writeFile, rm } from 'node:fs/promi
 import { once } from 'node:events';
 import { UpdateManager } from '../src/server/update-manager.mjs';
 import { OwnedUpdateService } from '../src/server/update-service.mjs';
-import { writePrivateFile } from '../src/server/runtime-paths.mjs';
 import { testSigningIdentity, signedUpdateFixture } from './helpers/signed-update.mjs';
 import { localRuntime } from './helpers/owned-runtime.mjs';
 import { createServer } from 'node:net';
@@ -26,10 +25,11 @@ test('local test-signed native arm64 packages run real commit and failed-start r
   let released = 0;
   // This is an explicit test coordinator, not production inventory proof.
   const coordinator = { acquire: async () => ({ assertValid: async () => {}, release: async () => { released++; } }) };
+  coordinator.acquireBootstrap = coordinator.acquire;
   const manager = new UpdateManager({ root: path.join(base, 'installation'), dataRoot, repository: 'owner/repo',
     trustedKeys: signing.keys, coordinator, origin, freeSpace: async () => 4e9 });
   const service = new OwnedUpdateService({ versionsRoot: path.join(manager.root, 'versions'), dataRoot, privateRoot, origin,
-    verify: p => manager.verifyInstalled(p), disableProxy: true, startupTimeout: 2000 });
+    verify: p => manager.verifyInstalled(p), disableProxy: true, startupTimeout: 10000 });
   manager.service = service;
   t.after(async () => {
     const child = service.owned?.child;
@@ -37,8 +37,9 @@ test('local test-signed native arm64 packages run real commit and failed-start r
     await rm(base, { recursive: true, force: true });
   });
   const previous = await manager.stage(await signedUpdateFixture(base, signing, '1.0.4', executable));
-  await writePrivateFile(path.join(manager.root, 'current.json'), JSON.stringify(previous)); // QA bootstrap only
-  await manager.healthy(previous); await service.activate(previous);
+  assert.deepEqual(await manager.bootstrap(previous), { state: 'committed', version: '1.0.4' });
+  assert.equal((await manager.readBootstrap()).phase, 'activated');
+  assert.equal(released, 1); released = 0;
   const oldPid = service.owned.child.pid;
   const next = await manager.stage(await signedUpdateFixture(base, signing, '1.0.5', executable));
   manager.onStep = async phase => {

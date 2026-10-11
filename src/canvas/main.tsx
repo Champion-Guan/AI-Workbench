@@ -12,9 +12,12 @@ import { router } from "@/router";
 import { initProductRecycleBridge } from '@/services/product-recycle-bridge';
 import { startUpdateActivityReporter } from '@/services/update-activity-reporter';
 import { startManagedPageRelay } from '@/services/managed-page-relay';
+import { startUpdateTaskGuard } from '@/services/update-task-guard';
 
 initAnalytics();
 initProductRecycleBridge();
+const stopUpdateTaskGuard = startUpdateTaskGuard();
+if (import.meta.hot) import.meta.hot.dispose(stopUpdateTaskGuard);
 const stopUpdateActivityReporter = startUpdateActivityReporter();
 if (import.meta.hot) import.meta.hot.dispose(stopUpdateActivityReporter);
 const stopManagedPageRelay = startManagedPageRelay();

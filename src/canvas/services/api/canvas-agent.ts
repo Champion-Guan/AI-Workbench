@@ -1,5 +1,5 @@
 import i18n from "@/i18n";
-import { observeActivity } from "@/lib/update-activity";
+import { observeNetworkActivity as observeActivity } from "@/lib/update-activity";
 import { remoteAgentJournal } from "@/lib/remote-task-journal";
 import type { CanvasAgentSnapshot } from "@/lib/canvas/canvas-agent-ops";
 import type { AgentReasoningEffort } from "@/stores/use-agent-store";
@@ -123,7 +123,7 @@ export async function fetchAgentJson<T>(endpoint: string, token: string, path: s
             const body = typeof init.body === "string" ? JSON.parse(init.body) as { messageId?: unknown } : null;
             if (typeof body?.messageId !== "string" || !body.messageId || body.messageId.length > 256) throw Error("Agent 任务缺少可靠的请求标识。");
             const key = await agentRequestKey(endpoint, token, body.messageId);
-            const intent = remoteAgentJournal.begin();
+            const intent = await remoteAgentJournal.beginDurable();
             remoteAgentJournal.bind(intent, key);
         }
         const data = await fetchAgentJsonImpl<T>(endpoint, token, path, init);
@@ -153,7 +153,7 @@ async function reconcileAgentRequestHistory(endpoint: string, token: string, dat
         const item = value as { role?: unknown; turnId?: unknown; clientMessageId?: unknown };
         if (item.role !== "user" || typeof item.turnId !== "string" || !settled.has(item.turnId)
             || typeof item.clientMessageId !== "string" || !item.clientMessageId || item.clientMessageId.length > 256) continue;
-        try { remoteAgentJournal.terminal(await agentRequestKey(endpoint, token, item.clientMessageId)); }
+        try { await remoteAgentJournal.terminalDurable(await agentRequestKey(endpoint, token, item.clientMessageId)); }
         catch { /* Keep the durable row; a hash failure isn't terminal proof. */ }
     }
 }

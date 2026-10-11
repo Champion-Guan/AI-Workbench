@@ -22,6 +22,8 @@ import { StableDownload } from "./stable-download.mjs";
 import { createUpdateStartup } from "./update-startup.mjs";
 import { createUpdateHttpHandler } from "./update-http.mjs";
 import { UpdateManagerClient } from "./update-manager-client.mjs";
+import { UpdateTaskLedger } from "./update-task-ledger.mjs";
+import { createUpdateTaskHttpHandler } from "./update-task-http.mjs";
 
 const projectRoot = fileURLToPath(new URL("../../", import.meta.url));
 
@@ -38,6 +40,13 @@ const applicationBuildId = createHash("sha256").update(readFileSync(fileURLToPat
 const applicationInstanceId = randomUUID();
 const activityGate = new ActivityGate();
 const browserActivityReports = new BrowserActivityReports();
+const updateTaskLedger = new UpdateTaskLedger({ file: join(privatePaths.updates, "task-ledger.json"),
+  version: applicationVersion, instance: applicationInstanceId });
+let updateTaskLedgerReady = false;
+try { await updateTaskLedger.initialize(); updateTaskLedgerReady = true; }
+catch { /* Keep invalid evidence and normal service; automatic installation stays disabled. */ }
+const updateTaskHttp = createUpdateTaskHttpHandler({ ledger: updateTaskLedger, origin: `http://127.0.0.1:${port}`,
+  ready: updateTaskLedgerReady, activityGate });
 const credentialRegistry = new CredentialRegistry({ directory: join(privatePaths.config, "credentials"),
   vault: new MacKeychainVault({ executable: join(privatePaths.runtime, "guan-keychain") }) });
 const credentialHttp = createCredentialHttpHandler({ registry: credentialRegistry, origin: `http://127.0.0.1:${port}`, activityGate,
@@ -4055,6 +4064,7 @@ const server = createServer(async (request, response) => {
   const method = request.method || "GET";
   const pathname = new URL(request.url || "/", "http://127.0.0.1").pathname.replace(/\/$/, "") || "/";
   if (updateStartup.reject(request, response, pathname)) return;
+  if (await updateTaskHttp(request, response)) return;
   if (await credentialHttp(request, response)) return;
   if (await updateHttp(request, response)) return;
   if (pathname === "/local-app/activity/report") {
@@ -4082,6 +4092,7 @@ const server = createServer(async (request, response) => {
     response.writeHead(200, { "content-type": "application/json", "cache-control": "no-store" });
     response.end(JSON.stringify({ app: "guan-ai-workbench", version: applicationVersion, buildId: applicationBuildId,
       instanceId: applicationInstanceId, pid: process.pid, ready: !shutdownStarted, maintenance: updateStartup.quarantined(), origin: `http://127.0.0.1:${port}`, dataLayout: 1,
+      taskEvidenceProtocol: updateTaskLedgerReady ? 1 : 0,
       proxy: { running: Boolean(builtInImageProxy), stateReadable: !proxyStateReadFailed } }));
     return;
   }

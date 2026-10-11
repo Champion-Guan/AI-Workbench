@@ -63,9 +63,12 @@ export class UpdateManager {
     // Read durable state after a daemon restart without executing or repairing
     // anything. A terminal journal is not evidence of acknowledged activation.
     try {
-      const current = await this.readCurrent(), journal = await this.readJournal();
+      const current = await this.readCurrent(), journal = await this.readJournal(), bootstrap = await this.readBootstrap();
       let state = this.state.state, error = this.state.error;
-      if (state === 'idle' && journal) {
+      if (bootstrap && !['activated', 'aborted'].includes(bootstrap.phase)) {
+        state = bootstrap.phase === 'committed' ? 'activation-required' : 'recovery-required';
+        error = state === 'activation-required' ? 'update_activation_unconfirmed' : 'update_recovery_required';
+      } else if (state === 'idle' && journal) {
         state = ['committed', 'rolled-back'].includes(journal.phase) ? 'activation-required' : 'recovery-required';
         error = state === 'activation-required' ? 'update_activation_unconfirmed' : 'update_recovery_required';
       } else if (!current && ['idle', 'staged'].includes(state)) {
@@ -115,6 +118,25 @@ export class UpdateManager {
     const raw = await readPrivateFile(path.join(this.root, 'current.json'), { maxBytes: 2048 });
     return raw === null ? null : identity(JSON.parse(raw));
   }
+  async readBootstrap() {
+    const raw = await readPrivateFile(path.join(this.root, 'bootstrap.json'), { maxBytes: 4096 });
+    if (raw === null) return null;
+    const value = JSON.parse(raw);
+    if (!exact(value, ['format', 'phase', 'next']) || value.format !== 1
+      || !['prepared', 'starting', 'committed', 'activated', 'aborted'].includes(value.phase)) throw Error('update_bootstrap_invalid');
+    identity(value.next); return value;
+  }
+  async bootstrapRecord(value, phase) {
+    value.phase = phase;
+    await writePrivateFile(path.join(this.root, 'bootstrap.json'), JSON.stringify(value));
+    this.state = { state: phase === 'activated' ? 'committed' : phase === 'aborted' ? 'bootstrap-required' : phase,
+      version: value.next.version, error: null };
+    await this.onStep('bootstrap-' + phase);
+  }
+  async assertNoPendingBootstrap() {
+    const value = await this.readBootstrap();
+    if (value && !['activated', 'aborted'].includes(value.phase)) throw Error('update_recovery_required');
+  }
   async readJournal() {
     const raw = await readPrivateFile(path.join(this.root, 'transaction.json'), { maxBytes: 8192 });
     if (raw === null) return null;
@@ -149,6 +171,7 @@ export class UpdateManager {
   }
   async stage({ directory, version, archiveName = 'package.zip' }) {
     return this.locked(async () => {
+      await this.assertNoPendingBootstrap();
       if (this.recoveryLease) throw Error('update_recovery_required');
       const journal = await this.readJournal();
       if (journal && !['committed', 'rolled-back'].includes(journal.phase)) throw Error('update_recovery_required');
@@ -201,6 +224,110 @@ export class UpdateManager {
     if (!report || report.ready !== true || report.version !== pointer.version || report.buildId !== pointer.buildId
       || report.origin !== this.origin) throw Error('update_health_failed');
   }
+  // First signed service start is not an update of an adopted PID. The old
+  // service must already have stopped in an explicitly authorized maintenance
+  // window, and a trusted coordinator must continuously prove that window.
+  // This method is deliberately NOT reachable through the Web status/stage IPC.
+  async bootstrap(next) {
+    next = Object.freeze({ ...identity(next) });
+    return this.locked(async () => {
+      if (this.recoveryLease || await this.readCurrent() || await this.readJournal()) throw Error('update_bootstrap_conflict');
+      await this.assertNoPendingBootstrap();
+      const checked = await this.verifyInstalled(next);
+      if (checked.startupProtocol !== 1) throw Error('service_startup_protocol_incompatible');
+      if (!this.service || !this.coordinator?.acquireBootstrap || await this.service.isStopped() !== true) throw Error('update_bootstrap_blocked');
+      const lease = await this.coordinator.acquireBootstrap({ next });
+      if (!lease || typeof lease.assertValid !== 'function' || typeof lease.release !== 'function') throw Error('install_permit_invalid');
+      const record = { format: 1, phase: 'prepared', next };
+      let started = false, releaseSafe = false;
+      try {
+        await lease.assertValid(); await this.bootstrapRecord(record, 'prepared');
+        await lease.assertValid(); await this.bootstrapRecord(record, 'starting'); started = true;
+        await this.healthy(next); await lease.assertValid();
+        // A crash between pointer and committed is uncertain, never a license
+        // to execute a second process or clear the first process's state.
+        await writePrivateFile(path.join(this.root, 'current.json'), JSON.stringify(next));
+        await this.bootstrapRecord(record, 'committed'); await lease.assertValid();
+        await this.service.activate(next); await lease.assertValid();
+        await this.bootstrapRecord(record, 'activated'); releaseSafe = true;
+        return { state: 'committed', version: next.version };
+      } catch {
+        let current;
+        try { current = await this.readCurrent(); }
+        catch {
+          this.recoveryLease = lease;
+          this.state = { state: 'recovery-required', error: 'update_recovery_required' };
+          throw Error('update_recovery_required');
+        }
+        if (current) {
+          this.recoveryLease = lease;
+          this.state = { state: 'activation-required', error: 'update_activation_unconfirmed' };
+          throw Error('update_activation_unconfirmed');
+        }
+        try {
+          if (started) await this.service.stop({ allowed: [next] });
+          if (await this.service.isStopped() !== true) throw Error();
+          await this.bootstrapRecord(record, 'aborted'); releaseSafe = true;
+        } catch {
+          this.recoveryLease = lease;
+          this.state = { state: 'recovery-required', error: 'update_recovery_required' };
+          throw Error('update_recovery_required');
+        }
+        throw Error('update_bootstrap_blocked');
+      } finally { if (releaseSafe) await this.releaseBootstrapLease(lease); }
+    });
+  }
+  async releaseBootstrapLease(lease) {
+    try { await lease.release(); }
+    catch {
+      this.recoveryLease = lease;
+      this.state = { state: 'recovery-required', error: 'update_recovery_required' };
+      throw Error('update_recovery_required');
+    }
+  }
+  async reconcileBootstrap() {
+    return this.locked(async () => {
+      const record = await this.readBootstrap(), current = await this.readCurrent();
+      if (!record || !['committed', 'activated'].includes(record.phase) || !current
+        || ['id', 'version', 'commit', 'buildId'].some(k => current[k] !== record.next[k])) throw Error('update_recovery_required');
+      await this.verifyInstalled(current);
+      if (!this.service || !this.recoveryLease && !this.coordinator?.acquireBootstrapRecovery) throw Error('install_coordination_unavailable');
+      const lease = this.recoveryLease || await this.coordinator.acquireBootstrapRecovery({ next: current });
+      if (!lease || typeof lease.assertValid !== 'function' || typeof lease.release !== 'function') throw Error('install_permit_invalid');
+      this.recoveryLease = lease;
+      await lease.assertValid();
+      if (await this.service.isStopped() === true) await this.healthy(current);
+      await lease.assertValid(); await this.service.activate(current); await lease.assertValid();
+      await this.bootstrapRecord(record, 'activated'); await lease.release(); this.recoveryLease = null;
+      return { state: 'committed', version: current.version };
+    });
+  }
+  async recoverBootstrap() {
+    return this.locked(async () => {
+      const record = await this.readBootstrap(), current = await this.readCurrent();
+      if (!record || ['activated', 'aborted'].includes(record.phase)) throw Error('update_recovery_required');
+      await this.verifyInstalled(record.next);
+      if (current && ['id', 'version', 'commit', 'buildId'].some(k => current[k] !== record.next[k])) throw Error('update_current_conflict');
+      if (!this.service || await this.service.recoverySafe?.() !== true
+        || !this.recoveryLease && !this.coordinator?.acquireBootstrapRecovery) throw Error('update_recovery_blocked');
+      const lease = this.recoveryLease || await this.coordinator.acquireBootstrapRecovery({ next: record.next });
+      if (!lease || typeof lease.assertValid !== 'function' || typeof lease.release !== 'function') throw Error('install_permit_invalid');
+      this.recoveryLease = lease; await lease.assertValid();
+      if (!current) {
+        await this.service.stop({ allowed: [record.next] });
+        if (await this.service.isStopped() !== true) throw Error('update_recovery_blocked');
+        await this.bootstrapRecord(record, 'aborted'); await lease.release(); this.recoveryLease = null;
+        return { state: 'bootstrap-required' };
+      }
+      // Pointer-before-commit crash: exact signed identity and an owned,
+      // quarantined service may complete forward. No legacy PID is adopted.
+      if (await this.service.isStopped() === true) await this.healthy(current);
+      await lease.assertValid(); await this.bootstrapRecord(record, 'committed');
+      await lease.assertValid(); await this.service.activate(current); await lease.assertValid();
+      await this.bootstrapRecord(record, 'activated'); await lease.release(); this.recoveryLease = null;
+      return { state: 'committed', version: current.version };
+    });
+  }
   async rollback(j, lease) {
     await this.verifyInstalled(j.previous);
     await this.journal(j, 'rolling-back');
@@ -215,6 +342,7 @@ export class UpdateManager {
     // Do not retain a caller's mutable object across verification/await points.
     next = Object.freeze({ ...identity(next) });
     return this.locked(async () => {
+      await this.assertNoPendingBootstrap();
       if (this.recoveryLease) throw Error('update_recovery_required');
       const unfinished = await this.readJournal();
       if (unfinished && !['committed', 'rolled-back'].includes(unfinished.phase)) throw Error('update_recovery_required');
@@ -265,6 +393,7 @@ export class UpdateManager {
   }
   async recover() {
     return this.locked(async () => {
+      await this.assertNoPendingBootstrap();
       const j = await this.readJournal();
       if (!j) return { state: 'no-recovery-needed' };
       // A durable terminal pointer does not prove activation acknowledged or
@@ -293,6 +422,7 @@ export class UpdateManager {
   }
   async reconcileActivation() {
     return this.locked(async () => {
+      await this.assertNoPendingBootstrap();
       const j = await this.readJournal();
       if (!j || !['committed', 'rolled-back'].includes(j.phase)) throw Error('update_recovery_required');
       const pointer = j.phase === 'committed' ? j.next : j.previous, current = await this.readCurrent();

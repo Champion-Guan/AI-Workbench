@@ -1,5 +1,5 @@
 import i18n from "@/i18n";
-import { observeActivity } from "@/lib/update-activity";
+import { observeNetworkActivity as observeActivity } from "@/lib/update-activity";
 import { withLocalProxy, type WebdavSyncConfig } from "@/stores/use-config-store";
 
 export const WEBDAV_MANIFEST_FILE_NAME = "manifest.json";

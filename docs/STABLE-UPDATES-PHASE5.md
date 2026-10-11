@@ -61,7 +61,7 @@
 
 ## 下一批必须完成后才能验收阶段5
 
-1. **可信协调器**：完整窗口/Excel shell/缓存iframe/旧页库存；普通编辑/导入/恢复、旧插件的准入与实际存储排空；断线/刷新/BFCache、已开始Agent与远端未决任务处理。自注册和浏览器零计数不授权安装。未连接且未使用Agent不要求其不存在的源码。
+1. **可信协调器**：按用户最新批准，第一版只在所有浏览器退出后安装；原先开窗全根热排空留作增强。仍须持久任务/远端未知库存、保存与同步确认、真实进程检查、后端冻结和连续许可。自注册、浏览器零标签、空账本不授权安装。未连接且未使用Agent不要求其不存在的源码。
 2. **真实进程适配器与launchd接管**：独立manager自身稳定安装位置、应用服务的精确拥有权、启动隔离及继承IPC、graceful stop、健康超时；不能强杀不明进程。将启动/停止fixture替换为实际签名包和launchd隔离演练。
 3. **终态激活协调**：committed后进程退出、IPC确认丢失时，查明真实服务状态，幂等完成激活；不能使用目前no-recovery-needed结果直接开放任务。冷启动不能抹掉未决任务或坏journal。
 4. **首次bootstrap和客户引导**：维护窗口、原配置/浏览器完整备份及核对、旧服务正常停止；不能直接拿旧Mac个人包覆盖安装目录或依赖git pull。
@@ -140,3 +140,17 @@ manager 只读读取持久 current/journal，冷启动终态显示 activation-re
 用户明确授权仅原 Origin 的受限内容脚本。已实现 MessageChannel 发现/握手、单 session/递增请求序号、四类控制操作及严格脱敏状态，复用真实任务准入与保存屏障。不增加任意命令或安装入口，不改 UI。普通编辑/Excel/所有 profile 仍未证明全覆盖，故 `fullRootCoverage=false/installAllowed=false` 固定保留。
 
 专项 17/17 通过；独立 Playwright 使用离线路由、新临时 profile 和真实 IndexedDB，验证旧任务/保存等待、新根拒绝、保存后确认、ABA 失效及明确恢复。Chrome API 为夹具，不冒充实际扩展世界或全局协调器；用户生产页面、新扩展代码尚未部署。完整权限、代码、启用顺序与卸载说明见 `MANAGED-BROWSER.md`。最终集中验证以随后报告为准，不借用此前 464 项报告证明新源码。
+
+## 用户批准的闭浏览器第一版与签名引导
+
+第一版仅在所有浏览器退出、任务/同步已结束、数据已保存且没有未决或未知证据时才尝试安装。浏览器打开时只检查/下载/提示；不强制暂停 Excel 或任意插件，也不把浏览器退出当作远端任务结束。自动安装仍关闭，直到连续许可与生产接管验收完成。
+
+- `update-manager.mjs` 新增独立 bootstrap journal；必须是支持启动隔离的签名版本、端口确实空闲、确切服务适配器和可信连续许可。写入 current 后激活不明不降级；冷恢复核对签名、指针及所有权。坏 current、激活/释放确认丢失保留租约，显式协调恢复。
+- `update-runtime.mjs` 从原签名记录复核并完整复制独立 immutable runtime；与 installation/data 不重叠，拒绝系统根/主目录、链接、篡改和不安全权限。跨进程 manager 锁覆盖复制/rename。准备不安装 launchd、不切换 active runtime、不启动服务；更新器自身实际升级仍待完成。
+- `update-task-ledger.mjs` 在私人 `updates/task-ledger.json` 记录 opaque ID、域、版本和实例；请求执行前 fsync/读回。精确完成才删除，失败/丢响应/关页/重启不清除；冷实例不得清除旧实例任务。串行队列和跨进程排他锁防止丢更新；崩溃锁保留为未知，不按TTL/PID猜测清除。损坏文件保留，普通服务继续运行但任务安全入口拒绝。
+- `update-task-http.mjs` 精确loopback Host/Origin、2KiB JSON、请求总期限；只有 begin/complete，不向网页暴露冻结/安装/系统命令。health 的 `taskEvidenceProtocol` 仅代表该证据接口，不代表完整安装协议或库存。
+- `update-task-guard.ts` 仅在显式异步网络边界登记；生图、音频、视频、Agent JSON和WebDAV接入，不改变同步画布/插件/存储回调时序。1.0.3/1.0.4保持兼容；第一版兼容签名版本起，握手失败不降级为无保护请求。completion丢失不撤销已完成的业务结果，native记录保留。
+- 远端视频/Agent在真正发请求前同时保留浏览器与native意图；HTTP接受不退休远端记录。恢复视频轮询补足持久意图，明确关联终态才处理；双存储退休先建立native sentinel，浏览器删除失败或确认丢失保留阻断。启动导入旧浏览器意图，坏证据产生native未知阻断。不假装完成旧远端服务的权威全库存或冷任务自动核销。
+- `browser-process-census.mjs` 固定`/bin/ps`只读取进程可执行名称，不读取可能含Token的argv；常见浏览器、后台helper、WebKit和未知renderer均有否决。空/坏/超大输出、系统不支持或检查失败不能当作已退出。它只是安装否决条件，`inventoryVerified=false`，不能独自发放许可。
+
+上述新代码未部署到生产，没有开启安装或发布v1.0.5。还需闭浏览器连续协调器与后端冻结、完整持久覆盖/旧任务核对、独立签名runtime实际安装/升级、条件正式发布与新的维护确认后首次生产接管；两实体Mac属于阶段6。

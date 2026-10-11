@@ -1,5 +1,5 @@
 import axios from "axios";
-import { observeActivity } from "@/lib/update-activity";
+import { observeNetworkActivity as observeActivity } from "@/lib/update-activity";
 
 import i18n from "@/i18n";
 import { audioMimeType, normalizeAudioFormatValue, normalizeAudioSpeedValue, normalizeAudioVoiceValue } from "@/lib/audio-generation";

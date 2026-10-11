@@ -24,6 +24,7 @@ export async function signedUpdateFixture(parent, signing, version, executable =
     'bin/guan-keychain': binary, 'src/native/keychain-helper.swift': source, 'scripts/start-stable.command': '#!/bin/sh\nexit 99\n',
     'scripts/install-keychain-helper.mjs': '// installer', 'scripts/lib/native-keychain-build.mjs': '// verifier', 'bin/KEYCHAIN-BUILD.json': JSON.stringify(native) };
   if (executable) {
+    Object.assign(files, executable.files || {});
     files['update-startup.mjs'] = executable.startup;
     files['fixture.json'] = JSON.stringify({ version, mode: executable.mode || 'normal',
       buildId: sha256(Buffer.concat([Buffer.from(files['src/server/index.mjs']), Buffer.from(files['public/infinite-canvas/index.html'])])).slice(0, 24) });

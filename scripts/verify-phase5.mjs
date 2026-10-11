@@ -13,6 +13,7 @@ import { verifyCanvasBuild } from './lib/canvas-build.mjs';
 const root = fileURLToPath(new URL('../', import.meta.url));
 if (process.argv.length !== 2) throw Error('This verifier accepts no commands or production targets');
 const steps = [];
+let failedTests = [];
 const privateRoot = path.join(homedir(), 'Library/Application Support/GuanAIWorkbench');
 async function privateSnapshot() {
   const hashes = {};
@@ -71,7 +72,15 @@ function command(name, executable, args, timeoutMs = 15 * 60 * 1000) {
     child.once('error', () => { clearTimeout(timer); reject(Error('check-could-not-start')); });
     child.once('close', code => {
       clearTimeout(timer); steps.push({ name, passed: code === 0 && !exceeded, elapsedMs: Date.now() - started });
-      if (code !== 0 || exceeded) reject(Error('local-check-failed')); else resolve(stdout);
+      if (code !== 0 || exceeded) {
+        // Keep bounded test names only, never raw assertion values, stderr,
+        // credentials or business data. A failed batch must be diagnosable
+        // without rerunning every test simply to discover the failed case.
+        if (name === 'all-unit-and-isolated-integration-tests') failedTests = stdout.split('\n')
+          .filter(line => /^✖ |^not ok \d+ - /.test(line)).slice(0, 32)
+          .map(line => line.replace(/ \([^)]*\)$/, '').slice(0, 240));
+        reject(Error('local-check-failed'));
+      } else resolve(stdout);
     });
   });
 }
@@ -107,7 +116,8 @@ try {
     productionVersion: afterHealth?.version || null, productionObserved: Boolean(afterHealth),
     automaticInstallAllowed: false, steps,
     // No test fixture or fresh browser context can attest these actual gates.
-    remaining: ['managed-browser-all-profile-authority-and-full-root-admission', 'legacy-remote-task-reconciliation-and-agent-protocol-verification',
+    installationPolicy: 'closed-browsers-only',
+    remaining: ['closed-browser-continuous-permit-saved-sync-evidence-and-backend-freeze', 'legacy-remote-task-reconciliation-and-native-coverage-verification',
       'signed-protocol1-bootstrap-and-independent-manager-upgrade',
       'confirmed-maintenance-handoff-and-production-proxy-helper-compatibility'],
     excluded: ['production-install-or-restart', 'real-browser-storage-mutation', 'formal-release', 'physical-power-loss', 'two-physical-Macs'] };
@@ -115,6 +125,7 @@ try {
 } catch {
   report = { format: 1, checkedAt: new Date().toISOString(), localChecksPassed: false, fullPhase5Accepted: false,
     automaticInstallAllowed: false, steps, error: 'local-verification-failed', productionWasNotRestartedByVerifier: true };
+  if (failedTests.length) report.failedTests = failedTests;
   process.exitCode = 1;
 }
 const directory = path.join(root, 'output/phase5'); await privateDirectory(directory);

@@ -1,5 +1,5 @@
 import axios from "axios";
-import { observeActivity } from "@/lib/update-activity";
+import { observeNetworkActivity as observeActivity } from "@/lib/update-activity";
 
 import i18n from "@/i18n";
 import { buildApiUrl, fallbackModelsByCapability, resolveModelChannel, resolveModelRequestConfig, resolveModelScript, withLocalProxy, withoutLocalProxy, type AiConfig, type ModelChannel } from "@/stores/use-config-store";

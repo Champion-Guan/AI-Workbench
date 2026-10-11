@@ -31,7 +31,7 @@ function videoFixture() {
   const task = { provider: 'openai', id: 'fixture-task', model: 'fixture-model' };
   const ctx = evaluate('services/api/video.ts', {
     ...activity, unresolvedVideoActivity: pending, remoteVideoJournal: durable.journal, pluginVideoResults: new Map(), resolveModelRequestConfig: config => config,
-    createVideoGenerationTaskImpl: async (_config, _prompt, _references, _options, beforeRequest) => { beforeRequest(); return task; },
+    createVideoGenerationTaskImpl: async (_config, _prompt, _references, _options, beforeRequest) => { await beforeRequest(); return task; },
     pollVideoGenerationTaskImpl: async () => { if (failure) throw failure; return state; },
   }, ['createVideoGenerationTask', 'rememberVideoActivity', 'pollVideoGenerationTask']);
   const config = { model: 'fixture-model', baseUrl: 'https://example.invalid', apiKey: 'fixture-account' };
@@ -61,11 +61,11 @@ test('resumed videos acquire blockers, account identities are isolated and plain
   const another = { ...f.config, apiKey: 'other-fixture-account' };
   await f.ctx.pollVideoGenerationTask(f.config, f.task);
   await f.ctx.pollVideoGenerationTask(another, f.task);
-  assert.equal(f.registry.snapshot().canvas, 2);
+  assert.equal(f.registry.snapshot().canvas, 4, 'both resumed accounts have browser-durable and lifetime evidence');
   assert.ok([...f.pending.releases.keys()].every(key => /^[a-f0-9]{64}$/.test(key)));
   f.setState({ status: 'failed', error: 'confirmed upstream failure' });
   await f.ctx.pollVideoGenerationTask(another, f.task);
-  assert.equal(f.registry.snapshot().canvas, 1, 'other account cannot release the original task');
+  assert.equal(f.registry.snapshot().canvas, 2, 'other account cannot release the original durable task or its lifetime');
   await f.ctx.pollVideoGenerationTask(f.config, f.task);
   assert.equal(f.registry.snapshot().canvas, 0);
 });
@@ -73,7 +73,7 @@ test('resumed videos acquire blockers, account identities are isolated and plain
 test('lost video create response retains durable pre-request evidence after a cold realm', async () => {
   const f = videoFixture();
   f.ctx.createVideoGenerationTaskImpl = async (_config, _prompt, _references, _options, beforeRequest) => {
-    beforeRequest(); throw Error('create response lost');
+    await beforeRequest(); throw Error('create response lost');
   };
   await assert.rejects(f.ctx.createVideoGenerationTask(f.config, 'private prompt'), /response lost/);
   assert.equal(f.durable.rows.size, 1); assert.equal(f.registry.snapshot().canvas, 1);

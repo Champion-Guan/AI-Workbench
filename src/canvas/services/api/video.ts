@@ -1,5 +1,5 @@
 import axios from "axios";
-import { observeActivity } from "@/lib/update-activity";
+import { observeNetworkActivity as observeActivity } from "@/lib/update-activity";
 import { unresolvedVideoActivity } from "@/lib/unresolved-activity";
 import { remoteVideoJournal } from "@/lib/remote-task-journal";
 import { nanoid } from "nanoid";
@@ -81,8 +81,8 @@ export async function createVideoGenerationTask(config: AiConfig, prompt: string
         // Persist intent before invoking provider/plugin code. A rejected or
         // lost response can still mean the upstream accepted the request.
         let requestId: string | undefined;
-        const task = await createVideoGenerationTaskImpl(config, prompt, references, options, () => {
-            requestId ||= remoteVideoJournal.begin();
+        const task = await createVideoGenerationTaskImpl(config, prompt, references, options, async () => {
+            requestId ||= await remoteVideoJournal.beginDurable();
         });
         const key = await rememberVideoActivity(config, task);
         if (requestId) remoteVideoJournal.bind(requestId, key);
@@ -107,7 +107,7 @@ async function rememberVideoActivity(config: AiConfig, task: VideoGenerationTask
     }
 }
 
-async function createVideoGenerationTaskImpl(config: AiConfig, prompt: string, references: ReferenceImage[], options: VideoMediaOptions | undefined, beforeRequest: () => void): Promise<VideoGenerationTask> {
+async function createVideoGenerationTaskImpl(config: AiConfig, prompt: string, references: ReferenceImage[], options: VideoMediaOptions | undefined, beforeRequest: () => Promise<void>): Promise<VideoGenerationTask> {
     const selectedModel = (config.model || config.videoModel).trim();
     const requestConfig = resolveModelRequestConfig(config, selectedModel);
     const script = resolveModelScript(config, selectedModel);
@@ -121,12 +121,13 @@ export async function pollVideoGenerationTask(config: AiConfig, task: VideoGener
     return observeActivity("canvas", async () => {
         // Also covers resumed tasks loaded from persistent canvas/history data.
         const key = await rememberVideoActivity(config, task);
+        if (key) await remoteVideoJournal.ensureTaskDurable(key);
         const state = await pollVideoGenerationTaskImpl(config, task, options);
         // An expired in-memory plugin result is a UI failure, not evidence
         // about an upstream script that may have survived the previous page.
         const provenTerminal = task.provider !== "plugin" || pluginVideoResults.has(task.id);
         if (key && provenTerminal && (state.status === "completed" || state.status === "failed")) {
-            if (remoteVideoJournal.terminal(key)) unresolvedVideoActivity.terminal(key);
+            if (await remoteVideoJournal.terminalDurable(key)) unresolvedVideoActivity.terminal(key);
         }
         return state;
     });
@@ -143,13 +144,13 @@ async function pollVideoGenerationTaskImpl(config: AiConfig, task: VideoGenerati
     return pollOpenAIVideoTask(requestConfig, task, options);
 }
 
-async function createPluginVideoTask(config: AiConfig, model: string, script: string, prompt: string, references: ReferenceImage[], options: VideoMediaOptions | undefined, beforeRequest: () => void): Promise<VideoGenerationTask> {
+async function createPluginVideoTask(config: AiConfig, model: string, script: string, prompt: string, references: ReferenceImage[], options: VideoMediaOptions | undefined, beforeRequest: () => Promise<void>): Promise<VideoGenerationTask> {
     if (!config.baseUrl.trim()) throw new Error(apiText("baseUrlRequired"));
     if (!config.apiKey.trim()) throw new Error(apiText("apiKeyRequired"));
     const refs = await Promise.all(references.map((image) => imageToDataUrl(image)));
     const videos = await Promise.all((options?.videos || []).map((video) => referenceMediaToFile(video, "ref.mp4", "invalidReferenceVideo", options)));
     const audios = await Promise.all((options?.audios || []).map((audio) => referenceMediaToFile(audio, "ref.mp3", "invalidReferenceAudio", options)));
-    beforeRequest();
+    await beforeRequest();
     const result = videoPluginResult(
         await runModelPlugin({
             capability: "video",
@@ -194,7 +195,7 @@ export async function storeGeneratedVideo(result: VideoGenerationResult): Promis
     throw new Error(apiText("noPlayableVideo"));
 }
 
-async function createOpenAIVideoTask(config: AiConfig, model: string, prompt: string, references: ReferenceImage[], options: VideoMediaOptions | undefined, beforeRequest: () => void): Promise<VideoGenerationTask> {
+async function createOpenAIVideoTask(config: AiConfig, model: string, prompt: string, references: ReferenceImage[], options: VideoMediaOptions | undefined, beforeRequest: () => Promise<void>): Promise<VideoGenerationTask> {
     const images = await Promise.all(references.map(async (image) => dataUrlToFile({ ...image, dataUrl: await imageToDataUrl(image) })));
     const videos = await Promise.all((options?.videos || []).map((video) => referenceMediaToFile(video, "ref.mp4", "invalidReferenceVideo", options)));
     const audios = await Promise.all((options?.audios || []).map((audio) => referenceMediaToFile(audio, "ref.mp3", "invalidReferenceAudio", options)));
@@ -216,7 +217,7 @@ async function createOpenAIVideoTask(config: AiConfig, model: string, prompt: st
     }
     videos.forEach((file) => body.append("video[]", file));
     audios.forEach((file) => body.append("audio[]", file));
-    beforeRequest();
+    await beforeRequest();
     try {
         const created = unwrapVideoResponse((await axios.post<ApiVideoResponse>(aiApiUrl(config, "/videos"), body, { headers: aiHeaders(config), signal: options?.signal })).data);
         if (!created.id) throw new Error(apiText("noVideoTaskId"));
@@ -254,7 +255,7 @@ async function videoResultFromUrl(url: string, options?: RequestOptions): Promis
     }
 }
 
-async function createGeminiVideoTask(config: AiConfig, model: string, prompt: string, references: ReferenceImage[], options: VideoMediaOptions | undefined, beforeRequest: () => void): Promise<VideoGenerationTask> {
+async function createGeminiVideoTask(config: AiConfig, model: string, prompt: string, references: ReferenceImage[], options: VideoMediaOptions | undefined, beforeRequest: () => Promise<void>): Promise<VideoGenerationTask> {
     const images = await Promise.all(references.map((image) => imageToDataUrl(image)));
     const videos = await Promise.all((options?.videos || []).map((video) => referenceMediaToFile(video, "ref.mp4", "invalidReferenceVideo", options)));
     const audios = await Promise.all((options?.audios || []).map((audio) => referenceMediaToFile(audio, "ref.mp3", "invalidReferenceAudio", options)));
@@ -268,7 +269,7 @@ async function createGeminiVideoTask(config: AiConfig, model: string, prompt: st
     }
     if (videos[0]) instance.video = await fileToGeminiInline(videos[0]);
     if (audios[0]) instance.audio = await fileToGeminiInline(audios[0]);
-    beforeRequest();
+    await beforeRequest();
     try {
         const created = unwrapEnvelope((await axios.post<ApiEnvelope<GeminiVideoOperation>>(geminiVideoUrl(config, model, "predictLongRunning"), {
             instances: [instance],

@@ -48,6 +48,23 @@ test('one parallel rejection does not erase unfinished sibling operations', asyn
   assert.equal(r.snapshot().webdav, 0);
 });
 
+test('disabled lifecycle preserves synchronous callbacks and completion failures cannot rewrite business success', async () => {
+  const r = registry(); let changed = false;
+  const plain = r.run('storage', () => { changed = true; return 'saved'; });
+  assert.equal(changed, true); assert.equal(await plain, 'saved');
+  const remove = r.setLifecycle({ begin: () => null, complete: () => { throw Error('lost acknowledgement'); } });
+  changed = false;
+  const guarded = r.runNetwork('storage', () => { changed = true; return 'saved'; });
+  assert.equal(changed, true); assert.equal(await guarded, 'saved');
+  assert.equal(r.snapshot().storage, 0); remove();
+  const pending = deferred(); let called = false;
+  r.setLifecycle({ begin: () => pending.promise, complete: () => {} });
+  const write = r.runNetwork('canvas', () => { called = true; return 'generated'; });
+  assert.equal(called, false); pending.reject(Error('cannot record intent'));
+  await assert.rejects(write, /cannot record intent/); assert.equal(called, false);
+  assert.equal(r.snapshot().canvas, 0);
+});
+
 test('explicit storage adapter preserves receivers, generic/callback arguments and failed writes', async () => {
   const r = registry(), pending = deferred();
   const backend = {
