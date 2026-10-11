@@ -19,6 +19,7 @@ import { createCredentialHttpHandler } from "./credential-http.mjs";
 import { UpdateAuth } from "./update-auth.mjs";
 import { SoftwareUpdates } from "./software-updates.mjs";
 import { StableDownload } from "./stable-download.mjs";
+import { createUpdateStartup } from "./update-startup.mjs";
 import { createUpdateHttpHandler } from "./update-http.mjs";
 
 const projectRoot = fileURLToPath(new URL("../../", import.meta.url));
@@ -4047,9 +4048,11 @@ async function activityRequest(category, response, operation) {
   finally { release(); }
 }
 
+const updateStartup = createUpdateStartup({ onActivate: () => softwareUpdates.start() });
 const server = createServer(async (request, response) => {
   const method = request.method || "GET";
   const pathname = new URL(request.url || "/", "http://127.0.0.1").pathname.replace(/\/$/, "") || "/";
+  if (updateStartup.reject(request, response, pathname)) return;
   if (await credentialHttp(request, response)) return;
   if (await updateHttp(request, response)) return;
   if (pathname === "/local-app/activity/report") {
@@ -4076,7 +4079,7 @@ const server = createServer(async (request, response) => {
     if (method !== "GET" || !isLocalAppRequest(request)) { response.writeHead(403); response.end(); return; }
     response.writeHead(200, { "content-type": "application/json", "cache-control": "no-store" });
     response.end(JSON.stringify({ app: "guan-ai-workbench", version: applicationVersion, buildId: applicationBuildId,
-      instanceId: applicationInstanceId, pid: process.pid, ready: !shutdownStarted, origin: `http://127.0.0.1:${port}`, dataLayout: 1,
+      instanceId: applicationInstanceId, pid: process.pid, ready: !shutdownStarted, maintenance: updateStartup.quarantined(), origin: `http://127.0.0.1:${port}`, dataLayout: 1,
       proxy: { running: Boolean(builtInImageProxy), stateReadable: !proxyStateReadFailed } }));
     return;
   }
@@ -4233,6 +4236,6 @@ try {
 }
 
 server.listen(port, "127.0.0.1", () => {
-  softwareUpdates.start();
+  if (!updateStartup.quarantined()) softwareUpdates.start();
   console.log("Guan AI 生图工作台运行在 http://127.0.0.1:" + port);
 });

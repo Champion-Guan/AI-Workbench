@@ -6,7 +6,7 @@ import { parseVersion } from '../../src/server/stable-version.mjs';
 // Build-only identity proof. Does not create tags, sign, install or publish.
 export async function checkStableBuildQa({ root, expectedCommit, expectedArch, defaultBranch,
   platform = process.platform, arch = process.arch }) {
-  if (platform !== 'darwin' || !['arm64', 'x64'].includes(expectedArch) || arch !== expectedArch
+  if (platform !== 'darwin' || expectedArch !== 'arm64' || arch !== expectedArch
     || !/^[a-f0-9]{40}$/.test(expectedCommit || '') || typeof defaultBranch !== 'string'
     || !/^[A-Za-z0-9_./-]{1,128}$/.test(defaultBranch) || defaultBranch.includes('..')) throw Error('Invalid native QA identity');
   const git = args => execFileSync('git', args, { cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();

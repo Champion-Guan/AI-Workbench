@@ -12,7 +12,7 @@ import { writePrivateFile } from '../src/server/runtime-paths.mjs';
 import { machArchitecture } from './lib/stable-runtime.mjs';
 
 async function main() {
-  if (process.argv.slice(2).some(x => !['--qa', '--qa-final', '--qa-checkpoint'].includes(x)) || process.argv.length > 3 || process.platform !== 'darwin') throw Error('Native build QA only');
+  if (process.argv.slice(2).some(x => !['--qa', '--qa-final', '--qa-checkpoint'].includes(x)) || process.argv.length > 3 || process.platform !== 'darwin' || process.arch !== 'arm64') throw Error('Native arm64 build QA only');
   const root = fileURLToPath(new URL('../', import.meta.url)), output = path.join(root,
     process.argv.includes('--qa-checkpoint') ? 'output/phase4/native-qa-checkpoint' : process.argv.includes('--qa-final') ? 'output/phase4/native-qa-final' : process.argv.includes('--qa') ? 'output/phase4/native-qa' : 'output/stable');
   const record = JSON.parse(await readFile(path.join(output, 'package-' + process.arch + '.json'), 'utf8')), descriptor = record.descriptor;

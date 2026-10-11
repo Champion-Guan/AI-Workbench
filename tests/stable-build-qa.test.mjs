@@ -50,11 +50,12 @@ test('build-only QA refuses prerelease package identity', async t => {
   execFileSync('git', ['update-ref', 'refs/remotes/origin/main', input.expectedCommit], { cwd: input.root });
   await assert.rejects(checkStableBuildQa(input), /Stable package version/);
 });
-test('native QA workflow is manual, dual-native, immutable and read-only with no signing secret or release path', async () => {
+test('native QA workflow is manual, arm64-only, immutable and read-only with no signing secret or release path', async () => {
   const qa = await readFile(new URL('../.github/workflows/stable-build-qa.yml', import.meta.url), 'utf8');
   assert.match(qa, /workflow_dispatch:/); assert.match(qa, /contents: read/);
   assert.doesNotMatch(qa, /contents: write|secrets\.|stable:sign|publish-stable|release create|environment:|pull_request_target|\n  push:|\n  pull_request:/);
-  for (const value of ['BUILD-ONLY', 'github.event.repository.default_branch', 'macos-15-intel', 'arch: arm64', 'arch: x64', 'ref: ${{ github.sha }}', 'check-stable-build-qa.mjs', 'verify-stable-native.mjs', 'stable-build-qa-${{ matrix.arch }}']) assert.ok(qa.includes(value));
+  assert.doesNotMatch(qa, /macos-15-intel|arch: x64/);
+  for (const value of ['BUILD-ONLY', 'github.event.repository.default_branch', 'arch: arm64', 'ref: ${{ github.sha }}', 'check-stable-build-qa.mjs', 'verify-stable-native.mjs', 'stable-build-qa-${{ matrix.arch }}']) assert.ok(qa.includes(value));
   const release = await readFile(new URL('../.github/workflows/stable-release.yml', import.meta.url), 'utf8');
   for (const value of ['npm ci --prefix src/canvas --ignore-scripts --legacy-peer-deps', 'npm run native:build', 'npm run stable:runtime', 'npm run stable:build', 'node scripts/verify-stable-native.mjs']) assert.ok(qa.includes(value) && release.includes(value));
   for (const action of qa.matchAll(/uses: (actions\/[^\s]+)/g)) assert.match(action[1], /@[a-f0-9]{40}$/);

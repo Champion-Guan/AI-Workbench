@@ -11,11 +11,12 @@ test('ordinary CI does not publish, uses read-only permissions and includes requ
   assert.ok(ci.includes('go install github.com/zricethezav/gitleaks/v8@v8.24.3'));
   for (const action of ci.matchAll(/uses: ([^\s]+)/g)) assert.match(action[1], /@[a-f0-9]{40}$/);
 });
-test('stable publication is manual, native dual architecture and immutable-source-bound with isolated signing job', async () => {
+test('stable publication is manual, arm64-only and immutable-source-bound with isolated signing job', async () => {
   const workflow = await readFile(new URL('../.github/workflows/stable-release.yml', import.meta.url), 'utf8');
   assert.match(workflow, /workflow_dispatch:/); assert.doesNotMatch(workflow, /pull_request_target|\n  push:|ref: \$\{\{ inputs.tag/);
   assert.equal([...workflow.matchAll(/ref: \$\{\{ github.sha \}\}/g)].length, 2);
-  for (const value of ['RELEASE-STABLE', 'macos-15-intel', 'arch: arm64', 'arch: x64', 'verify-stable-native.mjs', 'cancel-in-progress: false']) assert.ok(workflow.includes(value));
+  assert.doesNotMatch(workflow, /macos-15-intel|arch: x64/);
+  for (const value of ['RELEASE-STABLE', 'arch: arm64', 'verify-stable-native.mjs', 'cancel-in-progress: false']) assert.ok(workflow.includes(value));
   assert.doesNotMatch(workflow, /environment:/);
   assert.equal([...workflow.matchAll(/node scripts\/check-stable-owner-approval.mjs/g)].length, 2);
   assert.equal([...workflow.matchAll(/github.actor_id == '87700227'/g)].length, 2);

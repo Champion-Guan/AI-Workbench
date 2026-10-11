@@ -46,6 +46,14 @@ test('manifest verifies pinned Ed25519 before trusting package metadata, binds r
     assert.throws(() => verifyStableManifest(f.bytes, f.signature, { ...f.options, ...opts }));
   assert.throws(() => verifyStableArchive(Buffer.from('corrupt'), v.selected));
 });
+test('arm64-only manifest is trusted; Intel-only or duplicate architectures are rejected while legacy dual manifest remains valid', () => {
+  const f = signed();
+  for (const packages of [[f.manifest.packages[0]], [f.manifest.packages[1]], [f.manifest.packages[0], f.manifest.packages[0]]]) {
+    const bytes = Buffer.from(JSON.stringify({ ...f.manifest, packages }, null, 2) + '\n'), signature = sign(null, bytes, f.privateKey);
+    if (packages.length === 1 && packages[0].arch === 'arm64') assert.equal(verifyStableManifest(bytes, signature, f.options).selected.arch, 'arm64');
+    else assert.throws(() => verifyStableManifest(bytes, signature, f.options), /stable_manifest_invalid/);
+  }
+});
 test('corrupted signature, forged key, duplicate JSON fields and noncanonical manifest fail closed', () => {
   const f = signed();
   assert.throws(() => verifyStableManifest(f.bytes, Buffer.alloc(64), f.options), /signature_invalid/);

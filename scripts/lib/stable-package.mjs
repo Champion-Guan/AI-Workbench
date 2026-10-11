@@ -11,7 +11,7 @@ import { parseVersion } from '../../src/server/stable-version.mjs';
 import { validateZipArchive, verifyReleaseFiles } from './release-validation.mjs';
 
 export async function buildStablePackage({ root, portableDirectory, runtimeDirectory, output, commit }) {
-  if (process.platform !== 'darwin' || !['arm64', 'x64'].includes(process.arch) || !/^[a-f0-9]{40}$/.test(commit)) throw Error('Native stable build identity required');
+  if (process.platform !== 'darwin' || process.arch !== 'arm64' || !/^[a-f0-9]{40}$/.test(commit)) throw Error('Native arm64 stable build identity required');
   const version = JSON.parse(await readFile(path.join(root, 'package.json'), 'utf8')).version;
   if (!parseVersion(version) || parseVersion(version).pre.length) throw Error('Stable version required');
   await verifyCanvasBuild(root, path.join(root, 'src/canvas/dist'));

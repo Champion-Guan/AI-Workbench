@@ -17,7 +17,7 @@ async function main() {
   const root = fileURLToPath(new URL('../', import.meta.url)), version = JSON.parse(await readFile(path.join(root, 'package.json'), 'utf8')).version;
   if (approval.tag !== 'v' + version) throw Error('Approved tag/version mismatch');
   const records = [];
-  for (const arch of ['arm64', 'x64']) {
+  for (const arch of ['arm64']) {
     const file = path.join(directory, 'package-' + arch + '.json'), info = await lstat(file);
     if (!info.isFile() || info.isSymbolicLink() || info.size > 4096) throw Error('Invalid artifact metadata');
     const record = JSON.parse(await readFile(file, 'utf8'));
@@ -40,8 +40,8 @@ async function main() {
   for (const [name, content] of [['guan-stable-manifest.json', bytes], ['guan-stable-manifest.sig', signature]]) {
     if (!await writePrivateFile(path.join(directory, name), content, { exclusive: true })) throw Error('Existing signature retained');
   }
-  for (const arch of ['arm64', 'x64']) await verifySignedStable({ directory, repository, version, arch });
+  await verifySignedStable({ directory, repository, version, arch: 'arm64' });
   if (!await writePrivateFile(path.join(directory, 'SHA256SUMS.txt'), manifest.packages.map(p => `${p.sha256}  ${p.name}\n`).join(''), { exclusive: true })) throw Error('Existing checksum file retained');
-  console.log(JSON.stringify({ ok: true, version, packages: 2, keyId: id, privateKeyExported: false }));
+  console.log(JSON.stringify({ ok: true, version, packages: 1, keyId: id, privateKeyExported: false }));
 }
 main().catch(() => { console.error('Stable signing failed safely; nothing was published. Verify owner approval, signing secret, pinned public key and artifact identity.'); process.exitCode = 1; });

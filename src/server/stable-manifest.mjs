@@ -17,7 +17,7 @@ export function validateStableManifest(m) {
     || m.format !== 1 || m.app !== 'guan-ai-workbench' || m.channel !== 'stable' || !version || version.pre.length || version.version !== m.version
     || !validRepository(m.repository) || !/^[a-f0-9]{40}$/.test(m.commit) || !/^[a-f0-9]{64}$/.test(m.keyId)
     || typeof m.builtAt !== 'string' || !Number.isFinite(Date.parse(m.builtAt)) || new Date(m.builtAt).toISOString() !== m.builtAt
-    || !Array.isArray(m.packages) || m.packages.length !== 2) throw new UpdateError('stable_manifest_invalid');
+    || !Array.isArray(m.packages) || ![1, 2].includes(m.packages.length)) throw new UpdateError('stable_manifest_invalid');
   const architectures = new Set();
   for (const p of m.packages) {
     if (!exact(p, ['platform', 'arch', 'name', 'sha256', 'size', 'nodeVersion', 'runtimeSha256', 'runtimeSize'])
@@ -28,6 +28,9 @@ export function validateStableManifest(m) {
       || !Number.isSafeInteger(p.runtimeSize) || p.runtimeSize < 1 || p.runtimeSize > 160 * 1024 * 1024) throw new UpdateError('stable_manifest_invalid');
     architectures.add(p.arch);
   }
+  // Future releases are arm64-only; retain validation of historical dual packages.
+  // An Intel-only manifest is never a supported Stable channel.
+  if (!architectures.has('arm64')) throw new UpdateError('stable_manifest_invalid');
   return m;
 }
 export function verifyStableManifest(bytes, signature, { trustedKeys = STABLE_TRUSTED_KEYS, repository, releaseVersion, currentVersion, arch = process.arch, platform = process.platform } = {}) {

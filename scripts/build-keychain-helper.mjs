@@ -5,7 +5,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import { spawn } from 'node:child_process';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
-if (process.platform !== 'darwin' || process.argv.length !== 2) throw Error('Native macOS build only; no arbitrary compiler options accepted');
+if (process.platform !== 'darwin' || process.arch !== 'arm64' || process.argv.length !== 2) throw Error('Native arm64 macOS build only; no arbitrary compiler options accepted');
 const output = path.join(root, 'output/native');
 await mkdir(output, { recursive: true, mode: 0o700 });
 const source = path.join(root, 'src/native/keychain-helper.swift');

@@ -18,7 +18,7 @@ async function main() {
   const root = fileURLToPath(new URL('../', import.meta.url)), version = JSON.parse(await readFile(path.join(root, 'package.json'), 'utf8')).version;
   if (approval.tag !== 'v' + version) throw Error('Approved tag/version mismatch');
   const checked = await verifySignedStable({ directory, repository, version, arch: 'arm64' });
-  await verifySignedStable({ directory, repository, version, arch: 'x64' });
+  if (checked.manifest.packages.length !== 1 || checked.selected.arch !== 'arm64') throw Error('Future releases require arm64 only');
   if (checked.manifest.commit !== process.env.GUAN_RELEASE_COMMIT) throw Error('Unexpected release commit');
   const request = async (url, method, body, contentType = 'application/json') => {
     const response = await fetch(url, { method, body: Buffer.isBuffer(body) ? body : JSON.stringify(body), redirect: 'error', signal: AbortSignal.timeout(180000),

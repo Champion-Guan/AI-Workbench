@@ -31,8 +31,6 @@ jobs:
         include:
           - runner: macos-15
             arch: arm64
-          - runner: macos-15-intel
-            arch: x64
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 40
     env:
@@ -106,7 +104,7 @@ jobs:
           pattern: stable-*
           merge-multiple: true
           path: output/stable
-      - name: Sign and verify both packages with pinned Ed25519 key
+      - name: Sign and verify arm64 package with pinned Ed25519 key
         env:
           GUAN_STABLE_SIGNING_KEY: ${{ secrets.GUAN_STABLE_SIGNING_KEY }}
         run: npm run stable:sign -- "$GUAN_REPOSITORY" "$GITHUB_WORKSPACE/output/stable"

@@ -27,7 +27,7 @@ async function bounded(url, limit) {
 }
 async function main() {
   const arch = process.argv[2];
-  if (process.argv.length !== 3 || !['arm64', 'x64'].includes(arch)) throw Error('Specify arm64 or x64');
+  if (process.argv.length !== 3 || arch !== 'arm64') throw Error('Only arm64 is supported for future releases');
   const root = fileURLToPath(new URL('../', import.meta.url)), filename = `node-${NODE_VERSION}-darwin-${arch}.tar.gz`;
   const source = `https://nodejs.org/dist/${NODE_VERSION}/${filename}`;
   const sums = (await bounded(`https://nodejs.org/dist/${NODE_VERSION}/SHASUMS256.txt`, 65536)).toString('utf8');
