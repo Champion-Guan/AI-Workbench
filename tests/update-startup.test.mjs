@@ -29,6 +29,12 @@ test('normal launch is unchanged; requested quarantine without a real parent fai
   assert.equal(createUpdateStartup({ env: {} }).quarantined(), false);
   assert.throws(() => createUpdateStartup({ env: { GUAN_UPDATE_QUARANTINE: '1', GUAN_UPDATE_NONCE: randomUUID() }, parent: new EventEmitter() }), /startup_invalid/);
 });
+test('IPC acknowledgement failure after activation does not crash or re-quarantine an active version', () => {
+  const parent = new EventEmitter(); parent.send = () => { throw Error('parent disconnected'); };
+  const nonce = randomUUID(), startup = createUpdateStartup({ env: { GUAN_UPDATE_QUARANTINE: '1', GUAN_UPDATE_NONCE: nonce }, parent });
+  assert.doesNotThrow(() => parent.emit('message', { op: 'guan-update-activate', nonce }));
+  assert.equal(startup.quarantined(), false);
+});
 test('real isolated backend starts quarantined, exposes only health, and activates over inherited IPC', { timeout: 15000 }, async t => {
   const root = await mkdtemp(path.join(tmpdir(), 'guan-startup-test-')); t.after(() => rm(root, { recursive: true, force: true }));
   for (const name of ['config', 'proxy', 'runtime']) await mkdir(path.join(root, 'data', name), { recursive: true });

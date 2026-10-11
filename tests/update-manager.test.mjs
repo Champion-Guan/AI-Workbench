@@ -30,6 +30,7 @@ async function fixture(t, { bootstrap = true } = {}) {
   };
   let assertions = 0;
   const coordinator = { async acquire() { return { async assertValid() { assertions++; }, async release() { calls.push('release'); } }; } };
+  coordinator.acquireRecovery = coordinator.acquire;
   manager.service = service; manager.coordinator = coordinator;
   return { base, signing, options, manager, previous, next, nextInput, calls, service, coordinator, assertions: () => assertions };
 }
@@ -43,7 +44,7 @@ test('arm64 staging re-verifies real signatures, exact files and stable identity
 });
 test('successful transaction checks permit, stops before pointer switch and commits only after exact health', async t => {
   const f = await fixture(t); assert.deepEqual(await f.manager.install(f.next), { state: 'committed', version: '1.0.5' });
-  assert.deepEqual(f.calls, ['stop', 'start:1.0.5', 'release']); assert.equal(f.assertions(), 3);
+  assert.deepEqual(f.calls, ['stop', 'start:1.0.5', 'release']); assert.equal(f.assertions(), 5);
   assert.deepEqual(await f.manager.readCurrent(), f.next); assert.equal((await f.manager.readJournal()).phase, 'committed');
   assert.equal((await f.manager.verifyInstalled(f.previous)).signatureVerified, true);
 });
@@ -127,9 +128,9 @@ test('real process termination at each durable transaction boundary recovers the
       await m.install(next);`;
     const processResult = spawnSync(process.execPath, ['--input-type=module', '-e', source, JSON.stringify(f.options), JSON.stringify(f.next), phase], { encoding: 'utf8' });
     assert.equal(processResult.status, 73, processResult.stderr);
-    const restarted = new UpdateManager({ ...f.options, service: f.service });
+    const restarted = new UpdateManager({ ...f.options, service: f.service, coordinator: f.coordinator });
     const result = await restarted.recover();
-    if (phase === 'committed') { assert.equal(result.state, 'no-recovery-needed'); assert.deepEqual(await restarted.readCurrent(), f.next); }
+    if (phase === 'committed') { assert.equal(result.state, 'activation-required'); assert.deepEqual(await restarted.readCurrent(), f.next); }
     else { assert.equal(result.state, 'rolled-back'); assert.deepEqual(await restarted.readCurrent(), f.previous); }
     assert.equal(await readFile(path.join(f.options.dataRoot, 'private-settings'), 'utf8'), 'retain exact business data');
   }
@@ -149,4 +150,35 @@ test('future installer rejects Intel and any code/data overlapping or broad root
   const options = { root: '/safe/installation', dataRoot: '/safe/data', repository: 'owner/repo', platform: 'darwin', arch: 'arm64' };
   assert.throws(() => new UpdateManager({ ...options, arch: 'x64' }), /platform/);
   for (const root of ['/', '/safe', '/safe/data/nested']) assert.throws(() => new UpdateManager({ ...options, root }), /path/);
+});
+test('post-commit revalidation failure retains new pointer and pause; trusted reconciliation releases only after activation', async t => {
+  const f = await fixture(t); let assertions = 0, active = false;
+  f.manager.coordinator = { acquire: async () => ({ assertValid: async () => { if (++assertions === 5) throw Error('inventory lost after commit'); },
+    release: async () => f.calls.push('release') }) };
+  f.service.activate = async () => { active = true; };
+  await assert.rejects(f.manager.install(f.next), /activation_unconfirmed/);
+  assert.equal(active, false); assert.deepEqual(await f.manager.readCurrent(), f.next); assert.equal(f.calls.includes('release'), false);
+  await assert.rejects(f.manager.install(f.next), /recovery_required/);
+  assert.deepEqual(await f.manager.reconcileActivation(), { state: 'committed', version: '1.0.5' });
+  assert.equal(active, true); assert.equal(f.calls.at(-1), 'release'); assert.equal(f.manager.recoveryLease, null);
+});
+test('cold terminal reconciliation requires fresh authoritative permit; unknown service remains untouched', async t => {
+  const f = await fixture(t); await f.manager.install(f.next);
+  const cold = new UpdateManager({ ...f.options, service: f.service });
+  assert.deepEqual(await cold.recover(), { state: 'activation-required' });
+  await assert.rejects(cold.reconcileActivation(), /coordination_unavailable/);
+  let released = false;
+  cold.coordinator = { acquireRecovery: async () => ({ assertValid: async () => {}, release: async () => { released = true; } }) };
+  f.service.activate = async () => { throw Error('unknown ownership'); };
+  await assert.rejects(cold.reconcileActivation(), /activation_unconfirmed/); assert.equal(released, false);
+  assert.deepEqual(await cold.readCurrent(), f.next);
+  f.service.activate = async () => {};
+  assert.equal((await cold.reconcileActivation()).state, 'committed'); assert.equal(released, true);
+});
+test('nonterminal cold recovery cannot restart or activate a service without an authoritative recovery permit', async t => {
+  const f = await fixture(t);
+  await writePrivateFile(path.join(f.options.root, 'transaction.json'), JSON.stringify({ format: 1, phase: 'starting', previous: f.previous, next: f.next }));
+  f.manager.coordinator = null;
+  await assert.rejects(f.manager.recover(), /coordination_unavailable/); assert.deepEqual(f.calls, []);
+  assert.equal((await f.manager.readJournal()).phase, 'starting'); assert.deepEqual(await f.manager.readCurrent(), f.previous);
 });

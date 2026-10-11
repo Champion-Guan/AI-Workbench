@@ -41,7 +41,7 @@ async function durableTree(directory) {
 // A trusted coordinator and exact-owned-service adapter are mandatory to install.
 export class UpdateManager {
   constructor({ root, dataRoot, projectRoot, repository, trustedKeys, coordinator, service,
-    platform = process.platform, arch = process.arch, freeSpace, onStep = async () => {} }) {
+    platform = process.platform, arch = process.arch, freeSpace, onStep = async () => {}, origin = 'http://127.0.0.1:5174' }) {
     if (!path.isAbsolute(root || '') || !path.isAbsolute(dataRoot || '') || !validRepository(repository)
       || platform !== 'darwin' || arch !== 'arm64') throw Error('update_platform_invalid');
     this.root = path.resolve(root); this.dataRoot = path.resolve(dataRoot); this.repository = repository;
@@ -49,6 +49,12 @@ export class UpdateManager {
       || inside(this.root, this.dataRoot) || inside(this.dataRoot, this.root)
       || projectRoot && (inside(path.resolve(projectRoot), this.root) || inside(this.root, path.resolve(projectRoot)))) throw Error('update_path_invalid');
     this.keys = trustedKeys; this.coordinator = coordinator; this.service = service; this.onStep = onStep;
+    const url = new URL(origin);
+    if (url.protocol !== 'http:' || url.hostname !== '127.0.0.1' || !url.port || url.origin !== origin
+      || url.username || url.password || url.pathname !== '/' || url.search || url.hash) throw Error('update_origin_invalid');
+    // Trusted constructor override is exclusively for isolated integration tests.
+    // The daemon never accepts an origin from IPC or an HTTP request.
+    this.origin = origin;
     this.freeSpace = freeSpace || (async () => { const s = await statfs(this.root); return s.bavail * s.bsize; });
     this.state = { state: 'idle', error: null }; this.busy = false;
   }
@@ -125,6 +131,7 @@ export class UpdateManager {
   }
   async stage({ directory, version, archiveName = 'package.zip' }) {
     return this.locked(async () => {
+      if (this.recoveryLease) throw Error('update_recovery_required');
       const journal = await this.readJournal();
       if (journal && !['committed', 'rolled-back'].includes(journal.phase)) throw Error('update_recovery_required');
       const current = await this.readCurrent();
@@ -164,23 +171,25 @@ export class UpdateManager {
   }
   async healthy(pointer) {
     const report = await this.service.start({ ...pointer, directory: path.join(this.root, 'versions', pointer.id), dataRoot: this.dataRoot,
-      origin: 'http://127.0.0.1:5174' });
+      origin: this.origin });
     if (!report || report.ready !== true || report.version !== pointer.version || report.buildId !== pointer.buildId
-      || report.origin !== 'http://127.0.0.1:5174') throw Error('update_health_failed');
+      || report.origin !== this.origin) throw Error('update_health_failed');
   }
-  async rollback(j) {
+  async rollback(j, lease) {
     await this.verifyInstalled(j.previous);
     await this.journal(j, 'rolling-back');
     await this.stop(j);
     await writePrivateFile(path.join(this.root, 'current.json'), JSON.stringify(j.previous));
     await this.healthy(j.previous);
     await this.journal(j, 'rolled-back');
+    if (lease) await lease.assertValid();
     if (this.service.activate) await this.service.activate(j.previous);
   }
   async install(next) {
     // Do not retain a caller's mutable object across verification/await points.
     next = Object.freeze({ ...identity(next) });
     return this.locked(async () => {
+      if (this.recoveryLease) throw Error('update_recovery_required');
       const unfinished = await this.readJournal();
       if (unfinished && !['committed', 'rolled-back'].includes(unfinished.phase)) throw Error('update_recovery_required');
       const previous = await this.readCurrent();
@@ -201,7 +210,9 @@ export class UpdateManager {
         await this.journal(j, 'switching');
         await writePrivateFile(path.join(this.root, 'current.json'), JSON.stringify(next));
         await this.journal(j, 'starting'); await this.healthy(next);
+        await lease.assertValid();
         await this.journal(j, 'committed');
+        await lease.assertValid();
         if (this.service.activate) await this.service.activate(next);
         return { state: 'committed', version: next.version };
       } catch {
@@ -213,7 +224,7 @@ export class UpdateManager {
           throw Error('update_activation_unconfirmed');
         }
         if (begun) {
-          try { await this.rollback(j); }
+          try { await this.rollback(j, lease); }
           catch {
             releaseSafe = false; this.recoveryLease = lease;
             this.state = { state: 'recovery-required', error: 'update_rollback_failed' }; throw Error('update_rollback_failed');
@@ -227,14 +238,55 @@ export class UpdateManager {
   async recover() {
     return this.locked(async () => {
       const j = await this.readJournal();
-      if (!j || ['committed', 'rolled-back'].includes(j.phase)) return { state: 'no-recovery-needed' };
+      if (!j) return { state: 'no-recovery-needed' };
+      // A durable terminal pointer does not prove activation acknowledged or
+      // inventory survived a manager restart. No automatic unlock/downgrade.
+      if (['committed', 'rolled-back'].includes(j.phase)) {
+        this.state = { state: 'activation-required', error: 'update_activation_unconfirmed' };
+        return { state: 'activation-required' };
+      }
       // Crash recovery is not permission to stop an independently running app.
       if (!this.service || await this.service.recoverySafe?.() !== true) throw Error('update_recovery_blocked');
       const current = await this.readCurrent();
       if (!current || ![j.previous.id, j.next.id].includes(current.id)) throw Error('update_current_conflict');
-      await this.rollback(j);
-      if (this.recoveryLease) { await this.recoveryLease.release(); this.recoveryLease = null; }
-      return { state: 'rolled-back', version: j.previous.version };
+      if (!this.recoveryLease && !this.coordinator?.acquireRecovery) throw Error('install_coordination_unavailable');
+      const lease = this.recoveryLease || await this.coordinator.acquireRecovery({ journal: j, current });
+      if (!lease || typeof lease.assertValid !== 'function' || typeof lease.release !== 'function') throw Error('install_permit_invalid');
+      this.recoveryLease = lease;
+      try {
+        await lease.assertValid(); await this.rollback(j, lease);
+        await lease.assertValid(); await lease.release(); this.recoveryLease = null;
+        return { state: 'rolled-back', version: j.previous.version };
+      } catch {
+        this.state = { state: 'recovery-required', error: 'update_rollback_failed' };
+        throw Error('update_rollback_failed');
+      }
+    });
+  }
+  async reconcileActivation() {
+    return this.locked(async () => {
+      const j = await this.readJournal();
+      if (!j || !['committed', 'rolled-back'].includes(j.phase)) throw Error('update_recovery_required');
+      const pointer = j.phase === 'committed' ? j.next : j.previous, current = await this.readCurrent();
+      if (!current || ['id', 'version', 'commit', 'buildId'].some(k => current[k] !== pointer[k])) throw Error('update_current_conflict');
+      await this.verifyInstalled(pointer);
+      if (!this.service?.activate || !this.recoveryLease && !this.coordinator?.acquireRecovery) throw Error('install_coordination_unavailable');
+      // Reuse a retained lease only after revalidation; after restart require a
+      // fresh authoritative recovery permit, never infer one from the journal.
+      const lease = this.recoveryLease || await this.coordinator.acquireRecovery({ journal: j, current });
+      if (!lease || typeof lease.assertValid !== 'function' || typeof lease.release !== 'function') throw Error('install_permit_invalid');
+      this.recoveryLease = lease;
+      try {
+        await lease.assertValid();
+        if (await this.service.isStopped() === true) await this.healthy(pointer);
+        await lease.assertValid(); await this.service.activate(pointer);
+        await lease.assertValid(); await lease.release(); this.recoveryLease = null;
+        this.state = { state: j.phase, version: pointer.version, error: null };
+        return { state: j.phase, version: pointer.version };
+      } catch {
+        this.state = { state: 'activation-required', error: 'update_activation_unconfirmed' };
+        throw Error('update_activation_unconfirmed');
+      }
     });
   }
 }

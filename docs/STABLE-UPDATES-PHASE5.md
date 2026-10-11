@@ -76,3 +76,29 @@
 更改前源码归档`pre-phase5-arm64-20261011.tar.gz`，SHA256`fd43f90a68f785bf8faa3c3e277d8815ca2fb790182e9d3e17226a9b6eef6f85`。原完整项目/代理/浏览器备份持续保留；本轮源码检查点不是新增完整用户数据备份，也不是离线灾备。
 
 改动后提交源码归档`phase5-arm64-core-8d9707b.tar.gz`，SHA256`fb01374f8fc25f27a4c0b9d5385375e4b19578409ab54c19cca7fffe27db3a68`。改动前522文件、改动后532文件均解压与对应Git提交逐文件比较一致。该归档固定功能提交，不包含本节随后加入的CI验收说明；不移动v1.0.4标签或改写旧Release。
+
+## 2026-10-11 真实服务与用户态launchd隔离验收（更新当前状态）
+
+本节更新此前“真实服务适配器未实现”的状态，不代表阶段5整体完成或生产已启用。
+
+- 新增`src/server/update-service.mjs`：固定版本目录的`runtime/node`和`server.mjs`，执行前由manager重新验签和精确库存校验；只保留自己spawn的ChildProcess，不使用保存的PID、端口发现或journal接管其它进程。路径要求规范化、本人所有、非链接及不可被组/其它用户写入。严格区分私人根与其`data`目录，保持既有数据布局，不产生`data/data`。
+- 显式干净环境、不继承NODE_OPTIONS/Token/代理环境变量，敏感配置仍由既有私人env机制读取；固定loopback健康请求，不走HTTP代理、不跟随重定向，限制响应和总超时。健康核对ready、版本/buildId、Origin、精确child PID及不变instanceId、maintenance=true。默认Origin仍5174，测试临时端口只能由可信构造器指定，不接受HTTP/Unix调用参数。
+- 只发送SIGTERM给确切自有child，等待退出且端口确实空闲；超时保留handle并失败，不强杀/冒充停止。端口被未知进程占用时拒绝启动、恢复和接管。更新器重启后也不凭相同版本/健康PID领养孤儿；目前保守阻断，真正跨重启接管仍待稳定bootstrap/supervisor协议。
+- 激活使用继承IPC nonce及同一PID/instance健康读回；ack丢失但精确健康证明已激活时可幂等完成。`update-startup.mjs`的ack发送异常不会把已开放业务的新版本意外崩溃。未知健康或所有权丢失保留新指针，不降级。
+- `update-manager.mjs`健康后及committed后重验持续许可；stage/install不能绕过保留的恢复租约。终态`recover()`现在返回activation-required，而非no-recovery-needed自动视为安全；`reconcileActivation()`需要重新验证的保留许可或可信`acquireRecovery`许可。非终态冷恢复也要求可信恢复许可，旧版隔离启动后在激活前再验许可。失败继续保留暂停，不从磁盘记录推导业务空闲。
+- 独立daemon已构造真实适配器，但仍没有可信协调器和install/recover IPC指令，不能启动/停止任何业务服务。浏览器安装能力和autoInstall保持false。
+- 新增`tests/update-service.test.mjs`、`update-service-transaction.test.mjs`、本地backend/runtime夹具：真实Node进程、真实项目后端副本、端口冲突、错误健康/退出、停止超时、错身份、IPC丢确认、重启后拒绝孤儿、并发和链接/验证拒绝。真实事务使用**本机随机测试签名密钥**及官方独立arm64 Node，执行本机QA服务，不执行远端未签名包。三个测试签名版本验证实际提交、提交前业务503、新版启动失败恢复旧版、原测试数据不变。协调器是明确的测试fixture，不冒充生产库存证明；合成Keychain helper不执行。
+- Homebrew Node依赖相邻libnode，不是可独立搬迁的runtime。测试改用已准备并核对的官方独立Node；CI setup-node同样使用独立发行版。此处不是修改用户系统Node。
+- 新增`scripts/verify-update-launchd.mjs`：完整复制本机开发更新器到独立临时目录，使用随机`com.guanaiworkbench.updater.qa.<UUID>`标签，实际用户态launchctl bootstrap、0600 Unix status和graceful bootout成功。测试job及临时目录已移除；**没有安装生产LaunchAgent、接管生产服务或执行版本安装**。launchd生成器默认标签不变，额外只允许严格QA命名空间。
+
+### 本轮验证与下一步
+
+完整433/433回归、TypeScript、Vite build通过；最后launchd QA新增后另跑实际launchd演练及5项Unix/plist测试，Lint仍0错误/4条原警告。既有bridge/混合import/大bundle/module-type提示保留。源码/历史扫描通过，旧占位例外不扩大；提交前另执行暂存扫描，远端CI结果单独记录。
+
+本机未签名便携样包349文件、7路由、独立数据根的真实后端启动验证通过，SHA256`dd313893ff650e1a03f3d7994443b3bd9bd046f38a8d4468c4ba53a5bb747cda`。样包产生在launchd QA扩展前，仅证明该快照，不是新的Stable或可安装签名包，不提升1.0.4版本。
+
+改动前干净96d3672源码归档`pre-phase5-service-96d3672.tar.gz`，532文件，SHA256`18dfb3078030ce560a838c286d1c07c5388ccc0a523fc16bdd883e566197d412`，0600；重新生成Git archive字节哈希一致。原完整项目/代理/真实浏览器/加密签名备份均保留，这只是额外源码检查点。
+
+生产只读复核仍v1.0.3/PID10088/buildId40a1b85f6d87f6fbd0ac28d4/原instance、Origin5174、ready/代理正常；私人profile/state/transports三文件基线SHA256完全一致。没有数据库/浏览器迁移、生产资源部署或重启，没有创建正式密钥、提升版本、改动历史Release或发布新版本。
+
+尚需完成：完整可信窗口/iframe/旧页和远端库存、编辑/导入/插件根排空；固定独立manager的可信首次bootstrap及跨manager重启所有权/孤儿协调；客户首次引导和备份、受限后端/UI接入、真实代理/helper升级兼容、故障/断电及两台实体arm64 Mac验收。在这些条件满足前，不自动安装。

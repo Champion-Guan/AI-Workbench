@@ -3,10 +3,11 @@ import { fileURLToPath } from 'node:url';
 import { runtimePaths } from '../src/server/runtime-paths.mjs';
 import { UpdateManager } from '../src/server/update-manager.mjs';
 import { serveUpdateManager } from '../src/server/update-manager-ipc.mjs';
+import { OwnedUpdateService } from '../src/server/update-service.mjs';
 
 // Stable, independently launched entry point. Never loads user runtime.env or
 // invokes shell commands; full installation remains closed until stage-5's
-// authoritative coordinator and owned-service adapter are wired and verified.
+// authoritative coordinator and first-service handoff are wired and verified.
 async function main() {
   if (process.argv.length !== 2 || process.platform !== 'darwin' || process.arch !== 'arm64') throw Error();
   const projectRoot = fileURLToPath(new URL('../', import.meta.url));
@@ -14,6 +15,8 @@ async function main() {
   const manager = new UpdateManager({ root: path.join(paths.root, 'installation'), dataRoot: paths.data,
     projectRoot, repository: 'MrGuAm/guan-ai-workbench' });
   await manager.initialize();
+  manager.service = new OwnedUpdateService({ versionsRoot: path.join(manager.root, 'versions'),
+    dataRoot: paths.data, privateRoot: paths.root, verify: pointer => manager.verifyInstalled(pointer) });
   const ipc = await serveUpdateManager({ manager, socketPath: path.join(paths.updates, 'u.sock'), downloadsDirectory: path.join(paths.updates, 'packages') });
   let closing = false;
   const close = async () => { if (closing) return; closing = true; await ipc.close(); };

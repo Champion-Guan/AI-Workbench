@@ -10,7 +10,10 @@ export function createUpdateStartup({ env = process.env, parent = process, onAct
     if (!message || Object.keys(message).sort().join(',') !== 'nonce,op'
       || message.op !== 'guan-update-activate' || message.nonce !== nonce) return;
     if (quarantined) { quarantined = false; onActivate(); }
-    parent.send({ op: 'guan-update-activated', nonce });
+    // Parent can disappear between activation and acknowledgement. A lost ack
+    // is reconciled by exact owned-process health; it must not crash a version
+    // which has already opened its business routes.
+    try { parent.send({ op: 'guan-update-activated', nonce }, () => {}); } catch {}
   });
   return { quarantined: () => quarantined,
     reject(request, response, pathname) {
