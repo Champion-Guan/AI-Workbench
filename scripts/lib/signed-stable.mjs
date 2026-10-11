@@ -47,6 +47,7 @@ export async function verifySignedStable({ directory, repository, version, arch,
       || m.bundledRuntime?.runtimeSha256 !== selected.runtimeSha256 || m.bundledRuntime?.runtimeSize !== selected.runtimeSize
       || machArchitecture(await readFile(path.join(temporary, zip.root, 'runtime/node'))) !== arch) throw Error('Signed package identity mismatch');
     const result = { manifest, selected, files: checked.files, buildId: checked.buildId, signatureVerified: true, executed: false,
+      startupProtocol: m.startupProtocol === 1 ? 1 : null,
       releaseSha256: sha256(await readFile(path.join(temporary, zip.root, 'RELEASE.json'))) };
     // Trusted installer callback only: use this verified snapshot, never reopen
     // replaceable downloaded bytes between verification and extraction/copy.

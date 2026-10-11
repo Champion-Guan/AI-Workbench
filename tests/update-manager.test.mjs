@@ -182,3 +182,10 @@ test('nonterminal cold recovery cannot restart or activate a service without an 
   await assert.rejects(f.manager.recover(), /coordination_unavailable/); assert.deepEqual(f.calls, []);
   assert.equal((await f.manager.readJournal()).phase, 'starting'); assert.deepEqual(await f.manager.readCurrent(), f.previous);
 });
+test('historical signed packages remain verifiable but incompatible rollback/startup protocol blocks before stopping old service', async t => {
+  const f = await fixture(t);
+  assert.equal((await f.manager.verifyInstalled(f.previous)).startupProtocol, null);
+  f.service.requiredStartupProtocol = 1;
+  await assert.rejects(f.manager.install(f.next), /protocol_incompatible/); assert.deepEqual(f.calls, []);
+  assert.deepEqual(await f.manager.readCurrent(), f.previous); assert.equal(await f.manager.readJournal(), null);
+});

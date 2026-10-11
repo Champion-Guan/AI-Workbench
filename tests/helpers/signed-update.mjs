@@ -32,6 +32,7 @@ export async function signedUpdateFixture(parent, signing, version, executable =
     files: Object.fromEntries(Object.entries(files).filter(([n]) => n.startsWith(prefix)).map(([n, b]) => [n.slice(prefix.length), sha256(b)])) };
   files[prefix + 'CANVAS-BUILD.json'] = JSON.stringify(canvas);
   const release = { app: 'guan-ai-workbench', edition: 'stable', channel: 'stable', version, entry: 'server.mjs', commit, platform: 'darwin', arch: 'arm64',
+    startupProtocol: executable ? 1 : undefined,
     automaticInstallAllowed: false, runtime: 'v24.16.0', nativeHelper: native, canvasBuild: { version, sourceHash: canvas.sourceHash },
     bundledRuntime: { runtimeSha256: sha256(runtime), runtimeSize: runtime.length }, files: Object.fromEntries(Object.entries(files).map(([n, b]) => [n, sha256(b)])) };
   files['RELEASE.json'] = JSON.stringify(release);

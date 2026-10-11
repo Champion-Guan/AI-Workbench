@@ -76,6 +76,7 @@ async function inventory(directory) {
 await inventory(stage);
 await writeFile(path.join(stage, 'RELEASE.json'), JSON.stringify({
   app: 'guan-ai-workbench', edition: 'portable-unsigned', channel: 'portable', automaticInstallAllowed: false,
+  startupProtocol: 1,
   version, build, builtAt: new Date().toISOString(),
   runtime: 'Node.js >=18.17', entry: 'server.mjs',
   included: useBuiltCanvas ? 'verified current-source canvas build, allowlisted server/shared runtime, locked undici dependency' : 'current production assets, allowlisted server/shared runtime, locked undici dependency',

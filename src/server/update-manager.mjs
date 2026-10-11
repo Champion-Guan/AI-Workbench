@@ -194,7 +194,9 @@ export class UpdateManager {
       if (unfinished && !['committed', 'rolled-back'].includes(unfinished.phase)) throw Error('update_recovery_required');
       const previous = await this.readCurrent();
       if (!previous) throw Error('update_bootstrap_required');
-      await this.verifyInstalled(previous); await this.verifyInstalled(next);
+      const previousChecked = await this.verifyInstalled(previous), nextChecked = await this.verifyInstalled(next);
+      if (this.service?.requiredStartupProtocol === 1 && (previousChecked.startupProtocol !== 1 || nextChecked.startupProtocol !== 1))
+        throw Error('service_startup_protocol_incompatible');
       if (compareVersions(next.version, previous.version) <= 0) throw Error('version_not_newer');
       if (!this.coordinator?.acquire || !this.service) throw Error('install_coordination_unavailable');
       const lease = await this.coordinator.acquire({ previous, next });

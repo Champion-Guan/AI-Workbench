@@ -5,6 +5,8 @@ import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { execFileSync, spawn } from 'node:child_process';
 import { createServer } from 'node:net';
+import { randomUUID } from 'node:crypto';
+import { once } from 'node:events';
 import path from 'node:path';
 import { validateZipArchive, verifyReleaseFiles } from './lib/release-validation.mjs';
 import { verifyStableArchive } from '../src/server/stable-manifest.mjs';
@@ -25,15 +27,16 @@ async function main() {
     const local = path.join(temporary, 'package.zip'); await writePrivateFile(local, archive, { exclusive: true });
     execFileSync('unzip', ['-q', local, '-d', temporary], { stdio: 'pipe' });
     const app = path.join(temporary, zip.root), checked = await verifyReleaseFiles(app, { trustedRuntime: descriptor });
-    if (checked.manifest.arch !== process.arch || checked.manifest.commit !== record.commit || checked.manifest.edition !== 'stable'
+    if (checked.manifest.arch !== process.arch || checked.manifest.commit !== record.commit || checked.manifest.edition !== 'stable' || checked.manifest.startupProtocol !== 1
       || machArchitecture(await readFile(path.join(app, 'runtime/node'))) !== process.arch) throw Error('Native package identity mismatch');
     const reservation = createServer(); await new Promise(resolve => reservation.listen(0, '127.0.0.1', resolve));
     const port = reservation.address().port; await new Promise(resolve => reservation.close(resolve));
     if (port === 5174) throw Error('Production port forbidden');
-    const origin = `http://127.0.0.1:${port}`;
+    const origin = `http://127.0.0.1:${port}`, nonce = randomUUID();
     child = spawn(path.join(app, 'runtime/node'), ['server.mjs'], { cwd: app,
       env: { PATH: '/usr/bin:/bin', PORT: String(port), GUAN_WORKBENCH_DATA_DIR: path.join(temporary, 'private-data'),
-        IMAGE_RELAY_MIHOMO_AUTO_DOWNLOAD: 'false', IMAGE_RELAY_MIHOMO_DISABLED: 'true', IMAGE_RELAY_PROXY: 'off' }, stdio: ['ignore', 'pipe', 'pipe'] });
+        IMAGE_RELAY_MIHOMO_AUTO_DOWNLOAD: 'false', IMAGE_RELAY_MIHOMO_DISABLED: 'true', IMAGE_RELAY_PROXY: 'off',
+        GUAN_UPDATE_QUARANTINE: '1', GUAN_UPDATE_NONCE: nonce }, stdio: ['ignore', 'pipe', 'pipe', 'ipc'] });
     child.stdout.resume(); child.stderr.resume();
     exit = new Promise(resolve => { child.once('exit', () => { exited = true; resolve(); }); child.once('error', () => { exited = true; resolve(); }); });
     let healthy = false;
@@ -41,11 +44,18 @@ async function main() {
       try {
         const response = await fetch(origin + '/local-app/health', { signal: AbortSignal.timeout(500) });
         const h = await response.json();
-        if (h.ready && h.pid === child.pid && h.version === record.version && h.buildId === checked.buildId && h.origin === origin) { healthy = true; break; }
+        if (h.ready && h.pid === child.pid && h.version === record.version && h.buildId === checked.buildId && h.origin === origin && h.maintenance === true) { healthy = true; break; }
       } catch {}
       await new Promise(resolve => setTimeout(resolve, 100));
     }
     if (!healthy || exited) throw Error('Bundled Node cannot start verified service');
+    for (const route of ['/', '/canvas/qa', '/local-app/updates/status'])
+      if ((await fetch(origin + route, { signal: AbortSignal.timeout(3000) })).status !== 503) throw Error('Native startup quarantine failed');
+    const acknowledgement = once(child, 'message', { signal: AbortSignal.timeout(3000) });
+    child.send({ op: 'guan-update-activate', nonce }, () => {});
+    const [message] = await acknowledgement;
+    if (message?.op !== 'guan-update-activated' || message.nonce !== nonce) throw Error('Native activation failed');
+    if ((await (await fetch(origin + '/local-app/health', { signal: AbortSignal.timeout(3000) })).json()).maintenance !== false) throw Error('Native activation health failed');
     for (const route of ['/', '/canvas/qa', '/canvas/excel-prompts-bridge.js', ...checked.assets]) {
       const response = await fetch(origin + route, { signal: AbortSignal.timeout(3000) });
       if (!response.ok || !(await response.arrayBuffer()).byteLength) throw Error('Native asset smoke failed');
@@ -53,7 +63,8 @@ async function main() {
     const response = await fetch(origin + '/local-app/updates/status', { headers: { origin } });
     const updates = await response.json();
     if (!response.ok || updates.install.allowed || updates.preferences.autoInstall || updates.preferences.repository !== '') throw Error('Native update state unsafe');
-    console.log(JSON.stringify({ ok: true, arch: process.arch, version: record.version, bundledRuntimeExecuted: true, privateDataIsolated: true, installAllowed: false }));
+    console.log(JSON.stringify({ ok: true, arch: process.arch, version: record.version, bundledRuntimeExecuted: true, privateDataIsolated: true,
+      startupQuarantineVerified: true, inheritedActivationVerified: true, installAllowed: false }));
   } finally {
     if (child && !exited) {
       child.kill('SIGTERM');

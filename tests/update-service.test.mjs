@@ -45,7 +45,7 @@ async function fixture(t, mode = 'normal', realBackend = false) {
   const sentinel = path.join(dataRoot, 'sentinel'); await writeFile(sentinel, 'retain local business data');
   let verified = 0;
   const options = { versionsRoot, dataRoot, privateRoot, origin, disableProxy: true, startupTimeout: 2000, stopTimeout: 500, activationTimeout: 150,
-    verify: async p => { verified++; assert.equal(p.id, pointer.id); return { directory }; } };
+    verify: async p => { verified++; assert.equal(p.id, pointer.id); return { directory, startupProtocol: 1 }; } };
   const service = new OwnedUpdateService(options);
   t.after(async () => {
     // Test-owned, intentionally unresponsive fixture only. Never a production PID.
@@ -124,6 +124,8 @@ test('verification refusal, wrong data/origin and symlink runtime prevent execut
     await assert.rejects(f.service.start(p), /identity/);
   const refused = new OwnedUpdateService({ ...f.options, verify: async () => { throw Error('signature invalid'); } });
   await assert.rejects(refused.start(f.pointer), /signature/); assert.equal(refused.owned, null);
+  const legacy = new OwnedUpdateService({ ...f.options, verify: async () => ({ directory: f.pointer.directory }) });
+  await assert.rejects(legacy.start(f.pointer), /protocol_incompatible/); assert.equal(legacy.owned, null);
   await rm(path.join(f.pointer.directory, 'runtime/node')); await symlink(process.execPath, path.join(f.pointer.directory, 'runtime/node'));
   await assert.rejects(f.service.start(f.pointer), /path_invalid/); assert.equal(f.service.owned, null);
 });

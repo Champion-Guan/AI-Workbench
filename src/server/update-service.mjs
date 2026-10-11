@@ -69,6 +69,7 @@ export class OwnedUpdateService {
     this.startupTimeout = startupTimeout; this.stopTimeout = stopTimeout;
     this.activationTimeout = activationTimeout; this.disableProxy = disableProxy;
     this.owned = null; this.busy = false;
+    Object.defineProperty(this, 'requiredStartupProtocol', { value: 1 });
   }
   async exclusive(fn) {
     if (this.busy) throw Error('service_operation_in_progress');
@@ -87,6 +88,9 @@ export class OwnedUpdateService {
     // Verification happens immediately before execution, not just staging.
     const checked = await this.verify(Object.freeze(Object.fromEntries(['id', 'version', 'commit', 'buildId'].map(k => [k, pointer[k]]))));
     if (checked?.directory !== directory) throw Error('service_identity_invalid');
+    // Older signed releases ignored quarantine environment flags. Never run
+    // them speculatively and discover compatibility after opening HTTP routes.
+    if (checked.startupProtocol !== 1) throw Error('service_startup_protocol_incompatible');
     for (const relative of ['runtime/node', 'server.mjs']) {
       const file = path.join(directory, relative), info = await lstat(file);
       if (!info.isFile() || info.isSymbolicLink() || info.uid !== process.getuid()
