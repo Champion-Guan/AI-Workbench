@@ -79,9 +79,13 @@ test('actual signed runtime + user launchd + operator consent + independent sche
   const jobs = new UserLaunchdJobs(), suffix = '.qa.' + randomUUID();
   const deployment = new UpdaterDeployment({ runtime, directory: path.join(base, 'deployment'), agents, privateRoot,
     logs: path.join(base, 'logs'), jobs, suffix, health: async () => {
-      for (let i = 0; i < 100; i++) {
-        if ((await client.status()).state !== 'unavailable') return;
-        await pause(50);
+      for (let i = 0; i < 300; i++) {
+        if ((await client.status()).state !== 'unavailable') {
+          if (await manager.readCurrent()) return;
+          try { await service.connect(); await service.inspectOwned(); return; }
+          catch { service.disconnect(); }
+        }
+        await pause(100);
       }
       throw Error('QA daemon health timeout');
     } });

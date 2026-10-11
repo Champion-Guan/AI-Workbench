@@ -106,8 +106,11 @@ async function main() {
   const deployment = new UpdaterDeployment({ runtime, directory: path.join(paths.root, 'updater-deployment'), agents,
     privateRoot: paths.root, logs: path.join(paths.root, 'logs/updater'), jobs: new UserLaunchdJobs(),
     health: async () => {
-      for (let attempt = 0; attempt < 100; attempt++) {
-        if ((await client.status()).state !== 'unavailable') { await service.connect(); return; }
+      for (let attempt = 0; attempt < 300; attempt++) {
+        if ((await client.status()).state !== 'unavailable') {
+          try { await service.connect(); await service.inspectOwned(); return; }
+          catch { service.disconnect(); }
+        }
         await new Promise(resolve => setTimeout(resolve, 100));
       }
       throw Error('updater_deployment_health_unconfirmed');
