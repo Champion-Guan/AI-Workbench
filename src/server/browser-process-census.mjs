@@ -24,10 +24,14 @@ export function parseBrowserProcesses(output) {
     const match = /^\s*([1-9][0-9]*)\s+(.+)$/.exec(line);
     if (!match || !Number.isSafeInteger(Number(match[1])) || ++rows > 32768) throw Error('browser_census_unavailable');
     const executable = match[2].trim();
+    const name = executable.slice(executable.lastIndexOf('/') + 1);
+    // Crash reporters cannot host pages. Directory names (e.g. our native
+    // browser-bridge runtime) are not the executable's browser identity.
+    if (['browser_crashpad_handler', 'chrome_crashpad_handler'].includes(name)) continue;
     for (const [name, pattern] of known) if (pattern.test(executable)) found.add(name);
     // Unknown browser-branded apps and WebView hosts remain a veto. Avoid
     // interpreting arbitrary arguments or trusting an unknown name as idle.
-    if (/(?:browser|chromium|chrome|firefox|webkit|webview)/i.test(executable)
+    if (/(?:browser|chromium|chrome|firefox|webkit|webview)/i.test(name)
       && !known.some(([, pattern]) => pattern.test(executable))) found.add('unknown-browser');
     if (/Helper \(Renderer\)$/.test(executable) && !known.some(([, pattern]) => pattern.test(executable))) found.add('unknown-browser');
   }

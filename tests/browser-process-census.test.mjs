@@ -19,6 +19,14 @@ test('malformed, empty, oversized, failed and unsupported census never means idl
   await assert.rejects(browserProcessCensus({ platform: 'linux' }), /unsupported/);
   await assert.rejects(browserProcessCensus({ platform: 'darwin', execute: async () => { throw Error('private argv'); } }), /^Error: browser_census_unavailable$/);
 });
+test('crash reporters and native bridge paths are not page hosts, while unknown renderers still veto', () => {
+  const rows = '1 /sbin/launchd\n10 /Applications/Codex.app/Helpers/browser_crashpad_handler\n'
+    + '11 /Applications/Google Chrome.app/Helpers/chrome_crashpad_handler\n'
+    + '12 /private/browser-bridge/runtime/node\n';
+  assert.deepEqual(parseBrowserProcesses(rows), { knownBrowsersExited: true, blockers: [], inventoryVerified: false });
+  assert.deepEqual(parseBrowserProcesses(rows + '13 /Applications/Custom.app/Custom Helper (Renderer)\n').blockers, ['unknown-browser']);
+  assert.deepEqual(parseBrowserProcesses(rows + '14 /Applications/Custom.app/embedded-webview\n').blockers, ['unknown-browser']);
+});
 test('census requests only command names through fixed ps, never shell/argv or inherited secrets', async () => {
   const result = await browserProcessCensus({ platform: 'darwin', execute: async (file, args, options) => {
     assert.equal(file, '/bin/ps'); assert.deepEqual(args, ['-axo', 'pid=,comm=']);
