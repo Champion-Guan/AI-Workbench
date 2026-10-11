@@ -119,12 +119,16 @@ test('inherited IPC authenticates instance/nonce, consumes sequence once, and ke
   while (!replies.length) await pause(1);
   assert.equal(replies[0].ok, true);
   parent.emit('message', request); await pause(5); assert.equal(replies.length, 1);
-  parent.send = () => { throw Error('lost acknowledgement'); };
+  let acknowledge;
+  const acknowledged = new Promise(resolve => { acknowledge = resolve; });
+  parent.send = () => { acknowledge(); throw Error('lost acknowledgement'); };
   const state = replies[0].evidence;
   parent.emit('message', { ...request, sequence: 2, command: { action: 'freeze', value: {
     backendRevision: state.backend.revision, ledgerRevision: state.ledger.revision, writeRevision: state.writes.revision } } });
-  while (!f.ledger.frozen) await pause(1);
-  await pause(5);
+  // Wait for the complete IPC operation, not a mid-freeze flag plus a guessed
+  // delay. Otherwise cleanup races its remaining durable ledger writes.
+  await acknowledged;
+  assert.equal(f.ledger.frozen, true);
   assert.equal(f.control.frozen(), true);
   parent.emit('message', { op: 'guan-update-activate', nonce }); assert.equal(startup.quarantined(), true);
   let code; const response = { writeHead: value => { code = value; }, end() {} };
