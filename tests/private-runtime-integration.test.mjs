@@ -4,7 +4,7 @@ import { spawn } from 'node:child_process';
 import { once } from 'node:events';
 import { createServer } from 'node:http';
 import { createServer as netServer } from 'node:net';
-import { mkdtemp, mkdir, readFile, writeFile, chmod, rm, rename, symlink } from 'node:fs/promises';
+import { mkdtemp, mkdir, readFile, writeFile, copyFile, chmod, rm, rename, symlink } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -41,7 +41,9 @@ async function fixture(t) {
   await writeFile(path.join(root, 'data/runtime/image-relay-transports.json'), '{}');
   const stateFile = path.join(root, 'data/proxy/state.json');
   await writeFile(stateFile, JSON.stringify({ version: 1, enabled: false, relayEnabled: true, source: null, cachedConfig: null, configName: 'fixture.yaml' }));
-  await chmod(fake, 0o700);
+  // Execute a private copy, never change the checked-out source permissions.
+  const fakeCore = path.join(root, 'fake-mihomo.mjs');
+  await copyFile(fake, fakeCore); await chmod(fakeCore, 0o700);
   const reservedApp = netServer();
   await new Promise(resolve => reservedApp.listen(0, '127.0.0.1', resolve));
   const appPort = reservedApp.address().port;
@@ -67,7 +69,7 @@ async function fixture(t) {
   async function start() {
     child = spawn(process.execPath, ['server.mjs'], { cwd: project, stdio: ['ignore', 'pipe', 'pipe'], env: {
       ...process.env, PORT: String(appPort), GUAN_WORKBENCH_DATA_DIR: root,
-      IMAGE_RELAY_PROXY_PORT: String(proxyPort), IMAGE_RELAY_MIHOMO_BIN: fake,
+      IMAGE_RELAY_PROXY_PORT: String(proxyPort), IMAGE_RELAY_MIHOMO_BIN: fakeCore,
       IMAGE_RELAY_MIHOMO_AUTO_DOWNLOAD: 'false', IMAGE_RELAY_MIHOMO_CONFIG_FILE: '',
       IMAGE_RELAY_SUBSCRIPTION_FILE: '', IMAGE_RELAY_SUBSCRIPTION_URL: '', IMAGE_RELAY_SUBSTORE_API_URL: '',
     } });

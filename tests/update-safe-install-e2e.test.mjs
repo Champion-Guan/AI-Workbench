@@ -166,5 +166,16 @@ test('actual signed runtime + user launchd + operator consent + independent sche
   console.info('QA settled current cold startup passed without another installation');
   assert.equal(await readFile(sentinel, 'utf8'), 'retain canvases/history/media/config');
   assert.equal((await ledger.snapshot()).pending, 0);
-  assert.equal((await deployment.recover({ assertValid: async () => {} })).state, 'committed');
+  // An active scheduler may still hold the cold-start lock after health becomes
+  // ready. Respect that lock; retry only its explicit contention result.
+  let recovered;
+  const recoveryDeadline = Date.now() + 60000;
+  while (!recovered) {
+    try { recovered = await deployment.recover({ assertValid: async () => {} }); }
+    catch (error) {
+      if (error.message !== 'update_in_progress' || Date.now() >= recoveryDeadline) throw error;
+      await pause(100);
+    }
+  }
+  assert.equal(recovered.state, 'committed');
 });
