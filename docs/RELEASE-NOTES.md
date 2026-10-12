@@ -1,5 +1,15 @@
 # 发布记录
 
+## 1.0.8 — 2026-10-12
+
+- 默认入口改为 `http://localhost:8888`，自动重定向到 `http://127.0.0.1:8888`，统一浏览器存储。
+- 仓库和更新渠道改为公开的 `Champion-Guan/AI-Workbench`，兼容原仓库身份；保留 basketikun/infinite-canvas 原作者、MIT 许可及页面标识。
+- 自定义请求脚本支持使用所选渠道的后端安全代理和 Keychain 引用；脚本及插件仍属于受信任代码，不作为恶意代码沙箱。
+- 安装前提示保存，关闭工作台页面后更新；其他网站和应用无需退出。继续验证 Ed25519 签名、SHA-256、确切进程归属、服务健康和失败回滚。
+- 仅提供 macOS Apple Silicon（arm64）包，内置 Node.js；采用本机构建签名，不使用 GitHub Actions。
+- **旧 5174 用户必须先备份并完成浏览器数据及独立服务的端口迁移，不能直接在新地址初始化空画布，也不能把此包覆盖到旧个人迁移包。** 参见 [8888 生产迁移说明](https://github.com/Champion-Guan/AI-Workbench/blob/main/docs/8888%E7%94%9F%E4%BA%A7%E8%BF%81%E7%A7%BB.md)。普通应用升级不会自动迁移旧浏览器 Origin 或旧 supervisor；未完成迁移的电脑请勿直接自动安装本版本。
+- Mac A 已实际完成数据迁移、签名安装、独立 manager/supervisor 冷重启、凭据读回和代理状态验证；562 项回归通过。Mac B 实机验收由所有者执行；WebDAV、外部 Agent、Gemini 真实连接未验收。
+
 ## 1.0.7 — 2026-10-12
 
 - 新建/编辑内置渠道、获取模型列表、配置文件导入和 Agent 连接先写入并读回 Keychain；浏览器持久化仅保存本机引用，失败保留原配置。
