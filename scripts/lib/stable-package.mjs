@@ -10,7 +10,7 @@ import { sha256 } from '../../src/server/stable-manifest.mjs';
 import { parseVersion } from '../../src/server/stable-version.mjs';
 import { validateZipArchive, verifyReleaseFiles } from './release-validation.mjs';
 
-export async function buildStablePackage({ root, portableDirectory, runtimeDirectory, output, commit }) {
+export async function buildStablePackage({ root, portableDirectory, runtimeDirectory, output, commit, legacyClientBridge = false }) {
   if (process.platform !== 'darwin' || process.arch !== 'arm64' || !/^[a-f0-9]{40}$/.test(commit)) throw Error('Native arm64 stable build identity required');
   const version = JSON.parse(await readFile(path.join(root, 'package.json'), 'utf8')).version;
   if (!parseVersion(version) || parseVersion(version).pre.length) throw Error('Stable version required');
@@ -21,7 +21,10 @@ export async function buildStablePackage({ root, portableDirectory, runtimeDirec
   const runtime = await verifyStableRuntime(runtimeDirectory, process.arch);
   const identity = JSON.parse(execFileSync(path.join(runtimeDirectory, 'node'), ['-p', 'JSON.stringify({version:process.version,arch:process.arch,platform:process.platform})'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }));
   if (identity.version !== runtime.nodeVersion || identity.arch !== process.arch || identity.platform !== 'darwin') throw Error('Bundled runtime failed native execution');
-  const name = `AI-Workbench-v${version}-macos-${process.arch}`, stage = path.join(output, name);
+  if (typeof legacyClientBridge !== 'boolean') throw Error('Invalid bridge build option');
+  // One transition release lets existing signed updaters install the new
+  // parser before the next release adopts the AI-Workbench archive name.
+  const name = `${legacyClientBridge ? 'guan-ai-workbench' : 'AI-Workbench'}-v${version}-macos-${process.arch}`, stage = path.join(output, name);
   await privateDirectory(output);
   await cp(portableDirectory, stage, { recursive: true, force: false, errorOnExist: true });
   await privateDirectory(path.join(stage, 'runtime'));
