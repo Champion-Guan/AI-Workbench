@@ -8,6 +8,8 @@ Guan AI 工作台是运行在本机的 AI 图片、视频和无限画布工作�
 
 稳定版发布在私有仓库 `Champion-Guan/guan-ai-workbench`。客户端只读取正式 Stable Release，并通过内置 Ed25519 公钥和 SHA-256 清单验证下载文件。
 
+本项目不使用 Apple Developer 账号、Developer ID 或 Apple notarization。macOS arm64 更新依靠 Stable 包的 Ed25519 签名、SHA-256 完整性校验和失败回滚。
+
 更新前需要保存画布，确认生成任务、Agent 和 WebDAV 同步已结束，并关闭所有工作台页面。浏览器中的其他网站以及其他应用可以继续运行。页面检查失败、任务状态未知、保存失败或签名验证失败时，安装会停止并保留当前版本。
 
 ## 个人数据
