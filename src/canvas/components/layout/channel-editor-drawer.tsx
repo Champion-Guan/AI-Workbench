@@ -1,4 +1,4 @@
-import { Button, Drawer, Input, InputNumber, Segmented, Select, Space } from "antd";
+import { App, Button, Drawer, Input, InputNumber, Segmented, Select, Space } from "antd";
 import { ListPlus, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -6,11 +6,14 @@ import { useTranslation } from "react-i18next";
 import { defaultBaseUrlForApiFormat, guessCapability, normalizeChannelModels, type ApiCallFormat, type ChannelModel, type ModelCapability, type ModelChannel } from "@/stores/use-config-store";
 import { ModelScriptEditor } from "./model-script-editor";
 import { ModelSelectModal } from "./model-select-modal";
+import { secureChannel, credentialEndpoint } from "@/services/secure-credentials";
 
 type ScriptTarget = { name: string; capability: ModelCapability; value: string };
 
 export function ChannelEditorDrawer({ open, channel, onSave, onClose }: { open: boolean; channel: ModelChannel | null; onSave: (channel: ModelChannel) => void; onClose: () => void }) {
     const { t } = useTranslation();
+    const { message } = App.useApp();
+    const [saving, setSaving] = useState(false);
     const [draft, setDraft] = useState<ModelChannel | null>(channel);
     const [selectOpen, setSelectOpen] = useState(false);
     const [scriptTarget, setScriptTarget] = useState<ScriptTarget | null>(null);
@@ -21,12 +24,19 @@ export function ChannelEditorDrawer({ open, channel, onSave, onClose }: { open: 
     const capabilityOptions: Array<{ label: string; value: ModelCapability }> = ["image", "video", "text", "audio"].map((value) => ({ label: t(`config.channelEditor.capabilities.${value}`), value: value as ModelCapability }));
 
     useEffect(() => {
-        if (open && channel) setDraft(channel);
-    }, [open, channel]);
+        let current = true;
+        if (open && channel) {
+            setDraft(channel);
+            void credentialEndpoint(channel.apiKey).then(endpoint => {
+                if (current && endpoint) setDraft(draft => draft === channel ? { ...channel, baseUrl: endpoint } : draft);
+            }).catch(() => { if (current) message.error("安全凭据绑定读取失败，请检查本机服务。"); });
+        }
+        return () => { current = false; };
+    }, [open, channel, message]);
 
     if (!draft) return null;
 
-    const patch = (value: Partial<ModelChannel>) => setDraft((current) => (current ? { ...current, ...value } : current));
+    const patch = (value: Partial<ModelChannel>) => { if (!saving) setDraft((current) => (current ? { ...current, ...value } : current)); };
     const setModels = (models: ChannelModel[]) => patch({ models });
 
     const changeApiFormat = (apiFormat: ApiCallFormat) => {
@@ -43,9 +53,15 @@ export function ChannelEditorDrawer({ open, channel, onSave, onClose }: { open: 
     const setScript = (name: string, script: string) => setModels(draft.models.map((model) => (model.name === name ? { ...model, script: script || undefined } : model)));
     const removeModel = (name: string) => setModels(draft.models.filter((model) => model.name !== name));
 
-    const save = () => {
-        onSave({ ...draft, name: draft.name.trim() || t("config.channels.unnamed"), models: normalizeChannelModels(draft.models) });
-        onClose();
+    const save = async () => {
+        if (saving) return;
+        setSaving(true);
+        try {
+            const secured = await secureChannel({ ...draft, name: draft.name.trim() || t("config.channels.unnamed"), models: normalizeChannelModels(draft.models) });
+            onSave(secured);
+            onClose();
+        } catch (error) { message.error(error instanceof Error ? error.message : "安全凭据保存失败，原配置已保留。"); }
+        finally { setSaving(false); }
     };
 
     return (
@@ -58,7 +74,7 @@ export function ChannelEditorDrawer({ open, channel, onSave, onClose }: { open: 
             extra={
                 <Space>
                     <Button onClick={onClose}>{t("common.cancel")}</Button>
-                    <Button type="primary" onClick={save}>
+                    <Button type="primary" loading={saving} onClick={() => void save()}>
                         {t("common.save")}
                     </Button>
                 </Space>

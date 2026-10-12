@@ -1,5 +1,6 @@
 import { useConfigStore, CONFIG_STORE_KEY } from '../../src/canvas/stores/use-config-store';
 import { requestGeneration } from '../../src/canvas/services/api/image';
+import { secureChannel } from '../../src/canvas/services/secure-credentials';
 
 export async function verifyCredentialBrowserFlow() {
   if (location.hostname !== '127.0.0.1' || location.port === '5174') throw Error('Isolated browser required');
@@ -28,6 +29,13 @@ export async function verifyCredentialBrowserFlow() {
   if (images.length !== 1 || !images[0].dataUrl.startsWith('data:image/png;base64,')) throw Error('Image response failed');
   const status = await (await fetch('/__qa/result')).json();
   if (!status.credentialMatched || status.requests !== 1 || !status.encryptedRecoveryVerified) throw Error('Native backend proof incomplete');
+  const secured = await secureChannel(channel);
+  useConfigStore.setState({ config: { ...config, channels: [secured], baseUrl: secured.baseUrl, apiKey: secured.apiKey } });
+  if (localStorage.getItem(CONFIG_STORE_KEY)?.includes(fixture.secret)) throw Error('New credential entry persisted plaintext');
+  const newImages = await requestGeneration(useConfigStore.getState().config, 'qa secure new entry');
+  if (newImages.length !== 1) throw Error('Secure new entry request failed');
+  const after = await (await fetch('/__qa/result')).json();
+  if (!after.credentialMatched || after.requests !== 2) throw Error('New entry native proof incomplete');
   return { ok: true, actualZustandPersistence: true, nativeKeychain: true, browserStoredReferenceOnly: true,
     actualImageApiClient: true, backendCredentialMatched: true, imageReturned: true, encryptedRecoveryVerified: true,
     userDataTouched: false, paidApiRequests: 0, productionMigrationEnabled: false };

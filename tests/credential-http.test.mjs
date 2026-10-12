@@ -63,6 +63,15 @@ test('actual HTTP routes enforce exact Origin, do not export secrets or authoriz
   assert.equal((await request('/local-app/credentials/status', undefined, { origin: 'https://evil.example' })).status, 403);
   const result = await request('/local-app/credentials/prepare', { configRecord: record() }); const prepared = await result.json();
   assert.equal(result.status, 200); assert.ok(!JSON.stringify(prepared).includes('fixture-private-value'));
+  const savedSecret = ['new', 'fixture', 'value'].join('-');
+  const saved = await request('/local-app/credentials/save', { kind: 'openai', endpoint: 'https://api.example.com', secret: savedSecret });
+  assert.equal(saved.status, 200);
+  const savedBinding = await saved.json();
+  assert.ok(!JSON.stringify(savedBinding).includes(savedSecret));
+  const binding = await (await request('/local-app/credentials/binding', { credentialRef: savedBinding.credentialRef })).json();
+  assert.equal(binding.endpoint, 'https://api.example.com'); assert.equal(binding.kind, 'openai');
+  assert.ok(!JSON.stringify(binding).includes(savedSecret));
+  assert.equal((await request('/local-app/credentials/save', { kind: 'github', endpoint: 'https://api.github.com', secret: 'fixture' })).status, 409);
   const id = prepared.changes[0].credentialRef.slice('guan-vault:'.length);
   const mismatch = await request('/local-secure-api/' + id + '/v1/images/generations', {}, { authorization: 'Bearer changed-browser-key' });
   assert.equal(mismatch.status, 409); assert.ok(!(await mismatch.text()).includes('fixture-private-value'));

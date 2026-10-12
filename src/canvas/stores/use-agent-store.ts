@@ -157,8 +157,10 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
         } catch {
             return set({ connectError: silent ? "" : i18n.t("agent.state.invalidUrl") });
         }
-        checkpointLocalStorageWrite("canvas-agent-url", endpoint);
-        checkpointLocalStorageWrite("canvas-agent-token", token);
+        if (token.startsWith("guan-vault:")) {
+            checkpointLocalStorageWrite("canvas-agent-url", endpoint);
+            checkpointLocalStorageWrite("canvas-agent-token", token);
+        }
         // Only set enabled here; LocalAgentPanel's effect owns SSE initialization.
         set({ url: endpoint, token, enabled: true, silentConnect: silent, fragmentBootstrap: false, activity: i18n.t("agent.status.connecting"), connectError: "" });
     },

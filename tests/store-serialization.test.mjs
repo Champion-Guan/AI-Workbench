@@ -169,13 +169,14 @@ test('real sidebar store preserves write-before-state/timer semantics, and unrel
 test('real Agent connection store does not enable connection if token saving fails; explicit retry keeps same keys', async () => {
     const f = fixture();
     const store = load('stores/use-agent-store.ts', { ...f.bindings, URL }, 'useAgentStore');
-    store.setState({ url: 'http://example.invalid/', token: 'fixture-placeholder' });
+    const reference = 'guan-vault:11111111-1111-4111-8111-111111111111';
+    store.setState({ url: 'http://example.invalid/', token: reference });
     const saved = f.localStorage.setItem;
     f.localStorage.setItem = (key, value) => { if (key === 'canvas-agent-token') throw Error('quota'); saved(key, value); };
     assert.throws(() => store.getState().connectAgent(), /quota/); assert.equal(store.getState().enabled, false);
     assert.equal(f.values.get('canvas-agent-url'), 'http://example.invalid'); await assert.rejects(f.flushStorageCheckpoints());
     f.localStorage.setItem = saved; store.getState().connectAgent(); await f.flushStorageCheckpoints();
-    assert.equal(store.getState().enabled, true); assert.equal(f.values.get('canvas-agent-token'), 'fixture-placeholder');
+    assert.equal(store.getState().enabled, true); assert.equal(f.values.get('canvas-agent-token'), reference);
     assert.equal(f.registry.snapshot().storage, 0);
 });
 

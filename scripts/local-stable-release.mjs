@@ -30,7 +30,9 @@ try {
     const info = await lstat(backupDirectory);
     if (!info.isDirectory() || info.isSymbolicLink() || info.uid !== process.getuid() || info.mode & 0o077) throw Error();
     const record = JSON.parse(await bounded(path.join(backupDirectory, 'BOOTSTRAP.json'), 8192));
-    if (record.repository !== approval.repository || !record.backupVerified || record.keychainNamespace !== 'production'
+    const signingRepositoryMatches = record.repository === approval.repository ||
+      record.repository === 'MrGuAm/guan-ai-workbench' && approval.repository === 'Champion-Guan/guan-ai-workbench';
+    if (!signingRepositoryMatches || !record.backupVerified || record.keychainNamespace !== 'production'
       || record.encryptedPrivateFile !== 'signing-key.encrypted.pem' || !Object.hasOwn(STABLE_TRUSTED_KEYS, record.keyId)) throw Error();
     const encrypted = await bounded(path.join(backupDirectory, record.encryptedPrivateFile), 8192);
     if (sha256(encrypted) !== record.encryptedSha256) throw Error();

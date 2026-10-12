@@ -472,7 +472,7 @@ export default {
             },
             runtime: { requestFailed: "Request failed ({{status}})", urlRequired: "JSON URL is required", fetchFailed: "Failed to fetch “{{name}}”: {{error}}", noPrompts: "No valid prompts were parsed from “{{name}}”", invalidRoot: "Invalid “{{name}}” format: the root value must be an array" },
         },
-        fileSecurity: "The JSON file contains API keys and WebDAV credentials. Keep it secure.",
+        fileSecurity: "Exported JSON omits API keys, WebDAV passwords and custom request scripts. Set them up again on the new computer.",
         import: "Import settings",
         export: "Export settings",
         imported: "Settings and preferences imported",

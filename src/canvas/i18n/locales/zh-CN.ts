@@ -472,7 +472,7 @@ export default {
             },
             runtime: { requestFailed: "请求失败（{{status}}）", urlRequired: "JSON URL 不能为空", fetchFailed: "「{{name}}」拉取失败：{{error}}", noPrompts: "「{{name}}」未解析到有效提示词", invalidRoot: "「{{name}}」格式错误：根节点必须是数组" },
         },
-        fileSecurity: "JSON 文件包含 API Key 和 WebDAV 凭据，请妥善保管。",
+        fileSecurity: "导出的 JSON 不含 API Key、WebDAV 密码和自定义请求脚本；在新电脑上需重新配置。",
         import: "导入配置",
         export: "导出配置",
         imported: "配置与用户偏好已导入",

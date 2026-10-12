@@ -8,13 +8,31 @@ import { createActivityFixture } from './helpers/frontend-activity.mjs';
 const read = file => readFileSync(new URL('../src/canvas/' + file, import.meta.url), 'utf8');
 function load(file, bindings, expose) {
   const source = read(file).replace(/^import .*;\s*$/gm, '').replace(/\bexport /g, '');
-  const context = vm.createContext(bindings);
+  const context = vm.createContext({ secureConfig: async (config, webdav) => ({ config, webdav }), ...bindings,
+    useConfigStore: { getState: () => ({}), ...bindings.useConfigStore } });
   vm.runInContext(ts.transpileModule(source + '\nglobalThis.api = ' + expose, { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText, context);
   return context.api;
 }
 function deferred() { let resolve, reject; const promise = new Promise((a, b) => { resolve = a; reject = b; }); return { promise, resolve, reject }; }
 const assertPortableCredentialBindings = load('lib/config-portability.ts', { URL }, 'assertPortableCredentialBindings');
+const createPortableAppConfig = load('services/config-file.ts', { URL }, 'createPortableAppConfig');
 const configFile = { app: 'infinite-canvas', version: 1, config: { channels: [] }, webdav: { directory: 'kept' }, promptSources: { sources: [], schedule: {} } };
+test('portable config export omits credentials and machine-bound routes without changing the active configuration', () => {
+  const id = randomUUID(), secret = 'qa-secret-value';
+  const config = { apiKey: secret, baseUrl: `http://127.0.0.1:5174/local-secure-api/${id}`,
+    channels: [{ apiKey: `guan-vault:${id}`, baseUrl: new URL('/v1?token=hidden', `https://${['user', 'pass'].join(':')}@example.test`).href, models: [{ name: 'fixture', script: `authorization: ${secret}` }] }] };
+  const webdav = { url: `http://127.0.0.1:5174/local-secure-api/${id}`, password: secret, directory: 'workbench' };
+  const exported = createPortableAppConfig(config, webdav, [], {});
+  const serialized = JSON.stringify(exported);
+  assert.equal(exported.credentialsOmitted, true);
+  assert.equal(exported.config.apiKey, ''); assert.equal(exported.config.baseUrl, '');
+  assert.equal(exported.config.channels[0].apiKey, ''); assert.equal(exported.config.channels[0].baseUrl, '');
+  assert.equal(exported.config.channels[0].models[0].script, '');
+  assert.equal(exported.webdav.password, ''); assert.equal(exported.webdav.url, '');
+  assert.equal(exported.webdav.directory, 'workbench');
+  assert.ok(!serialized.includes(secret) && !serialized.includes(`guan-vault:${id}`));
+  assert.equal(config.apiKey, secret); assert.equal(webdav.password, secret);
+});
 test('actual configuration import rejects new roots before reading or changing data while paused', async () => {
   const f = createActivityFixture(), epoch = randomUUID(); let reads = 0, writes = 0;
   const importConfig = load('services/config-file.ts', { ...f, assertPortableCredentialBindings, TextEncoder, i18n: { t: key => key },

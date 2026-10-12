@@ -24,6 +24,21 @@ export function createCredentialHttpHandler({ registry, origin, activityGate, di
       release = activityGate.acquire(isProxy ? 'relay' : 'storage');
       if (isManagement) {
         if (raw === '/local-app/credentials/status' && request.method === 'GET') reply(response, 200, { ok: true, ...await registry.publicStatus(), credentialReadback: 'not-checked' });
+        else if (raw === '/local-app/credentials/save' && request.method === 'POST') {
+          const data = await readJson(request);
+          if (!data || Object.keys(data).some(key => !['kind', 'endpoint', 'secret', 'username'].includes(key))
+            || !['openai', 'gemini', 'webdav', 'agent'].includes(data.kind)) throw new CredentialError('invalid_request');
+          const reference = await registry.createProfile(data);
+          reply(response, 200, { ok: true, credentialRef: reference.credentialRef, baseUrl: origin + '/local-secure-api/' + reference.id });
+        }
+        else if (raw === '/local-app/credentials/binding' && request.method === 'POST') {
+          const data = await readJson(request);
+          if (!data || Object.keys(data).join(',') !== 'credentialRef' || typeof data.credentialRef !== 'string'
+            || !/^guan-vault:[a-f0-9-]{36}$/.test(data.credentialRef)) throw new CredentialError('invalid_request');
+          const profile = await registry.resolve(data.credentialRef.slice('guan-vault:'.length));
+          reply(response, 200, { ok: true, endpoint: profile.endpoint, kind: profile.kind, username: profile.username,
+            credentialRef: data.credentialRef, baseUrl: origin + '/local-secure-api/' + profile.id });
+        }
         else if (raw === '/local-app/credentials/prepare' && request.method === 'POST') {
           const data = await readJson(request);
           if (!data || Object.keys(data).some(key => !['configRecord', 'agent'].includes(key))) throw new CredentialError('invalid_request');
@@ -37,7 +52,7 @@ export function createCredentialHttpHandler({ registry, origin, activityGate, di
         // API Key must never silently continue using the previous credential.
         const ref = 'guan-vault:' + match[1], url = new URL('http://request.invalid' + match[2]);
         const supplied = profile.kind === 'agent' ? url.searchParams.get('token')
-          : profile.kind === 'gemini' ? request.headers['x-goog-api-key']
+          : profile.kind === 'gemini' ? request.headers['x-goog-api-key'] || url.searchParams.get('key')
           : profile.kind === 'webdav' ? (request.headers.authorization === 'Basic ' + Buffer.from(profile.username + ':' + ref).toString('base64') ? ref : null)
           : String(request.headers.authorization || '').replace(/^Bearer /, '');
         if (supplied !== ref) throw new CredentialError('credential_reference_mismatch');

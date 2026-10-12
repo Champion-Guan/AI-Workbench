@@ -84,7 +84,7 @@ test('actual connection effect prefix preserves guards and rejects Token write b
     assert.ok(stop > 0);
     // Execute actual statements before EventSource setup, with a sentinel for the next step.
     const body = statements.slice(0, stop).map(node => node.getText(panelAst)).join('\n');
-    const invoke = enabled => run('const effect = () => { ' + body + '\nconnect(); }', { ...f.bindings, clientReady: true, enabled, token: 'fixture-value', endpoint: 'http://127.0.0.1:9', connect: () => { connects++; } }, 'effect')();
+    const invoke = enabled => run('const effect = () => { ' + body + '\nconnect(); }', { ...f.bindings, clientReady: true, enabled, token: 'guan-vault:11111111-1111-4111-8111-111111111111', endpoint: 'http://127.0.0.1:9', connect: () => { connects++; } }, 'effect')();
     invoke(false); assert.equal(f.writes.length, 0);
     f.failSet('canvas-agent-token'); assert.throws(() => invoke(true)); assert.equal(connects, 0);
     assert.equal(f.values.get('canvas-agent-url'), 'http://127.0.0.1:9'); await assert.rejects(f.flushStorageCheckpoints());

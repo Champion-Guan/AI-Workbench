@@ -27,6 +27,7 @@ import { acknowledgeCodexHistory, activateAgentClient, AgentApiError, discoverAg
 import { AgentChatTimeline, AgentTaskProgress, AgentUsageBar } from "./agent-chat";
 import { AgentChatComposer } from "./agent-chat-composer";
 import { AgentConnectView } from "./agent-connect-view";
+import { secureCredential } from "@/services/secure-credentials";
 import {
     activityDeltaFallback,
     activityDetail,
@@ -343,6 +344,15 @@ export function LocalAgentPanel({ embedded, headless, autoConnect }: { embedded?
 
     useEffect(() => {
         if (!clientReady || !enabled || !token.trim()) return;
+        if (!token.startsWith("guan-vault:")) {
+            let cancelled = false;
+            void secureCredential("agent", endpoint, token).then(binding => {
+                if (!cancelled && useAgentStore.getState().token === token) setAgentState({ url: binding.baseUrl, token: binding.credentialRef });
+            }).catch(() => {
+                if (!cancelled) setAgentState({ enabled: false, connected: false, connectError: "Agent 凭据未能安全保存，原配置已保留。" });
+            });
+            return () => { cancelled = true; };
+        }
         checkpointLocalStorageWrite("canvas-agent-url", endpoint);
         checkpointLocalStorageWrite("canvas-agent-token", token);
         const clientId = clientIdRef.current;

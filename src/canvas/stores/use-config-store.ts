@@ -3,6 +3,7 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { nanoid } from "nanoid";
 import { createCheckpointJsonStorage } from "@/lib/checkpoint-json-storage";
+import { secureChannel } from "@/services/secure-credentials";
 
 import i18n from "@/i18n";
 
@@ -151,7 +152,7 @@ type ConfigStore = {
     configTab: ConfigTabKey;
     shouldPromptContinue: boolean;
     updateConfig: <K extends keyof AiConfig>(key: K, value: AiConfig[K]) => void;
-    importChannelCredentials: (input: { baseUrl?: string | null; apiKey?: string | null }) => ChannelCredentialsImportResult;
+    importChannelCredentials: (input: { baseUrl?: string | null; apiKey?: string | null }) => Promise<ChannelCredentialsImportResult>;
     updateWebdavConfig: <K extends keyof WebdavSyncConfig>(key: K, value: WebdavSyncConfig[K]) => void;
     isAiConfigReady: (config: AiConfig, model: string) => boolean;
     openConfigDialog: (shouldPromptContinue?: boolean, tab?: ConfigTabKey) => void;
@@ -306,10 +307,15 @@ export const useConfigStore = create<ConfigStore>()(
                         [key]: value,
                     },
                 })),
-            importChannelCredentials: (input) => {
+            importChannelCredentials: async (input) => {
                 const currentConfig = get().config;
                 const result = upsertChannelCredentials(currentConfig, input);
-                if (result.config !== currentConfig) set({ config: result.config });
+                if (result.config !== currentConfig) {
+                    const channels = [];
+                    for (const channel of result.config.channels) channels.push(await secureChannel(channel));
+                    if (get().config !== currentConfig) throw new Error("配置已改变，请重新导入渠道。");
+                    set({ config: { ...result.config, channels } });
+                }
                 return { status: result.status, channelName: result.channelName };
             },
             updateWebdavConfig: (key, value) =>

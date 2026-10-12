@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { fetchChannelModels } from "@/services/api/image";
+import { secureChannel } from "@/services/secure-credentials";
 import { guessCapability, type ChannelModel, type ModelChannel } from "@/stores/use-config-store";
 
 // Channel model selector: fetch upstream models or add them manually, then include checked models in the channel list.
@@ -69,7 +70,7 @@ export function ModelSelectModal({ open, channel, selectedNames, onConfirm, onCl
         }
         setLoading(true);
         try {
-            const models = await fetchChannelModels(channel);
+            const models = await fetchChannelModels(await secureChannel(channel));
             setFetched(models);
             setActiveTab("new");
             message.success(t("config.modelSelect.fetched", { count: models.length }));

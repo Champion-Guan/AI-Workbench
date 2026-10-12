@@ -295,7 +295,16 @@ async function pollGeminiVideoTask(config: AiConfig, task: VideoGenerationTask, 
         if (!state.done) return { status: "pending" };
         const uri = state.response?.generateVideoResponse?.generatedSamples?.[0]?.video?.uri;
         if (!uri) return { status: "failed", error: apiText("noPlayableVideo") };
-        const url = uri.includes("key=") ? uri : `${uri}${uri.includes("?") ? "&" : "?"}key=${config.apiKey}`;
+        let url: string;
+        if (config.apiKey.startsWith("guan-vault:")) {
+            const { credentialEndpoint } = await import("@/services/secure-credentials");
+            const endpoint = await credentialEndpoint(config.apiKey);
+            const media = new URL(uri);
+            if (!endpoint || media.origin !== new URL(endpoint).origin || !/^\/v1(?:beta)?\/files\/[\w.-]+(?::download)?$/.test(media.pathname)) throw new Error("视频下载地址与安全凭据渠道不匹配。");
+            media.searchParams.delete("key");
+            media.searchParams.set("key", config.apiKey);
+            url = `${config.baseUrl.replace(/\/+$/, "")}${media.pathname}${media.search}`;
+        } else url = uri.includes("key=") ? uri : `${uri}${uri.includes("?") ? "&" : "?"}key=${config.apiKey}`;
         return { status: "completed", result: await videoResultFromUrl(url, options) };
     } catch (error) {
         throw new Error(readAxiosError(error, apiText("videoTaskQueryFailed")));

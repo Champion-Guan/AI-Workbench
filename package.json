@@ -1,7 +1,7 @@
 {
   "name": "guan-ai-workbench",
   "private": true,
-  "version": "1.0.6",
+  "version": "1.0.7",
   "description": "Local AI image workbench with an embedded infinite canvas.",
   "scripts": {
     "start": "node server.mjs",

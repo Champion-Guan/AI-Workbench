@@ -8,7 +8,7 @@ const methods = { openai: new Set(['GET', 'POST', 'DELETE']), gemini: new Set(['
   agent: new Set(['GET', 'POST']), webdav: new Set(['GET', 'PUT', 'PROPFIND', 'MKCOL']), github: new Set(['GET']) };
 function allowedPath(kind, pathname) {
   if (kind === 'openai') return /^\/v1\/(?:models(?:\/[\w.-]+)?|images\/(?:generations|edits|variations)|chat\/completions|responses(?:\/[\w-]+)?|audio\/(?:speech|transcriptions|translations)|videos(?:\/[\w-]+(?:\/content)?)?)$/.test(pathname);
-  if (kind === 'gemini') return /^\/v1(?:beta)?\/(?:models(?:\/[\w.:-]+)?|operations\/[\w.-]+)$/.test(pathname);
+  if (kind === 'gemini') return /^\/v1(?:beta)?\/(?:models(?:\/[\w.:-]+)?|operations\/[\w.-]+|files\/[\w.-]+(?::download)?)$/.test(pathname);
   if (kind === 'agent') return /^\/(?:events|canvas\/(?:state|activate|result)|agent\/(?:config|local-image|local-file\/reveal|attachments\/[\w-]+|message-assets\/[\w.-]+\/[\w.-]+|codex\/[\w./-]+))$/.test(pathname);
   if (kind === 'github') return /^\/repos\/[\w.-]+\/[\w.-]+\/(?:releases(?:\/(?:latest|\d+|assets\/\d+))?)$/.test(pathname);
   return kind === 'webdav';

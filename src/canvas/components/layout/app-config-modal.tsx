@@ -18,6 +18,7 @@ import { audioFormatOptions, audioVoiceOptions, normalizeAudioSpeedValue } from 
 import { darkSwitchTokens } from "@/lib/app-theme";
 import { createModelChannel, modelOptionsFromChannels, normalizeModelOptionValue, selectableModelsByCapability, useConfigStore, type AiConfig, type ApiCallFormat, type ConfigTabKey, type ModelCapability, type ModelChannel } from "@/stores/use-config-store";
 import { useThemeStore } from "@/stores/use-theme-store";
+import { secureWebdav, credentialEndpoint } from "@/services/secure-credentials";
 
 type ModelGroup = {
     capability: ModelCapability;
@@ -63,6 +64,16 @@ export function AppConfigPanel({ showDoneButton = false, initialTab = "channels"
     const [proxyRoutes, setProxyRoutes] = useState<Record<string, string>>({});
     const config = useConfigStore((state) => state.config);
     const webdav = useConfigStore((state) => state.webdav);
+    const [webdavDraft, setWebdavDraft] = useState(webdav);
+    const [savingWebdav, setSavingWebdav] = useState(false);
+    useEffect(() => {
+        let current = true;
+        setWebdavDraft(webdav);
+        void credentialEndpoint(webdav.password).then(endpoint => {
+            if (current && endpoint) setWebdavDraft(draft => draft === webdav ? { ...webdav, url: endpoint } : draft);
+        }).catch(() => { if (current) message.error("WebDAV 安全凭据绑定读取失败。"); });
+        return () => { current = false; };
+    }, [webdav, message]);
     const updateConfig = useConfigStore((state) => state.updateConfig);
     const updateWebdavConfig = useConfigStore((state) => state.updateWebdavConfig);
     const shouldPromptContinue = useConfigStore((state) => state.shouldPromptContinue);
@@ -84,7 +95,7 @@ export function AppConfigPanel({ showDoneButton = false, initialTab = "channels"
     }, [open, config.channels]);
 
     const saveConfig = (nextConfig: AiConfig) => {
-        (Object.keys(nextConfig) as Array<keyof AiConfig>).forEach((key) => updateConfig(key, nextConfig[key]));
+        useConfigStore.setState({ config: nextConfig });
     };
 
     const finishConfig = () => {
@@ -123,7 +134,21 @@ export function AppConfigPanel({ showDoneButton = false, initialTab = "channels"
     };
 
     const saveChannel = (channel: ModelChannel) => {
-        updateChannels(config.channels.map((item) => (item.id === channel.id ? channel : item)));
+        const current = useConfigStore.getState().config;
+        if (current.channels.find(item => item.id === channel.id) !== editingChannel) throw new Error("渠道已改变，请重新打开编辑；原配置未覆盖。");
+        useConfigStore.setState({ config: withChannels(current, current.channels.map((item) => (item.id === channel.id ? channel : item))) });
+    };
+
+    const saveWebdav = async () => {
+        if (savingWebdav) return;
+        setSavingWebdav(true);
+        try {
+            const secured = await secureWebdav(webdavDraft);
+            if (useConfigStore.getState().webdav !== webdav) throw new Error("WebDAV 配置已改变，请重新保存。");
+            useConfigStore.setState({ webdav: secured });
+            message.success(t("config.saved"));
+        } catch (error) { message.error(error instanceof Error ? error.message : "安全凭据保存失败，原配置已保留。"); }
+        finally { setSavingWebdav(false); }
     };
 
     const testWebdav = async () => {
@@ -184,7 +209,7 @@ export function AppConfigPanel({ showDoneButton = false, initialTab = "channels"
                     <Button icon={<Upload className="size-4" />} onClick={() => configInputRef.current?.click()}>
                         {t("config.import")}
                     </Button>
-                    <Button icon={<Download className="size-4" />} onClick={exportAppConfig}>
+                    <Button icon={<Download className="size-4" />} onClick={() => void exportAppConfig().catch(() => message.error("配置导出未完成，请检查本机凭据服务。"))}>
                         {t("config.export")}
                     </Button>
                     <input ref={configInputRef} type="file" accept="application/json,.json" className="hidden" onChange={(event) => event.target.files?.[0] && void loadConfigFile(event.target.files[0])} />
@@ -319,19 +344,20 @@ export function AppConfigPanel({ showDoneButton = false, initialTab = "channels"
                                     </div>
                                     <div className="grid gap-4 md:grid-cols-2">
                                         <Form.Item label={t("config.webdav.url")} className="mb-4">
-                                            <Input value={webdav.url} placeholder="https://nas.example.com/webdav" onChange={(event) => updateWebdavConfig("url", event.target.value)} />
+                                            <Input disabled={savingWebdav} value={webdavDraft.url} placeholder="https://nas.example.com/webdav" onChange={(event) => setWebdavDraft({ ...webdavDraft, url: event.target.value })} />
                                         </Form.Item>
                                         <Form.Item label={t("config.webdav.directory")} extra={t("config.webdav.directoryDescription", { manifest: WEBDAV_MANIFEST_FILE_NAME })} className="mb-4">
-                                            <Input value={webdav.directory} placeholder="infinite-canvas" onChange={(event) => updateWebdavConfig("directory", event.target.value)} />
+                                            <Input disabled={savingWebdav} value={webdavDraft.directory} placeholder="infinite-canvas" onChange={(event) => setWebdavDraft({ ...webdavDraft, directory: event.target.value })} />
                                         </Form.Item>
                                         <Form.Item label={t("config.webdav.username")} className="mb-0">
-                                            <Input value={webdav.username} autoComplete="username" onChange={(event) => updateWebdavConfig("username", event.target.value)} />
+                                            <Input disabled={savingWebdav} value={webdavDraft.username} autoComplete="username" onChange={(event) => setWebdavDraft({ ...webdavDraft, username: event.target.value })} />
                                         </Form.Item>
                                         <Form.Item label={t("config.webdav.password")} className="mb-0">
-                                            <Input.Password value={webdav.password} autoComplete="current-password" onChange={(event) => updateWebdavConfig("password", event.target.value)} />
+                                            <Input.Password disabled={savingWebdav} value={webdavDraft.password} autoComplete="off" onChange={(event) => setWebdavDraft({ ...webdavDraft, password: event.target.value })} />
                                         </Form.Item>
                                     </div>
                                     <div className="mt-4 flex flex-wrap items-center gap-2">
+                                        <Button loading={savingWebdav} onClick={() => void saveWebdav()}>保存 WebDAV 配置</Button>
                                         <Button icon={<Wifi className="size-4" />} disabled={!webdavReady || syncingWebdav} loading={testingWebdav} onClick={() => void testWebdav()}>
                                             {t("config.webdav.test")}
                                         </Button>
