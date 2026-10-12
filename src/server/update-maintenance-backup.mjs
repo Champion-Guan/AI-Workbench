@@ -18,7 +18,7 @@ async function inventory(root, { liveChrome = false } = {}) {
       const file = path.join(directory, entry), info = await lstat(file);
       // Chrome's process coordination symlinks are not user data and cannot
       // be restored to a different process. No other links are exempted.
-      if (liveChrome && directory === root && ['SingletonLock', 'SingletonSocket', 'SingletonCookie'].includes(entry)
+      if (liveChrome && directory === root && ['RunningChromeVersion', 'SingletonLock', 'SingletonSocket', 'SingletonCookie'].includes(entry)
         && info.isSymbolicLink()) continue;
       if (info.isSymbolicLink() || info.uid !== process.getuid()) throw Error('update_backup_source_unknown');
       if (info.isDirectory()) await visit(file);
