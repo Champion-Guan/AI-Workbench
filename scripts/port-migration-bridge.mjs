@@ -10,7 +10,8 @@ import { runtimePaths, privateDirectory, writePrivateFile } from '../src/server/
 const projectRoot = fileURLToPath(new URL('../', import.meta.url));
 const paths = runtimePaths({ projectRoot });
 const source = 'http://127.0.0.1:5174', target = 'http://127.0.0.1:8888';
-const automatic = process.argv[2] === '--automatic';
+const portable = process.argv[2] === '--automatic-portable';
+const automatic = process.argv[2] === '--automatic' || portable;
 const resume = automatic ? undefined : process.argv[2];
 if (process.argv.length > 3 || resume && (!path.isAbsolute(resume) || path.dirname(resume) !== path.join(paths.root, 'backups')
   || !/^port8888-[a-f0-9-]{36}$/.test(path.basename(resume)))) throw Error('migration_arguments_invalid');
@@ -35,9 +36,9 @@ if (!resume) {
 await cp(paths.data, path.join(directory, 'data'), { recursive: true, force: false, errorOnExist: true });
 if (JSON.stringify(before) !== JSON.stringify(await inventory(paths.data))
   || JSON.stringify(before) !== JSON.stringify(await inventory(path.join(directory, 'data')))) throw Error('backup_changed');
-for (const name of ['installation', 'updater-deployment'])
+if (!portable) for (const name of ['installation', 'updater-deployment'])
   await cp(path.join(paths.root, name, name === 'installation' ? 'current.json' : 'deployment.json'), path.join(directory, name + '.json'));
-await writePrivateFile(path.join(directory, 'PRIVATE-BACKUP.json'), JSON.stringify({ format: 1, files: before }));
+await writePrivateFile(path.join(directory, 'PRIVATE-BACKUP.json'), JSON.stringify({ format: 1, mode: portable ? 'portable' : 'managed', files: before }));
 }
 const nonce = randomUUID(), prefix = '/migration-' + nonce;
 const modules = Object.fromEntries(await Promise.all(['port-migration.mjs', 'browser-backup-codec.mjs'].map(async name =>

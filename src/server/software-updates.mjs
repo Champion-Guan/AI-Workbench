@@ -8,7 +8,8 @@ import { STABLE_REPOSITORY, isWorkbenchRepository, isPublicUpdateRepository, sam
 export const UPDATE_INTERVAL_MS = 6 * 60 * 60 * 1000;
 const defaults = () => ({ version: 1, repository: STABLE_REPOSITORY, autoCheck: true, autoDownload: true, autoInstall: false, network: 'auto' });
 export class SoftwareUpdates {
-  constructor({ directory, auth, currentVersion, downloader = null, manager = null, proxyUrl = () => null, readRelease = readGitHubStable, now = Date.now }) {
+  constructor({ directory, auth, currentVersion, downloader = null, manager = null, proxyUrl = () => null, readRelease = readGitHubStable, now = Date.now, lockRepository = true }) {
+    this.lockRepository = lockRepository;
     this.downloader = downloader;
     this.manager = manager; this.staging = null; this.stageResult = null;
     this.stopped = false;
@@ -40,7 +41,7 @@ export class SoftwareUpdates {
       const p = JSON.parse(raw);
       if (p.version !== 1 || p.repository !== '' && !validRepository(p.repository) || ['autoCheck', 'autoDownload', 'autoInstall'].some(k => typeof p[k] !== 'boolean')
         || !['auto', 'direct', 'proxy'].includes(p.network) || Object.keys(p).some(k => !Object.hasOwn(defaults(), k))) throw Error();
-      return isWorkbenchRepository(p.repository) ? { ...p, repository: STABLE_REPOSITORY } : p;
+      return this.lockRepository || isWorkbenchRepository(p.repository) ? { ...p, repository: STABLE_REPOSITORY } : p;
     } catch { throw new UpdateError('update_storage_invalid'); }
   }
   async status() {
@@ -62,11 +63,13 @@ export class SoftwareUpdates {
   }
   configure(input) {
     return this.serial(async () => {
+      if (this.lockRepository && input?.repository !== undefined && input.repository !== STABLE_REPOSITORY)
+        throw new UpdateError('update_repository_locked');
       if (!input || typeof input !== 'object' || Array.isArray(input) || Object.keys(input).some(k => !['repository', 'autoCheck', 'autoDownload', 'autoInstall', 'network'].includes(k))
         || input.repository !== undefined && input.repository !== '' && !validRepository(input.repository)
         || ['autoCheck', 'autoDownload', 'autoInstall'].some(k => input[k] !== undefined && typeof input[k] !== 'boolean')
         || input.network !== undefined && !['auto', 'direct', 'proxy'].includes(input.network)) throw new UpdateError('invalid_update_preferences');
-      const old = await this.preferences(), next = { ...old, ...input };
+      const old = await this.preferences(), next = { ...old, ...input, ...(this.lockRepository ? { repository: STABLE_REPOSITORY } : {}) };
       await this.history(old.repository); // Bad history is preserved, not silently reset.
       await writePrivateJson(this.file, next);
       if (next.repository !== old.repository) {

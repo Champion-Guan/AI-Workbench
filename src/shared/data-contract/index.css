@@ -34,7 +34,7 @@ html[data-workbench-theme="dark"] #guan-data-contract-root {
   gap: 8px;
   flex: 1 1 0;
   min-width: 0;
-  margin-left: auto;
+  margin-left: 24px;
   /*
    * Keep the header controls in the normal workbench layer. The settings
    * dialog owns a higher stacking context, so its backdrop can cover these

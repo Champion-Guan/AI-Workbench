@@ -20,7 +20,7 @@ async function fixture(t, options = {}) {
   const keys = new Map();
   const auth = new UpdateAuth({ directory, vault: { insert: async (id, value) => keys.set(id, value), read: async id => keys.get(id) ?? null } });
   let time = Date.parse('2026-10-10T12:00:00Z'), calls = 0;
-  const updates = new SoftwareUpdates({ directory, auth, currentVersion: '1.0.3', now: () => time,
+  const updates = new SoftwareUpdates({ directory, auth, currentVersion: '1.0.3', now: () => time, lockRepository: false,
     readRelease: async () => { calls++; return selectStableRelease([release()]); }, ...options });
   return { directory, keys, auth, updates, calls: () => calls, advance: () => { time += 61000; } };
 }
@@ -96,7 +96,7 @@ test('defaults, repository binding, startup/six-hour timer, disabled auto check 
   await f.updates.tail; assert.equal(f.calls(), 0); assert.equal(interval, UPDATE_INTERVAL_MS);
   await f.updates.configure({ autoCheck: true }); tick(); await f.updates.tail;
   assert.equal(f.calls(), 1); f.updates.stop();
-  const reloaded = new SoftwareUpdates({ directory: f.directory, auth: f.auth, currentVersion: '1.0.3' });
+  const reloaded = new SoftwareUpdates({ directory: f.directory, auth: f.auth, currentVersion: '1.0.3', lockRepository: false });
   assert.equal((await reloaded.preferences()).repository, 'owner/repo'); assert.equal((await reloaded.status()).install.allowed, false);
   assert.equal((await reloaded.status()).history.length, 1); assert.equal((await reloaded.status()).lastCheckedAt, '2026-10-10T12:00:00.000Z');
 });

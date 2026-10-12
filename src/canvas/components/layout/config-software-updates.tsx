@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Alert, App, Button, Input, Select, Switch } from "antd";
+import { App, Button, Select, Switch } from "antd";
 import { useVersionCheck } from "@/hooks/use-version-check";
 import { VersionReleaseModal } from "@/components/layout/version-release-modal";
 import { updateMessages, installationMessages, updateRequest, type UpdatePreferences } from "@/services/software-updates";
@@ -7,10 +7,7 @@ import { updateMessages, installationMessages, updateRequest, type UpdatePrefere
 export function ConfigSoftwareUpdates() {
     const { message, modal } = App.useApp();
     const { status, refresh, checking, checkLatestRelease } = useVersionCheck();
-    const [repository, setRepository] = useState("");
     const [saving, setSaving] = useState(false);
-    const savedRepository = status?.preferences.repository;
-    useEffect(() => { if (savedRepository !== undefined) setRepository(savedRepository); }, [savedRepository]);
     const save = async (input: Partial<UpdatePreferences>) => {
         setSaving(true);
         try { await updateRequest("preferences", input); await refresh(); message.success("软件更新设置已保存"); }
@@ -54,11 +51,6 @@ export function ConfigSoftwareUpdates() {
                 <div>当前版本：{status?.currentVersion || "读取中"}</div><div>最新稳定版本：{status?.latest?.version || "尚未获得"}</div>
                 <div>更新渠道：{status?.channel || "GitHub Public / Stable"}</div><div>上次检查：{status?.lastCheckedAt ? new Date(status.lastCheckedAt).toLocaleString() : "尚未检查"}</div>
             </div>
-            <div className="space-y-2"><label htmlFor="guan-updates-repository">更新仓库（所有者/仓库）</label>
-                <div className="flex gap-2"><Input id="guan-updates-repository" aria-label="更新仓库" value={repository} maxLength={201} placeholder="Champion-Guan/AI-Workbench" onChange={e => setRepository(e.target.value)} /><Button loading={saving} onClick={() => void save({ repository: repository.trim() })}>保存仓库</Button></div>
-            </div>
-            <Alert type="info" showIcon message="公开 Stable 更新无需 GitHub Token" description="正式更新仍需通过内置 Ed25519 公钥验签和完整性校验。个人 API Key 与配置不会随更新包分发。选择其他私有仓库时，仍需本机 Keychain 授权。" />
-            <div>授权状态：{status?.authorization === "not-required" ? "公开渠道，无需授权" : status?.authorization === "configured-not-verified" ? "已有本机授权记录，检查时验证权限" : "需要本机授权"}</div>
             <div className="flex flex-wrap items-center gap-5">
                 <label className="flex items-center gap-2"><Switch aria-label="自动检查更新" checked={prefs?.autoCheck ?? true} disabled={!prefs || saving} onChange={autoCheck => void save({ autoCheck })} />自动检查（启动及每 6 小时）</label>
                 <label className="flex items-center gap-2"><Switch aria-label="自动下载更新" checked={prefs?.autoDownload ?? true} disabled={!prefs || saving} onChange={autoDownload => void save({ autoDownload })} />自动下载（仅可信签名包）</label>

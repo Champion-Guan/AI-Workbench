@@ -54,6 +54,15 @@ test('arm64-only manifest is trusted; Intel-only or duplicate architectures are 
     else assert.throws(() => verifyStableManifest(bytes, signature, f.options), /stable_manifest_invalid/);
   }
 });
+test('AI-Workbench archive name is signed and version bound, while historical package names remain readable', () => {
+  const f = signed();
+  const manifest = { ...f.manifest, packages: [{ ...f.manifest.packages[0], name: 'AI-Workbench-v1.1.0-macos-arm64.zip' }] };
+  const bytes = Buffer.from(JSON.stringify(manifest, null, 2) + '\n');
+  assert.equal(verifyStableManifest(bytes, sign(null, bytes, f.privateKey), f.options).selected.name, manifest.packages[0].name);
+  manifest.packages[0].name = 'AI-Workbench-v1.2.0-macos-arm64.zip';
+  const invalid = Buffer.from(JSON.stringify(manifest, null, 2) + '\n');
+  assert.throws(() => verifyStableManifest(invalid, sign(null, invalid, f.privateKey), f.options), /stable_manifest_invalid/);
+});
 test('corrupted signature, forged key, duplicate JSON fields and noncanonical manifest fail closed', () => {
   const f = signed();
   assert.throws(() => verifyStableManifest(f.bytes, Buffer.alloc(64), f.options), /signature_invalid/);
@@ -124,7 +133,7 @@ test('asset body overflow, upstream exception and authorization expiry yield fix
 });
 test('SoftwareUpdates triggers background trusted download, hides asset IDs, and cancels on repository switch', async t => {
   const f = await fixture(t);
-  const updates = new SoftwareUpdates({ directory: f.directory, currentVersion: '1.0.3', downloader: f.downloader,
+  const updates = new SoftwareUpdates({ directory: f.directory, currentVersion: '1.0.3', downloader: f.downloader, lockRepository: false,
     auth: { metadata: async () => ({ repository: 'owner/repo' }), token: async () => token },
     readRelease: async () => ({ ...f.release, publishedAt: '2026-10-10T00:00:00.000Z', notes: 'notes', verification: 'not-verified' }) });
   await updates.configure({ repository: 'owner/repo' }); await updates.check();
@@ -135,7 +144,7 @@ test('SoftwareUpdates triggers background trusted download, hides asset IDs, and
 });
 test('late check completion cannot start a new download after update service shutdown', async t => {
   const f = await fixture(t); let unblock;
-  const updates = new SoftwareUpdates({ directory: f.directory, currentVersion: '1.0.3', downloader: f.downloader,
+  const updates = new SoftwareUpdates({ directory: f.directory, currentVersion: '1.0.3', downloader: f.downloader, lockRepository: false,
     auth: { metadata: async () => ({ repository: 'owner/repo' }), token: async () => token },
     readRelease: async () => { await new Promise(resolve => { unblock = resolve; }); return f.release; } });
   await updates.configure({ repository: 'owner/repo' }); const check = updates.check();

@@ -2,11 +2,14 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawn, execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { readFile } from 'node:fs/promises';
 import { once } from 'node:events';
 import { inspectMigrationPorts } from './lib/port-migration-preflight.mjs';
-import { runtimePaths } from '../src/server/runtime-paths.mjs';
+import { runtimePaths, writePrivateFile } from '../src/server/runtime-paths.mjs';
 import { migrationPackage } from './lib/port-migration-package.mjs';
+import { migrationInstallationMode, inspectPortableService } from './lib/portable-handoff.mjs';
+import { migrationNetworks } from './lib/migration-network.mjs';
+import { desktopShortcut } from './lib/macos-launcher.mjs';
+import { homedir } from 'node:os';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const execute = promisify(execFile);
@@ -27,24 +30,27 @@ async function main() {
     bridge.kill('SIGTERM'); await exited;
   };
   try {
-    console.log('仅适用于已接入独立 launchd 更新器的 macOS arm64 工作台。旧个人包/未接管服务请先安全接入。');
-    // Fail before creating any backup/bridge if the old installation is unmanaged.
     const paths = runtimePaths({ projectRoot: root });
-    for (const item of ['installation/current.json', 'updater-deployment/deployment.json'])
-      await readFile(path.join(paths.root, item));
-    const previous = JSON.parse(await readFile(path.join(paths.root, 'installation/current.json')));
-    if (!/^[0-9A-Za-z.+-]{1,160}$/.test(previous.id || '')) throw Error('migration_installation_invalid');
-    const { workbenchPageCensus: oldCensus } = await import(path.join(paths.root, 'installation/versions', previous.id, 'src/server/workbench-page-census.mjs'));
+    const installationMode = await migrationInstallationMode(paths.root);
+    const legacy = installationMode === 'portable'
+      ? await inspectPortableService({ version: state.version, privateRoot: paths.root }) : null;
     const { workbenchPageCensus } = await import('../src/server/workbench-page-census.mjs');
     const closed = async () => {
-      for (const census of [oldCensus, workbenchPageCensus]) {
-        const value = await census(); if (!value.workbenchPagesClosed || value.blockers.length) throw Error('migration_pages_open');
-      }
+      const value = await workbenchPageCensus({ ports: [5174, 8888] });
+      if (!value.workbenchPagesClosed || value.blockers.length) throw Error('migration_pages_open');
     };
+    console.log(legacy ? '检测到解压运行的 v1.0.7，将备份并首次接入独立更新器，再迁移到 8888。' : '检测到已接管工作台，将迁移到 8888。');
+    console.log('运行本脚本表示开始维护。请事先保存画布、结束生成任务并关闭工作台页面；不会关闭其他网站。');
     await closed();
     console.log('正在获取并核验正式 arm64 安装包（可信签名、SHA-256 及文件清单）…');
     const artifact = await migrationPackage({ directory: args[0] ? path.resolve(args[0]) : undefined,
-      updates: paths.updates, currentVersion: state.version });
+      updates: paths.updates, currentVersion: state.version, networks: await migrationNetworks(paths),
+      onProgress: value => {
+        if (value.phase === 'checking-release') console.log(`正在检查正式版本（${value.network === 'proxy' ? '本机代理' : '直连'}）…`);
+        else if (value.phase === 'network-failed') console.log('当前连接失败，尝试下一个本机网络通道；不会修改代理设置。');
+        else if (value.state === 'downloading') console.log(`安装包下载：${value.progress}%`);
+        else if (value.state === 'verifying-manifest') console.log('正在下载并验证签名清单…');
+      } });
     const artifacts = artifact.directory;
     if (cancelled) throw Error('migration_cancelled');
     await closed();
@@ -52,7 +58,7 @@ async function main() {
     let buffer = '', ready, rejectReady;
     const started = new Promise((resolve, reject) => { ready = resolve; rejectReady = reject; });
     rejectStarted = rejectReady;
-    bridge = spawn(process.execPath, [path.join(root, 'scripts/port-migration-bridge.mjs'), '--automatic'], {
+    bridge = spawn(process.execPath, [path.join(root, 'scripts/port-migration-bridge.mjs'), legacy ? '--automatic-portable' : '--automatic'], {
       cwd: root, stdio: ['ignore', 'pipe', 'pipe'], env: process.env,
     });
     let sourceBackedUp = false, verified = false;
@@ -79,6 +85,7 @@ async function main() {
     const url = new URL(info.migrationUrl);
     if (url.origin !== 'http://127.0.0.1:8888' || !/^\/migration-[a-f0-9-]{36}$/.test(url.pathname)
       || path.dirname(info.backupDirectory) !== paths.backups) throw Error('migration_bridge_invalid');
+    if (legacy) await writePrivateFile(path.join(info.backupDirectory, 'PORTABLE-SERVICE.json'), JSON.stringify(legacy), { exclusive: true });
     // Use the existing Chrome profile/extension, never a new empty user-data-dir.
     // Restored customer workbench tabs still veto export and installation.
     await execute('/usr/bin/open', ['-a', 'Google Chrome']);
@@ -98,23 +105,45 @@ async function main() {
     if (cancelled) throw Error('migration_cancelled');
     await stopBridge(); // Release only our exact bridge process, never kill by port.
     console.log('正在核验签名、暂存版本并切换独立服务…');
-    const installer = spawn(process.execPath, [path.join(root, 'scripts/migrate-production-port.mjs'), 'install', artifacts, info.backupDirectory],
+    const installerArgs = legacy
+      ? [path.join(root, 'scripts/bootstrap-stable-updater.mjs'), '--migration-bootstrap', artifacts, info.backupDirectory]
+      : [path.join(root, 'scripts/migrate-production-port.mjs'), 'install', artifacts, info.backupDirectory];
+    const installer = spawn(process.execPath, installerArgs,
       { cwd: root, env: process.env, stdio: 'inherit' });
     const [code] = await once(installer, 'exit');
     if (code !== 0) throw Error('migration_install_unconfirmed');
     const health = await inspectMigrationPorts();
     if (health.state !== 'already-migrated' || health.version !== artifact.version) throw Error('migration_health_unconfirmed');
     console.log(`迁移完成：http://localhost:8888\n旧浏览器数据保留。私人备份：${info.backupDirectory}`);
+    try {
+      await desktopShortcut({ desktop: path.join(homedir(), 'Desktop'), node: process.execPath, root });
+      console.log('桌面 AI-Workbench 入口已就绪。独立后台服务运行后可以关闭终端。');
+    } catch { console.log('桌面入口未创建（已有同名文件或权限不足），后台服务仍正常运行。'); }
     await execute('/usr/bin/open', ['http://localhost:8888']);
   } finally {
     await stopBridge(); process.removeListener('SIGINT', cancel); process.removeListener('SIGTERM', cancel);
   }
 }
 main().catch(error => {
+  const reason = error?.code || error?.message;
   const messages = { migration_pages_open: '请先保存并关闭 5174/8888 工作台页面。',
+    migration_installation_incomplete: '更新器安装记录不完整，已停止，不能将它当成普通便携服务接管。',
+    migration_recovery_required: '存在未完成的首次接管或更新事务，请先恢复，不会覆盖记录。',
+    migration_portable_version_unsupported: '首次接管目前支持解压运行的 v1.0.7，请先运行该版本。',
+    migration_service_identity_unknown: '无法核实 5174 服务的进程和 v1.0.7 目录，旧服务没有停止。',
+    migration_private_root_mismatch: '旧服务使用了不同的私人数据目录，已停止，避免迁移到错误位置。',
     migration_browser_unverified: '浏览器迁移未通过：需要同一 Chrome 配置中已加载 1.0.1 版工作台扩展。',
-    migration_download_failed: '正式安装包下载或验证失败，请检查 GitHub 网络连接后重试。' };
-  console.error(messages[error?.message] || '预检查、下载验证或服务切换未通过。');
-  console.error('迁移安全停止，旧数据和备份均保留。目标已有数据、端口被占用、未完成浏览器校验或未接入独立更新器时不能继续。请勿清空数据或强杀端口；查阅 docs/8888生产迁移.md。');
+    migration_download_failed: '正式安装包下载失败，请检查 GitHub 网络连接后重试。',
+    github_network_failed: '无法连接 GitHub：直连和已发现的本机代理均未成功。',
+    asset_download_failed: 'GitHub 安装包连接失败：请确认代理允许 github.com 和 release-assets.githubusercontent.com。',
+    asset_download_timeout: 'GitHub 安装包下载超时，请检查代理连接后重试。',
+    rate_limited: 'GitHub 接口限流，请稍后重试。',
+    asset_access_denied: 'GitHub 下载被拒绝或限流，请稍后重试。',
+    signature_invalid: '正式安装包签名验证失败，已停止；不会绕过签名。',
+    package_integrity_failed: '安装包内容不完整或损坏，已停止。',
+    disk_space_insufficient: '磁盘空间不足，请释放空间后重试。' };
+  console.error(messages[reason] || '预检查、下载验证或服务切换未通过。');
+  if (/^[a-z_]{1,80}$/.test(reason || '')) console.error(`错误代码：${reason}`);
+  console.error('迁移安全停止，旧数据和备份均保留。请勿清空数据或强杀端口；查阅 docs/8888生产迁移.md。');
   process.exitCode = 1;
 });

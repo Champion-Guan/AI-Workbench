@@ -15,7 +15,7 @@ const nativeBuild = useNativeHelper ? await verifyNativeKeychainBuild(root, path
 if (useBuiltCanvas) await verifyCanvasBuild(root, path.join(root, 'src/canvas/dist'));
 const version = JSON.parse(await readFile(path.join(root, 'package.json'), 'utf8')).version;
 const build = new Date().toISOString().replace(/[-:]/g, '').replace(/\..*/, '').replace('T', '-');
-const name = `guan-ai-workbench-v${version}-${build}`;
+const name = `AI-Workbench-v${version}-${build}`;
 const out = path.join(root, 'output/releases');
 const stage = path.join(out, name);
 await mkdir(out, { recursive: true, mode: 0o700 });
@@ -38,6 +38,12 @@ for (const entry of ['scripts/run-update-manager.mjs', 'scripts/run-update-super
   await cp(path.join(root, entry), path.join(stage, entry));
 }
 await cp(path.join(root, 'browser/managed-workbench'), path.join(stage, 'browser/managed-workbench'), { recursive: true });
+await cp(path.join(root, 'scripts/lib/portable-handoff.mjs'), path.join(stage, 'scripts/lib/portable-handoff.mjs'));
+await cp(path.join(root, 'scripts/lib/migration-network.mjs'), path.join(stage, 'scripts/lib/migration-network.mjs'));
+for (const entry of ['scripts/start-macos.mjs', 'scripts/lib/macos-launcher.mjs', 'scripts/open-managed-workbench.mjs']) {
+  await mkdir(path.dirname(path.join(stage, entry)), { recursive: true });
+  await cp(path.join(root, entry), path.join(stage, entry));
+}
 await cp(path.join(root, 'docs/MANAGED-BROWSER.md'), path.join(stage, 'docs/MANAGED-BROWSER.md'));
 await cp(path.join(root, 'docs/公开仓库与8888端口.md'), path.join(stage, 'docs/公开仓库与8888端口.md'));
 await cp(path.join(root, 'docs/8888生产迁移.md'), path.join(stage, 'docs/8888生产迁移.md'));

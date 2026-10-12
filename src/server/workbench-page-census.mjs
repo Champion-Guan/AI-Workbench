@@ -13,9 +13,12 @@ const browsers = [
 
 // Read-only Apple Events. URL values remain inside the browser scripting
 // operation: neither other-site URLs, titles nor credentials are returned.
-export function workbenchTabScript(bundleId, pid) {
+export function workbenchTabScript(bundleId, pid, ports = [8888]) {
   if (!browsers.some(([, id]) => id === bundleId) || !Number.isSafeInteger(pid) || pid < 1)
     throw Error('install_page_inventory_unavailable');
+  if (!Array.isArray(ports) || !ports.length || ports.some(port => ![5174, 8888].includes(port)))
+    throw Error('install_page_inventory_unavailable');
+  const origins = ports.flatMap(port => [`http://127.0.0.1:${port}`, `http://localhost:${port}`]);
   // Direct PID Apple Events are essential. JXA Application(pid) can still
   // resolve via bundle id and silently address another Chrome instance.
   return `ObjC.import('Foundation');
@@ -48,7 +51,7 @@ function visit(value) {
   } else {
     var tabAddress = ObjC.unwrap(value.stringValue);
     if (typeof tabAddress !== 'string') throw Error('Unknown tab');
-    if (['http://127.0.0.1:8888', 'http://localhost:8888'].some(function(origin) {
+    if ([${origins.map(origin => `'${origin}'`).join(', ')}].some(function(origin) {
       return tabAddress === origin || ['/', '?', '#'].some(function(separator) { return tabAddress.startsWith(origin + separator); });
     })) workbenchCount++;
   }
@@ -84,7 +87,9 @@ export const workbenchBrowserHosts = output => [...new Set(workbenchBrowserProce
 
 // Closing workbench windows is one veto, never proof that remote tasks ended.
 // Coordinator still requires exact per-version consent, ledger and freeze.
-export async function workbenchPageCensus({ platform = process.platform, execute = run } = {}) {
+export async function workbenchPageCensus({ platform = process.platform, execute = run, ports = [8888] } = {}) {
+  // Validate even when no browser is running.
+  workbenchTabScript('com.google.Chrome', 1, ports);
   if (platform !== 'darwin') throw Error('install_page_inventory_unavailable');
   const options = { encoding: 'utf8', timeout: 5000, maxBuffer: 2 * 1024 * 1024,
     env: { PATH: '/usr/bin:/bin', LC_ALL: 'C' } };
@@ -93,7 +98,7 @@ export async function workbenchPageCensus({ platform = process.platform, execute
     const before = await processList(), blockers = []; let pages = 0;
     for (const { name, bundleId, pid } of before) {
       if (!bundleId) { blockers.push(name); continue; }
-      const reply = (await execute('/usr/bin/osascript', ['-l', 'JavaScript', '-e', workbenchTabScript(bundleId, pid)], options)).stdout.trim();
+      const reply = (await execute('/usr/bin/osascript', ['-l', 'JavaScript', '-e', workbenchTabScript(bundleId, pid, ports)], options)).stdout.trim();
       if (!/^(?:0|[1-9][0-9]{0,4})$/.test(reply)) throw Error();
       const count = Number(reply); pages += count;
       if (count) blockers.push(name);

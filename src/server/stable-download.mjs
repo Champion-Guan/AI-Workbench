@@ -33,7 +33,8 @@ export class StableDownload {
       .finally(() => { this.pending = null; this.controller = null; });
     return this.pending;
   }
-  async run({ repository, release, token, proxyUrl, currentVersion }) {
+  async run({ repository, release, token, proxyUrl, currentVersion, downloadTimeoutMs = 10 * 60 * 1000 }) {
+    if (!Number.isSafeInteger(downloadTimeoutMs) || downloadTimeoutMs < 1000 || downloadTimeoutMs > 10 * 60 * 1000) throw new UpdateError('asset_request_invalid');
     if (!Object.keys(this.keys).length) throw new UpdateError('signing_trust_not_configured');
     const signal = this.controller.signal;
     const asset = name => {
@@ -67,7 +68,7 @@ export class StableDownload {
       handle = await open(part, constants.O_CREAT | constants.O_EXCL | constants.O_WRONLY | constants.O_NOFOLLOW, 0o600);
       const hash = createHash('sha256'); let count = 0;
       this.state.state = 'downloading';
-      const size = await timed(10 * 60 * 1000, downloadSignal => this.readAsset({ repository, asset: packageAsset, token, proxyUrl, maxBytes: selected.size,
+      const size = await timed(downloadTimeoutMs, downloadSignal => this.readAsset({ repository, asset: packageAsset, token, proxyUrl, maxBytes: selected.size,
         signal: downloadSignal,
         onChunk: async chunk => {
           signal.throwIfAborted(); count += chunk.length;

@@ -21,7 +21,7 @@ export async function buildStablePackage({ root, portableDirectory, runtimeDirec
   const runtime = await verifyStableRuntime(runtimeDirectory, process.arch);
   const identity = JSON.parse(execFileSync(path.join(runtimeDirectory, 'node'), ['-p', 'JSON.stringify({version:process.version,arch:process.arch,platform:process.platform})'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }));
   if (identity.version !== runtime.nodeVersion || identity.arch !== process.arch || identity.platform !== 'darwin') throw Error('Bundled runtime failed native execution');
-  const name = `guan-ai-workbench-v${version}-macos-${process.arch}`, stage = path.join(output, name);
+  const name = `AI-Workbench-v${version}-macos-${process.arch}`, stage = path.join(output, name);
   await privateDirectory(output);
   await cp(portableDirectory, stage, { recursive: true, force: false, errorOnExist: true });
   await privateDirectory(path.join(stage, 'runtime'));

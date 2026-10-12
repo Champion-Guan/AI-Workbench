@@ -55,7 +55,7 @@ export function AppConfigPanel({ showDoneButton = false, initialTab = "channels"
     const { message } = App.useApp();
     const { i18n, t } = useTranslation();
     const configInputRef = useRef<HTMLInputElement>(null);
-    const [activeTab, setActiveTab] = useState<ConfigTabKey>(initialTab);
+    const [activeTab, setActiveTab] = useState<ConfigTabKey>(initialTab === "webdav" ? "local-storage" : initialTab);
     const [editingChannelId, setEditingChannelId] = useState("");
     const [testingWebdav, setTestingWebdav] = useState(false);
     const [syncingWebdav, setSyncingWebdav] = useState(false);
@@ -67,13 +67,14 @@ export function AppConfigPanel({ showDoneButton = false, initialTab = "channels"
     const [webdavDraft, setWebdavDraft] = useState(webdav);
     const [savingWebdav, setSavingWebdav] = useState(false);
     useEffect(() => {
+        if (activeTab !== "webdav") return;
         let current = true;
         setWebdavDraft(webdav);
         void credentialEndpoint(webdav.password).then(endpoint => {
             if (current && endpoint) setWebdavDraft(draft => draft === webdav ? { ...webdav, url: endpoint } : draft);
         }).catch(() => { if (current) message.error("WebDAV 安全凭据绑定读取失败。"); });
         return () => { current = false; };
-    }, [webdav, message]);
+    }, [webdav, message, activeTab]);
     const updateConfig = useConfigStore((state) => state.updateConfig);
     const updateWebdavConfig = useConfigStore((state) => state.updateWebdavConfig);
     const shouldPromptContinue = useConfigStore((state) => state.shouldPromptContinue);
@@ -84,7 +85,7 @@ export function AppConfigPanel({ showDoneButton = false, initialTab = "channels"
     const editingChannel = config.channels.find((channel) => channel.id === editingChannelId) || null;
     const locale = i18n.resolvedLanguage as AppLocale;
     useEffect(() => {
-        if (open) setActiveTab(initialTab);
+        if (open) setActiveTab(initialTab === "webdav" ? "local-storage" : initialTab);
     }, [initialTab, open]);
     useEffect(() => {
         if (open) window.dispatchEvent(new Event("guan-config-panel-open"));
@@ -223,7 +224,6 @@ export function AppConfigPanel({ showDoneButton = false, initialTab = "channels"
                     setConfigTab(nextTab);
                 }}
                 items={[
-                    { key: "software-updates", label: "软件更新", children: <ConfigSoftwareUpdates /> },
                     {
                         key: "channels",
                         label: t("config.tabs.channels"),
@@ -377,7 +377,8 @@ export function AppConfigPanel({ showDoneButton = false, initialTab = "channels"
                         forceRender: true,
                         children: <ConfigLocalStorage active={open} />,
                     },
-                ]}
+                    { key: "software-updates", label: "软件更新", children: <ConfigSoftwareUpdates /> },
+                ].filter(item => item.key !== "webdav")}
             />
             {showDoneButton ? (
                 <div className="mt-4 flex justify-end">

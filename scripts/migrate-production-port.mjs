@@ -32,7 +32,7 @@ async function main() {
   try { await lstat(archive); }
   catch (error) {
     if (error.code !== 'ENOENT') throw error;
-    if (!/^guan-ai-workbench-v\d+\.\d+\.\d+-macos-arm64\.zip$/.test(manifest.packages[0]?.name || '')) throw Error('port_migration_artifact_invalid');
+    if (!/^(?:AI-Workbench|guan-ai-workbench)-v\d+\.\d+\.\d+-macos-arm64\.zip$/.test(manifest.packages[0]?.name || '')) throw Error('port_migration_artifact_invalid');
     await copyFile(path.join(artifacts, manifest.packages[0].name), archive, 1);
   }
   const next = await manager.stage({ directory: artifacts, version });

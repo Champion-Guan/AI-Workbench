@@ -8,11 +8,14 @@ import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 const root = fileURLToPath(new URL('../../', import.meta.url));
+const portable = process.argv[2] === '--portable';
 const temporary = await mkdtemp(path.join(tmpdir(), 'guan-migration-browser-'));
 for (const name of ['data', 'installation', 'updater-deployment']) await mkdir(path.join(temporary, name));
 await writeFile(path.join(temporary, 'data', 'fixture.json'), '{"qa":true}');
-await writeFile(path.join(temporary, 'installation', 'current.json'), '{}');
-await writeFile(path.join(temporary, 'updater-deployment', 'deployment.json'), '{}');
+if (!portable) {
+  await writeFile(path.join(temporary, 'installation', 'current.json'), '{}');
+  await writeFile(path.join(temporary, 'updater-deployment', 'deployment.json'), '{}');
+}
 const source = createServer((req, res) => {
   if (req.url === '/seed') {
     res.writeHead(200, { 'content-type': 'text/html' });
@@ -37,7 +40,7 @@ code = code.replace("'../src/server/runtime-paths.mjs'", JSON.stringify(new URL(
   .replace("server.listen(8888,", 'server.listen(' + port + ',')
   .replace("[name, await readFile(path.join(projectRoot, 'src/shared/data-contract', name))]",
     "[name, Buffer.from((await readFile(path.join(projectRoot, 'src/shared/data-contract', name), 'utf8')).replaceAll('http://127.0.0.1:5174', '" + sourceOrigin + "').replaceAll('http://127.0.0.1:8888', '" + targetOrigin + "'))]");
-const bridge = spawn(process.execPath, ['--input-type=module', '-e', code, '--', 'qa-bridge', '--automatic'], {
+const bridge = spawn(process.execPath, ['--input-type=module', '-e', code, '--', 'qa-bridge', portable ? '--automatic-portable' : '--automatic'], {
   cwd: root, env: { ...process.env, GUAN_WORKBENCH_DATA_DIR: temporary }, stdio: ['ignore', 'pipe', 'inherit'] });
 // -e puts the first argument at argv[1], unlike a normal script.
 // The QA bridge still emits the real nonce URL/receipts; automatic mode is made

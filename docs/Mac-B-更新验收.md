@@ -6,10 +6,10 @@ Mac B 实机操作由所有者执行。本机隔离测试不能代替另一台�
 
 1. 确认 Mac B 为 Apple Silicon。保存所有画布，等待生成、Agent 和 WebDAV 结束。
 2. 备份当前项目、私人运行目录和实际使用的浏览器工作台数据，记录哈希并做隔离恢复核验。浏览器冷备份时退出对应浏览器；安装更新本身只需关闭所有工作台页面。
-3. 保持原访问地址 `http://127.0.0.1:5174`，使用原浏览器配置。若旧机器使用不同 Origin，先设计并验证数据迁移，不能直接换地址。
-4. 从私有仓库 `Champion-Guan/guan-ai-workbench` 获取正式 macOS arm64 Stable。先用既有可信 Ed25519 公钥验证清单签名、包 SHA-256 与文件库存，验证前不运行包。不能把包中自带的未知公钥当作信任来源。
+3. 解压运行 v1.0.7、仍使用 `http://127.0.0.1:5174` 时，保持旧服务运行，保存并关闭工作台页面，使用最新版“5174到8888一键迁移工具”。在原 Chrome 配置加载工具内的 `browser/managed-workbench` 扩展后双击“ 双击迁移.command ”，自动备份、首次接管及 copy-once 迁移。旧存储保留，迁移后使用 `localhost:8888`（重定向到 `127.0.0.1:8888`）。不要先启动新包占用 8888，也不要删除旧数据。
+4. 正式 macOS arm64 Stable 来自公开仓库 `Champion-Guan/AI-Workbench`。工具自动验证既有可信 Ed25519 公钥签名、包 SHA-256 与文件库存，验证前不运行包。不能把包中自带的未知公钥当作信任来源。
 5. 按 `PHASE5-SAFE-INSTALL.md` 和 `WORKBENCH-PAGE-UPDATES.md` 中的安全安装要求接入独立用户态更新器；首次接入使用 `scripts/bootstrap-stable-updater.mjs` 的受限参数和已验证包，已有安装不重复覆盖初始化。未知任务或坏记录先处理，不能清除账本绕过保护。
-6. 在 Mac B 单独运行 `node scripts/authorize-updates.mjs Champion-Guan/guan-ai-workbench`，使用仅此仓库 Contents 只读的 Fine-grained Token，隐藏输入并保存到本机 Keychain。不要复制 Mac A 的凭据或私人迁移包。
+6. 公开 Stable 下载不需要 GitHub Token。不要复制 Mac A 的凭据或私人迁移包。迁移下载优先直连，连接失败尝试本机已配置的 HTTP 代理，终端显示进度和固定错误代码，不输出代理凭证。
 7. 普通配置导出不含密钥和自定义脚本。在 Mac B 重新填写自己的 AI、WebDAV 和 Agent 凭据，验证保存成功，再使用对应服务。
 
 ## 正常升级验收
@@ -40,3 +40,11 @@ Mac B 实机操作由所有者执行。本机隔离测试不能代替另一台�
 记录 Mac 型号、旧/新版本、Release 和固定提交、签名 keyId、包哈希、升级前后数据计数、故障结果及回滚版本。不得在报告中附 Token、API Key、私人配置内容或真实提示词。只有取得这些实体结果后，阶段 6 才能标记完成。
 
 Apple Developer、Developer ID、公证服务、Intel 和 GitHub Actions 不属于当前验收范围。
+
+## 本轮修复交付边界
+
+新源码隐藏设置的 WebDAV 页签，保留旧配置；不要求 WebDAV、Agent、Gemini 真实连接作为发布验收。后台启动由用户态 launchd 管理，启动成功后终端可关闭；桌面建立 `AI-Workbench.app`，重复启动复用服务。请保留其依赖的安装/工具目录，不能只复制桌面入口到另一台电脑。
+
+下一批安装包名称改为 `AI-Workbench-v版本-macos-arm64.zip`，新工具兼容历史包名。已发布旧更新器只接受旧包名，因此下一次发布前仍需完成旧客户端更新器的兼容接入，不能把新解析器测试当作旧客户端已经兼容。历史 Release 不改名、不覆盖。
+
+本轮源码、独立数据根及本机公开下载验证，不等于 Mac B 已完成迁移；实机需要核对产品、画布、历史、原文件和凭据后记录结果。

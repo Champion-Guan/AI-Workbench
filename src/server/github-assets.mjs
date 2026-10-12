@@ -35,6 +35,6 @@ export async function readReleaseAsset({ repository, asset, token, maxBytes, sig
       return onChunk ? size : Buffer.concat(chunks);
     }
     throw new UpdateError('asset_redirect_rejected');
-  } catch (e) { throw e instanceof UpdateError ? e : new UpdateError('asset_download_failed'); }
+  } catch (e) { throw e instanceof UpdateError ? e : new UpdateError(signal?.aborted ? 'asset_download_timeout' : 'asset_download_failed'); }
   finally { await dispatcher?.destroy().catch(() => {}); }
 }

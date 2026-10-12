@@ -9,6 +9,8 @@ export type SoftwareUpdateStatus = {
         reason?: string | null; staging?: boolean; stageError?: string | null };
 };
 export const updateMessages: Record<string, string> = {
+    update_repository_locked: "更新仓库固定为 Champion-Guan/AI-Workbench",
+    asset_download_timeout: "安装包下载超时，请检查本机代理后重试",
     unconfigured: "尚未配置仓库", unchecked: "尚未检查", available: "有新的稳定版本（签名结果见下载状态）", "up-to-date": "没有更高的稳定版本",
     "no-stable-release": "仓库暂无符合规范的稳定版", error: "检查未完成", repository_required: "请先填写私有仓库 OWNER/REPOSITORY",
     authorization_required: "请在本机终端独立授权 GitHub", authorization_expired: "GitHub 授权失效，请重新授权",

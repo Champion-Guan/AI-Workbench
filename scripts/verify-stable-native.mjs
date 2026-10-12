@@ -18,7 +18,7 @@ async function main() {
   const root = fileURLToPath(new URL('../', import.meta.url)), output = path.join(root,
     process.argv.includes('--qa-checkpoint') ? 'output/phase4/native-qa-checkpoint' : process.argv.includes('--qa-final') ? 'output/phase4/native-qa-final' : process.argv.includes('--qa') ? 'output/phase4/native-qa' : 'output/stable');
   const record = JSON.parse(await readFile(path.join(output, 'package-' + process.arch + '.json'), 'utf8')), descriptor = record.descriptor;
-  if (descriptor?.arch !== process.arch || descriptor.name !== `guan-ai-workbench-v${record.version}-macos-${process.arch}.zip`) throw Error('Native QA identity mismatch');
+  if (descriptor?.arch !== process.arch || ![`AI-Workbench-v${record.version}-macos-${process.arch}.zip`, `guan-ai-workbench-v${record.version}-macos-${process.arch}.zip`].includes(descriptor.name)) throw Error('Native QA identity mismatch');
   const archive = await readFile(path.join(output, descriptor.name)); verifyStableArchive(archive, descriptor);
   const zip = validateZipArchive(archive, { trustedRuntime: descriptor });
   const temporary = await mkdtemp(path.join(tmpdir(), 'guan-native-smoke-')); await chmod(temporary, 0o700);

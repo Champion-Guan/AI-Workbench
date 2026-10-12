@@ -23,7 +23,7 @@ export function validateStableManifest(m) {
   for (const p of m.packages) {
     if (!exact(p, ['platform', 'arch', 'name', 'sha256', 'size', 'nodeVersion', 'runtimeSha256', 'runtimeSize'])
       || p.platform !== 'darwin' || !['arm64', 'x64'].includes(p.arch) || architectures.has(p.arch)
-      || p.name !== `guan-ai-workbench-v${m.version}-macos-${p.arch}.zip` || !/^[a-f0-9]{64}$/.test(p.sha256)
+      || ![`AI-Workbench-v${m.version}-macos-${p.arch}.zip`, `guan-ai-workbench-v${m.version}-macos-${p.arch}.zip`].includes(p.name) || !/^[a-f0-9]{64}$/.test(p.sha256)
       || !Number.isSafeInteger(p.size) || p.size < 1 || p.size > MAX_STABLE_PACKAGE_BYTES
       || !/^v24\.\d+\.\d+$/.test(p.nodeVersion) || !/^[a-f0-9]{64}$/.test(p.runtimeSha256)
       || !Number.isSafeInteger(p.runtimeSize) || p.runtimeSize < 1 || p.runtimeSize > 160 * 1024 * 1024) throw new UpdateError('stable_manifest_invalid');

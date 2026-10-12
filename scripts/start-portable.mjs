@@ -4,6 +4,11 @@ import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
+if (process.platform === 'darwin') {
+  const { once } = await import('node:events');
+  const launcher = spawn(process.execPath, [path.join(root, 'scripts/start-macos.mjs')], { stdio: 'inherit' });
+  const [code] = await once(launcher, 'exit'); process.exit(code ?? 1);
+}
 process.chdir(root);
 const port = Number(process.env.PORT || 8888);
 const url = `http://127.0.0.1:${port}/`;
