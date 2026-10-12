@@ -11,7 +11,9 @@ localhost:8888 转到 127.0.0.1:8888，共用同一浏览器 Origin。
 自定义脚本使用 Keychain 引用和所选渠道的后端代理；任意脚本/插件仍是受信任代码，不宣称同页面 JavaScript 是恶意代码沙箱。
 保留 basketikun 原作者、MIT 许可及前端原项目标识。Mac B 实机验收由用户执行。
 
-状态：Mac A 已安装并接管 v1.0.7，独立更新管理器已升级；正式签名发布、实际私有下载验签、383 文件库存及生产健康核验通过。Mac B 实机验收由所有者执行。此文件顶部和下方阶段表为当前状态，后续旧日期记录仅为历史证据。
+状态：Mac A 已安装本机签名维护版本 v1.0.8，生产端口已从 5174 迁移至 8888，独立 manager/supervisor 均固定至 v1.0.8。此维护版本尚未发布至 GitHub。Mac B 实机验收由所有者执行。以下旧版本记录仅为历史证据。
+
+2026-10-12 8888 生产迁移验收：旧 Chrome Origin 只读备份后，在同一用户配置的新 Origin copy-once 恢复并逐项、Blob 字节验证，323 项 localStorage、2 个数据库、151 条记录通过；旧存储保留。562 项完整测试、类型检查、构建、原生签名包启动及验签通过。通过既有确切进程所有权和版本事务安装 v1.0.8，buildId `2f54b43632fcb95e94208513`；两个 launchd job 冷重启后 service-ready owned=true，8888 ready=true/maintenance=false，Mihomo running/stateReadable=true，5174 无监听。localhost:8888 返回 307 到 127.0.0.1:8888。14 个凭据 profile 读回、2 个加密快照解密及 8 个私人文件与备份逐项哈希一致。桌面启动器通过独立管理器打开新地址，不再 raw spawn 服务；现有 Chrome 工作台扩展已重新加载新端口配置。真实页面显示 5 个产品、当前画布 102 张卡片、原变量和图片。私人备份保留在 `backups/port8888-9c3415ef-d64c-4582-8e5c-ae9b9cc5d7b9`。不据此宣称远端服务或 Mac B 实机验证通过。
 
 2026-10-12 v1.0.7 生产安装：用户确认已保存、任务全部结束且批准安装；只关闭剩余工作台页面，其他网站与应用未退出。私人 data/updates 文件备份并解压逐项核验 data 的 8 个文件后，经现有独立调度器完成 v1.0.6 → v1.0.7 切换。运行 PID `42329`、buildId `c6c2419303d96c179aad293e`、ready=true、maintenance=false，Origin 未变，Mihomo running/stateReadable=true。14 个凭据 profile 读回、2 个加密快照解密通过，代理配置/state/transports 和凭据索引哈希与安装前一致。签名 manager 自身升级后应用 PID 保持不变，最终 service-ready owned=true、currentVersion=1.0.7。自动检查/下载开启；本次安装完成后自动安装恢复关闭。未迁移、清空或恢复覆盖浏览器数据库，不冒充 Mac B 或未配置远端服务实机验收。
 

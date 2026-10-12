@@ -2,7 +2,7 @@
 import path from 'node:path';
 import { homedir } from 'node:os';
 import { fileURLToPath } from 'node:url';
-import { readFile } from 'node:fs/promises';
+import { readFile, copyFile, lstat } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { runtimePaths, writePrivateFile, readPrivateFile } from '../src/server/runtime-paths.mjs';
 import { UpdateManager } from '../src/server/update-manager.mjs';
@@ -25,10 +25,17 @@ async function main() {
   if (createHash('sha256').update(await readFile(path.join(backup, 'browser-5174.json'))).digest('hex') !== receipt.sha256)
     throw Error('port_migration_backup_unverified');
   const manager = new UpdateManager({ root: path.join(paths.root, 'installation'), dataRoot: paths.data, projectRoot,
-    repository: 'Champion-Guan/AI-Workbench' });
+    repository: 'Champion-Guan/AI-Workbench', onStep: async phase => console.log(JSON.stringify({ phase })) });
   const version = JSON.parse(await readFile(path.join(projectRoot, 'package.json'))).version;
   const manifest = JSON.parse(await readFile(path.join(artifacts, 'guan-stable-manifest.json')));
-  const next = await manager.stage({ directory: artifacts, version, archiveName: manifest.packages[0].name });
+  const archive = path.join(artifacts, 'package.zip');
+  try { await lstat(archive); }
+  catch (error) {
+    if (error.code !== 'ENOENT') throw error;
+    if (!/^guan-ai-workbench-v\d+\.\d+\.\d+-macos-arm64\.zip$/.test(manifest.packages[0]?.name || '')) throw Error('port_migration_artifact_invalid');
+    await copyFile(path.join(artifacts, manifest.packages[0].name), archive, 1);
+  }
+  const next = await manager.stage({ directory: artifacts, version });
   const runtime = new SignedUpdaterRuntime({ directory: path.join(paths.root, 'updater-runtime'), manager });
   await runtime.prepare(next);
   if (mode === 'prepare') { console.log(JSON.stringify({ prepared: true, version, signed: true, productionChanged: false })); return; }
@@ -53,9 +60,13 @@ async function main() {
   for (const [role, descriptor] of [['manager', oldManager], ['supervisor', oldSupervisor]]) {
     await deployment.plist(descriptor);
     if (!await deployment.jobs.inspect(deployment.labels[role], descriptor)) throw Error('service_ownership_lost');
-    await writePrivateFile(path.join(backup, role + '.plist'), descriptor.bytes, { exclusive: true });
+    const prior = await readPrivateFile(path.join(backup, role + '.plist'), { maxBytes: 16384 });
+    if (prior !== null && prior !== descriptor.bytes) throw Error('port_migration_backup_conflict');
+    if (prior === null) await writePrivateFile(path.join(backup, role + '.plist'), descriptor.bytes, { exclusive: true });
   }
-  await writePrivateFile(path.join(backup, 'port-switch-original.json'), JSON.stringify(saved), { exclusive: true });
+  const original = await readPrivateFile(path.join(backup, 'port-switch-original.json'), { maxBytes: 65536 });
+  if (original !== null && original !== JSON.stringify(saved)) throw Error('port_migration_backup_conflict');
+  if (original === null) await writePrivateFile(path.join(backup, 'port-switch-original.json'), JSON.stringify(saved), { exclusive: true });
   await closed(); await deployment.jobs.stop(deployment.labels.manager, oldManager);
   const serviceOptions = { socketPath: path.join(paths.updates, 's.sock'), capabilityFile: path.join(paths.updates, 'supervisor.capability') };
   let active = new SupervisedUpdateService(serviceOptions), switched = false, stopped = false;
@@ -67,17 +78,21 @@ async function main() {
     isStopped: () => active.isStopped(), recoverySafe: () => active.recoverySafe(),
     start: pointer => active.start(pointer), activate: pointer => active.activate(pointer),
     async stop(options) {
+      console.log(JSON.stringify({ phase: 'owned-service-stop' }));
       await active.stop(options); stopped = true;
       if (!switched) {
         await closed(); active.disconnect();
         await deployment.jobs.stop(deployment.labels.supervisor, oldSupervisor);
+        console.log(JSON.stringify({ phase: 'old-supervisor-stopped' }));
         supervisorStopped = true;
         await deployment.write(upcoming.supervisor, false, [oldSupervisor.bytes]);
         supervisorWritten = true;
         await deployment.write(upcoming.manager, false, [oldManager.bytes]);
         managerWritten = true;
+        switched = true; // bootstrap may succeed even if its acknowledgement fails
         await deployment.jobs.start(deployment.labels.supervisor, upcoming.supervisor);
-        active = new SupervisedUpdateService(serviceOptions); switched = true;
+        console.log(JSON.stringify({ phase: 'new-supervisor-started' }));
+        active = new SupervisedUpdateService(serviceOptions);
         for (let n = 0; n < 100; n++) {
           try { await active.inspectOwned(); return; } catch { active.disconnect(); await new Promise(resolve => setTimeout(resolve, 100)); }
         }
@@ -111,9 +126,11 @@ async function main() {
     // metadata after the owned app has been stopped; never restore user data.
     if (switched) {
       if (await deployment.jobs.inspect(deployment.labels.manager, upcoming.manager)) await deployment.jobs.stop(deployment.labels.manager, upcoming.manager);
-      active = new SupervisedUpdateService(serviceOptions);
-      await active.stop({ allowed: [previous, next] }); active.disconnect();
-      await deployment.jobs.stop(deployment.labels.supervisor, upcoming.supervisor);
+      if (await deployment.jobs.inspect(deployment.labels.supervisor, upcoming.supervisor)) {
+        active = new SupervisedUpdateService(serviceOptions);
+        await active.stop({ allowed: [previous, next] }); active.disconnect();
+        await deployment.jobs.stop(deployment.labels.supervisor, upcoming.supervisor);
+      }
     }
     if (supervisorWritten) await deployment.write(oldSupervisor, false, [upcoming.supervisor.bytes]);
     if (managerWritten) await deployment.write(oldManager, false, [upcoming.manager.bytes]);
