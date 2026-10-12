@@ -8,6 +8,9 @@ const committed = tx => new Promise((resolve, reject) => {
 const storage = value => Object.fromEntries(Array.from({ length: value.length }, (_, i) => {
   const key = value.key(i); return [key, value.getItem(key)];
 }));
+// Immersive Translate creates a per-page handshake even on a blank Origin.
+// Keep the destination handshake; it is extension state, not workbench data.
+const transientSessionKey = '__imt_handshake_page_id';
 // Read-only source export, including Blob bytes, schemas and indexes.
 export async function exportBrowserStorage() {
   const snapshot = { app: 'guan-ai-workbench', kind: 'full-browser-backup', format: 1,
@@ -37,7 +40,8 @@ export async function restoreBrowserStorage(snapshot) {
   if (location.origin !== 'http://127.0.0.1:8888' || snapshot?.app !== 'guan-ai-workbench'
     || snapshot.kind !== 'full-browser-backup' || snapshot.format !== 1 || snapshot.origin !== 'http://127.0.0.1:5174'
     || !Array.isArray(snapshot.databases) || !snapshot.localStorage || !snapshot.sessionStorage) throw Error('迁移地址或备份格式不匹配');
-  if (localStorage.length || sessionStorage.length || (await indexedDB.databases()).length) throw Error('新地址已有数据，已停止迁移，未覆盖任何数据');
+  if (localStorage.length || Object.keys(storage(sessionStorage)).some(key => key !== transientSessionKey)
+    || (await indexedDB.databases()).length) throw Error('新地址已有数据，已停止迁移，未覆盖任何数据');
   // Validate/decode before the first destination write.
   const decoded = snapshot.databases.map(spec => ({ ...spec, stores: spec.stores.map(store => ({ ...store,
     records: store.records.map(record => ({ key: decodeBackupValue(record.key), value: decodeBackupValue(record.value) })) })) }));
@@ -72,8 +76,9 @@ export async function restoreBrowserStorage(snapshot) {
       } finally { db.close(); }
     }
     for (const [name, target] of [['localStorage', localStorage], ['sessionStorage', sessionStorage]]) {
-      for (const [key, value] of Object.entries(snapshot[name])) target.setItem(key, value);
-      for (const [key, value] of Object.entries(snapshot[name])) if (target.getItem(key) !== value) throw Error('配置内容校验失败');
+      const entries = Object.entries(snapshot[name]).filter(([key]) => name !== 'sessionStorage' || key !== transientSessionKey);
+      for (const [key, value] of entries) target.setItem(key, value);
+      for (const [key, value] of entries) if (target.getItem(key) !== value) throw Error('配置内容校验失败');
     }
     return { verified: true, databases: decoded.length };
   } catch { throw Error('迁移未通过，已保留原地址和备份；新地址的部分副本也保留，请勿打开工作台或覆盖数据'); }
