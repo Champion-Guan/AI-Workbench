@@ -8,7 +8,7 @@ const states = new Set(['idle', 'staged', 'prepared', 'stopping', 'switching', '
   'rolling-back', 'rolled-back', 'blocked', 'recovery-required', 'activation-required', 'bootstrap-required', 'awaiting-browser-exit', 'confirmation-required', 'deferred']);
 const reasons = new Set(['update_bootstrap_required', 'install_coordination_unavailable', 'update_recovery_required',
   'update_activation_unconfirmed', 'update_state_invalid', 'install_permit_invalid', 'update_failed_rolled_back', 'update_rollback_failed',
-  'install_operator_confirmation_required', 'install_operator_record_invalid', 'install_tasks_pending', 'install_browsers_running',
+  'install_operator_confirmation_required', 'install_operator_record_invalid', 'install_tasks_pending', 'install_browsers_running', 'install_page_inventory_unavailable',
   'install_evidence_changed', 'install_evidence_unconfirmed', 'install_closure_evidence_unavailable', 'install_coordination_busy',
   'install_backend_not_idle', 'install_backend_not_frozen', 'install_service_identity_invalid',
   'update_storage_invalid', 'service_ownership_lost', 'service_port_occupied', 'service_backend_outcome_unknown',

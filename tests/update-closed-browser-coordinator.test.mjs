@@ -22,7 +22,7 @@ async function fixture(t) {
   const service = { backendControl: command => control.command(command), isStopped: async () => stopped };
   const authority = { acquire: async () => ({ epoch: randomUUID(), fullCoverage: true,
     assertValid: async () => { if (!valid) throw Error('QA unknown inventory'); }, release: async () => { releaseCount++; } }) };
-  const census = async () => ({ knownBrowsersExited: closed, blockers: closed ? [] : ['Chrome'], inventoryVerified: false });
+  const census = async () => ({ workbenchPagesClosed: closed, blockers: closed ? [] : ['Chrome'], inventoryVerified: false });
   const coordinator = new ClosedBrowserCoordinator({ service, ledger, authority, census });
   const next = { id: 'next', version: '1.0.6', commit: 'a'.repeat(40), buildId: 'b'.repeat(24) };
   return { ledger, gate, writes, control, service, authority, census, coordinator, next,

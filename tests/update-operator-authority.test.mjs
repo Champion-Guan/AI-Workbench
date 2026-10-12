@@ -43,7 +43,7 @@ test('per-version confirmation persists, cannot authorise another target, expire
 test('confirmation + real durable/backend freeze yields a single-use lease; defer cannot cancel a claimed transaction', async t => {
   const f = await fixture(t); await f.authority.approve(f.next, 'saved-and-all-tasks-ended');
   const coordinator = new ClosedBrowserCoordinator({ service: f.service, ledger: f.ledger, authority: f.authority,
-    census: async () => ({ knownBrowsersExited: true, blockers: [] }) });
+    census: async () => ({ workbenchPagesClosed: true, blockers: [] }) });
   const lease = await coordinator.acquire({ previous: f.previous, next: f.next });
   assert.equal((await f.authority.read()).state, 'claimed');
   await assert.rejects(f.authority.defer(), /recovery_required/);
@@ -74,7 +74,7 @@ test('independent scheduler coalesces ticks, respects disabled preference/browse
   const f = await fixture(t), file = path.join(f.root, 'preferences.json'); let installs = 0, closed = false, finish;
   f.manager.install = async () => { installs++; await new Promise(resolve => { finish = resolve; }); };
   const scheduler = new UpdateInstallScheduler({ manager: f.manager, authority: f.authority, preferencesFile: file,
-    census: async () => ({ knownBrowsersExited: closed, blockers: closed ? [] : ['Chrome'] }) });
+    census: async () => ({ workbenchPagesClosed: closed, blockers: closed ? [] : ['Chrome'] }) });
   await scheduler.tick(); assert.equal(scheduler.state.state, 'deferred');
   await writeFile(file, JSON.stringify({ version: 1, repository: 'owner/repo', autoCheck: false, autoDownload: false, autoInstall: true, network: 'direct' }), { mode: 0o600 });
   await scheduler.tick(); assert.equal(scheduler.state.state, 'confirmation-required');

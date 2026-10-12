@@ -13,7 +13,7 @@ import { UpdateManagerClient } from '../src/server/update-manager-client.mjs';
 import { UpdateTaskLedger } from '../src/server/update-task-ledger.mjs';
 import { OperatorUpdateAuthority } from '../src/server/update-operator-authority.mjs';
 import { ClosedBrowserCoordinator } from '../src/server/update-closed-browser-coordinator.mjs';
-import { browserProcessCensus } from '../src/server/browser-process-census.mjs';
+import { workbenchPageCensus } from '../src/server/workbench-page-census.mjs';
 import { createMaintenanceBackup } from '../src/server/update-maintenance-backup.mjs';
 
 // Trusted native installer, no HTTP invocation and no arbitrary shell/URL/path
@@ -38,8 +38,8 @@ async function main() {
   const portProbe = new OwnedUpdateService({ versionsRoot: path.join(manager.root, 'versions'), dataRoot: paths.data,
     privateRoot: paths.root, verify: value => manager.verifyInstalled(value) });
   const closed = async () => {
-    const value = await browserProcessCensus();
-    if (!value.knownBrowsersExited || value.blockers.length) throw Error('install_browsers_running');
+    const value = await workbenchPageCensus();
+    if (!value.workbenchPagesClosed || value.blockers.length) throw Error('install_browsers_running');
   };
   await closed();
   if (mode === '--upgrade-manager') {
@@ -85,7 +85,7 @@ async function main() {
   if (!await portProbe.isStopped()) throw Error('service_port_occupied');
   const input = createInterface({ input: process.stdin, output: process.stdout });
   let answer;
-  try { answer = await input.question('请确认：旧服务已正常停止；所有浏览器已退出；画布已保存；生成、Agent、WebDAV 全部结束。输入「确认首次接管」继续：'); }
+  try { answer = await input.question('请确认：旧服务已正常停止；所有工作台页面已关闭（其他网站可以保留）；画布已保存；生成、Agent、WebDAV 全部结束。输入「确认首次接管」继续：'); }
   finally { input.close(); }
   if (answer !== '确认首次接管') throw Error('install_operator_confirmation_required');
   const backup = await createMaintenanceBackup({ directory: path.join(paths.root, 'backups'), dataRoot: paths.data,

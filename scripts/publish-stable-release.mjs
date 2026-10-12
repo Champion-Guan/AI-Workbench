@@ -15,13 +15,20 @@ async function main() {
   if (process.argv.length !== 4 || !validRepository(repository) || repository !== approval.repository
     || process.env.GUAN_RELEASE_COMMIT !== approval.commit || !path.isAbsolute(directory) || !token
     || process.env.GUAN_CONFIRM_RELEASE !== 'RELEASE-STABLE') throw Error('Owner manual release authorization required');
-  const root = fileURLToPath(new URL('../', import.meta.url)), version = JSON.parse(await readFile(path.join(root, 'package.json'), 'utf8')).version;
+  return publishStableRelease({ approval, directory, token, root: fileURLToPath(new URL('../', import.meta.url)) });
+}
+
+export async function publishStableRelease({ approval, directory, token, root, dispatcher }) {
+  const { repository, commit } = approval;
+  if (!validRepository(repository) || !/^[a-f0-9]{40}$/.test(commit) || !path.isAbsolute(directory) || !token) throw Error('Invalid publication inputs');
+  const version = JSON.parse(await readFile(path.join(root, 'package.json'), 'utf8')).version;
   if (approval.tag !== 'v' + version) throw Error('Approved tag/version mismatch');
   const checked = await verifySignedStable({ directory, repository, version, arch: 'arm64' });
   if (checked.manifest.packages.length !== 1 || checked.selected.arch !== 'arm64') throw Error('Future releases require arm64 only');
-  if (checked.manifest.commit !== process.env.GUAN_RELEASE_COMMIT) throw Error('Unexpected release commit');
+  if (checked.manifest.commit !== commit) throw Error('Unexpected release commit');
   const request = async (url, method, body, contentType = 'application/json') => {
-    const response = await fetch(url, { method, body: Buffer.isBuffer(body) ? body : JSON.stringify(body), redirect: 'error', signal: AbortSignal.timeout(180000),
+    const response = await fetch(url, { method, body: body === undefined ? undefined : Buffer.isBuffer(body) ? body : JSON.stringify(body), redirect: 'error', signal: AbortSignal.timeout(180000),
+      ...(dispatcher ? { dispatcher } : {}),
       headers: { authorization: `Bearer ${token}`, accept: 'application/vnd.github+json', 'content-type': contentType,
         'x-github-api-version': '2022-11-28', 'user-agent': 'GuanAIWorkbench-StablePublisher' } });
     if (!response.ok) { await response.body?.cancel(); throw Error('Publish API failed'); }
@@ -72,4 +79,5 @@ async function main() {
   if (published.draft !== false || published.prerelease !== false || published.tag_name !== 'v' + version) throw Error('Publication not confirmed');
   console.log(JSON.stringify({ ok: true, version, releaseId: release.id, assets: assets.length }));
 }
-main().catch(() => { console.error('Stable publication failed safely; any incomplete release remains a Draft. Inspect GitHub before retrying; no credentials are logged.'); process.exitCode = 1; });
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url))
+  main().catch(() => { console.error('Stable publication failed safely; any incomplete release remains a Draft. Inspect GitHub before retrying; no credentials are logged.'); process.exitCode = 1; });

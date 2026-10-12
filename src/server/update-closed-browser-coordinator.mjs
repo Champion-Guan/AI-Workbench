@@ -1,4 +1,4 @@
-import { browserProcessCensus } from './browser-process-census.mjs';
+import { workbenchPageCensus } from './workbench-page-census.mjs';
 import { validBackendEvidence, controlUuid } from './update-control-protocol.mjs';
 
 const same = (a, b) => ['id', 'version', 'commit', 'buildId'].every(k => a?.[k] === b?.[k]);
@@ -9,7 +9,7 @@ const idle = (v, background = true) => validBackendEvidence(v) && !v.backend.act
 // session/remote-task evidence and admission ownership across service restarts.
 // No default authority and no empty-ledger fallback are supplied here.
 export class ClosedBrowserCoordinator {
-  constructor({ service, ledger, authority, census = browserProcessCensus }) {
+  constructor({ service, ledger, authority, census = workbenchPageCensus }) {
     if (!service?.backendControl || !service?.isStopped || !ledger?.snapshot || typeof census !== 'function')
       throw Error('install_coordination_invalid');
     this.service = service; this.ledger = ledger; this.authority = authority; this.census = census;
@@ -17,7 +17,7 @@ export class ClosedBrowserCoordinator {
   }
   async browsersClosed() {
     const value = await this.census();
-    if (value?.knownBrowsersExited !== true || !Array.isArray(value.blockers) || value.blockers.length)
+    if (value?.workbenchPagesClosed !== true || !Array.isArray(value.blockers) || value.blockers.length)
       throw Error('install_browsers_running');
   }
   acquire(input) { return this.obtain('install', input); }

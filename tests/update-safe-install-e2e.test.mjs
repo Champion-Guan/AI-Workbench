@@ -48,7 +48,7 @@ test('actual signed runtime + user launchd + operator consent + independent sche
   // These three QA-only changes are inside a locally test-signed payload.
   // Never alter the source trust root, user browsers, production port or census.
   files['src/server/stable-trust.mjs'] = 'export const STABLE_TRUSTED_KEYS = Object.freeze(' + JSON.stringify(signing.keys) + ');';
-  files['src/server/browser-process-census.mjs'] = 'export async function browserProcessCensus() { return { knownBrowsersExited: true, blockers: [], inventoryVerified: false }; }';
+  files['src/server/workbench-page-census.mjs'] = 'export async function workbenchPageCensus() { return { workbenchPagesClosed: true, blockers: [], inventoryVerified: false }; }';
   files['src/server/update-supervisor.mjs'] = files['src/server/update-supervisor.mjs'].toString()
     .replace('} catch (e) { reply({ ok: false,', '} catch (e) { console.error(publicError(e)); reply({ ok: false,');
   files['src/server/update-manager.mjs'] = files['src/server/update-manager.mjs'].toString()

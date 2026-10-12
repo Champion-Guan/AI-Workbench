@@ -36,11 +36,11 @@ export function ConfigSoftwareUpdates() {
     const approve = () => {
         modal.confirm({
             title: `准备安装 ${status?.latest?.version || "此稳定版本"}？`,
-            content: "请确认所有画布已保存，生成、Agent 和 WebDAV 同步全部结束。确认后请勿继续编辑或启动任务，并退出所有浏览器。确认仅对此版本有效，30 分钟后失效；未决任务和坏记录仍会阻止安装。",
+            content: "请确认所有画布已保存，生成、Agent 和 WebDAV 同步全部结束。确认后请勿继续编辑或启动任务，并关闭所有工作台页面；浏览器和其他网站可以继续使用。确认仅对此版本有效，30 分钟后失效；未决任务和坏记录仍会阻止安装。",
             okText: "已保存且全部任务结束", cancelText: "稍后",
             onOk: async () => {
                 await updateRequest("approve", { acknowledgement: "saved-and-all-tasks-ended" });
-                await refresh(); message.success("已记录本次确认，请退出所有浏览器；安全检查通过后安装");
+                await refresh(); message.success("已记录本次确认，请关闭工作台页面；其他网站不受影响，安全检查通过后安装");
             },
         });
     };
@@ -62,7 +62,7 @@ export function ConfigSoftwareUpdates() {
             <div className="flex flex-wrap items-center gap-5">
                 <label className="flex items-center gap-2"><Switch aria-label="自动检查更新" checked={prefs?.autoCheck ?? true} disabled={!prefs || saving} onChange={autoCheck => void save({ autoCheck })} />自动检查（启动及每 6 小时）</label>
                 <label className="flex items-center gap-2"><Switch aria-label="自动下载更新" checked={prefs?.autoDownload ?? true} disabled={!prefs || saving} onChange={autoDownload => void save({ autoDownload })} />自动下载（仅可信签名包）</label>
-                <label className="flex items-center gap-2"><Switch aria-label="自动安装更新" checked={prefs?.autoInstall ?? false} disabled={!prefs || saving || status?.install.state === "unavailable" || status?.install.state === "bootstrap-required"} onChange={autoInstall => void save({ autoInstall })} />确认后自动安装（需退出浏览器）</label>
+                <label className="flex items-center gap-2"><Switch aria-label="自动安装更新" checked={prefs?.autoInstall ?? false} disabled={!prefs || saving || status?.install.state === "unavailable" || status?.install.state === "bootstrap-required"} onChange={autoInstall => void save({ autoInstall })} />确认后自动安装（需关闭工作台页面）</label>
             </div>
             <div className="flex items-center gap-3"><span>更新网络</span><Select aria-label="更新网络" className="min-w-44" value={prefs?.network || "auto"} disabled={!prefs || saving} options={[{ value: "auto", label: "自动（有代理则使用代理）" }, { value: "direct", label: "直连" }, { value: "proxy", label: "本地代理" }]} onChange={network => void save({ network })} /></div>
             <div className="flex items-center gap-3"><Button loading={checking} onClick={() => void checkLatestRelease(true)}>检查更新</Button><Button disabled={!status?.hasNewVersion || status?.download.state === "trust-not-configured" || downloading} onClick={() => void download()}>下载更新</Button><VersionReleaseModal label="更新日志" /></div>

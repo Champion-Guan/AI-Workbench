@@ -39,6 +39,6 @@ async function main() {
   const close = async () => { if (closing) return; closing = true; await scheduler.stop(); await ipc.close(); manager.service.disconnect(); };
   process.on('SIGTERM', () => { void close(); }); process.on('SIGINT', () => { void close(); });
   scheduler.start();
-  console.log('Independent update manager ready; installation requires per-update confirmation and closed browsers.');
+  console.log('Independent update manager ready; installation requires per-update confirmation and closed workbench pages.');
 }
 main().catch(() => { console.error('Update manager refused to start safely; existing software and user data were not changed.'); process.exitCode = 1; });

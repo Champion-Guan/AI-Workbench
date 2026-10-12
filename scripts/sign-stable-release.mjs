@@ -14,23 +14,28 @@ async function main() {
   const [repository, directory] = process.argv.slice(2);
   if (process.argv.length !== 4 || !validRepository(repository) || repository !== approval.repository
     || process.env.GUAN_RELEASE_COMMIT !== approval.commit || !path.isAbsolute(directory)) throw Error('Invalid signing inputs');
-  const root = fileURLToPath(new URL('../', import.meta.url)), version = JSON.parse(await readFile(path.join(root, 'package.json'), 'utf8')).version;
+  const raw = process.env.GUAN_STABLE_SIGNING_KEY;
+  delete process.env.GUAN_STABLE_SIGNING_KEY;
+  if (!raw || raw.length > 4096) throw Error('Signing secret required');
+  return signStableRelease({ approval, directory, root: fileURLToPath(new URL('../', import.meta.url)), privateKey: createPrivateKey(raw) });
+}
+
+// Shared by independently authenticated CI and local operator entry points.
+// Never exposes the key or grants permission to install.
+export async function signStableRelease({ approval, directory, root, privateKey }) {
+  const { repository, commit } = approval;
+  if (!validRepository(repository) || !/^[a-f0-9]{40}$/.test(commit) || !path.isAbsolute(directory)) throw Error('Invalid signing inputs');
+  const version = JSON.parse(await readFile(path.join(root, 'package.json'), 'utf8')).version;
   if (approval.tag !== 'v' + version) throw Error('Approved tag/version mismatch');
   const records = [];
   for (const arch of ['arm64']) {
     const file = path.join(directory, 'package-' + arch + '.json'), info = await lstat(file);
     if (!info.isFile() || info.isSymbolicLink() || info.size > 4096) throw Error('Invalid artifact metadata');
     const record = JSON.parse(await readFile(file, 'utf8'));
-    if (record.version !== version || record.descriptor?.arch !== arch || record.commit !== process.env.GUAN_RELEASE_COMMIT) throw Error('Artifact commit/version mismatch');
+    if (record.version !== version || record.descriptor?.arch !== arch || record.commit !== commit) throw Error('Artifact commit/version mismatch');
     records.push(record);
   }
-  // Owner-confirmed CI signing job only. No command-line key, chat key, output key,
-  // subprocess logging or frontend access. A user-approved pinned public key
-  // must already be committed to source before signing is permitted.
-  const raw = process.env.GUAN_STABLE_SIGNING_KEY;
-  delete process.env.GUAN_STABLE_SIGNING_KEY;
-  if (!raw || raw.length > 4096) throw Error('Signing secret required');
-  const privateKey = createPrivateKey(raw), publicKey = createPublicKey(privateKey).export({ type: 'spki', format: 'pem' });
+  const publicKey = createPublicKey(privateKey).export({ type: 'spki', format: 'pem' });
   if (privateKey.asymmetricKeyType !== 'ed25519') throw Error('Ed25519 required');
   const id = keyId(publicKey);
   if (!Object.hasOwn(STABLE_TRUSTED_KEYS, id) || keyId(STABLE_TRUSTED_KEYS[id]) !== id) throw Error('Signing key is not pinned');
@@ -44,4 +49,5 @@ async function main() {
   if (!await writePrivateFile(path.join(directory, 'SHA256SUMS.txt'), manifest.packages.map(p => `${p.sha256}  ${p.name}\n`).join(''), { exclusive: true })) throw Error('Existing checksum file retained');
   console.log(JSON.stringify({ ok: true, version, packages: 1, keyId: id, privateKeyExported: false }));
 }
-main().catch(() => { console.error('Stable signing failed safely; nothing was published. Verify owner approval, signing secret, pinned public key and artifact identity.'); process.exitCode = 1; });
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url))
+  main().catch(() => { console.error('Stable signing failed safely; nothing was published. Verify owner approval, signing secret, pinned public key and artifact identity.'); process.exitCode = 1; });

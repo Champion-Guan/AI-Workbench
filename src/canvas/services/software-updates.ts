@@ -38,7 +38,8 @@ export const updateMessages: Record<string, string> = {
     install_operator_confirmation_required: "此版本需要重新确认已保存且全部任务结束",
     install_operator_record_invalid: "安装确认记录损坏，已保留并停止安装",
     install_tasks_pending: "存在未决任务、失败保存或未确认记录，不能安装",
-    install_browsers_running: "请退出所有浏览器后再安装",
+    install_browsers_running: "请保存并关闭所有工作台页面，其他网站可以继续使用",
+    install_page_inventory_unavailable: "无法核实工作台页面状态，请检查本机浏览器自动化授权或浏览器支持情况",
     install_evidence_changed: "确认之后活动或保存状态改变，请重新核实",
 };
 export const installationMessages: Record<string, string> = {
@@ -46,7 +47,7 @@ export const installationMessages: Record<string, string> = {
     "bootstrap-required": "等待首次安全接管", "activation-required": "等待确认激活", "recovery-required": "需要安全恢复",
     blocked: "安装被安全阻止", prepared: "已准备版本事务", stopping: "正在停止受控服务", switching: "正在切换版本",
     starting: "正在隔离启动", committed: "版本事务已提交", "rolling-back": "正在恢复旧版", "rolled-back": "已恢复旧版",
-    "awaiting-browser-exit": "已确认，等待全部浏览器退出", "confirmation-required": "等待本次更新确认", deferred: "已选择稍后安装",
+    "awaiting-browser-exit": "已确认，等待工作台页面关闭", "confirmation-required": "等待本次更新确认", deferred: "已选择稍后安装",
 };
 export async function updateRequest(operation: "status" | "check" | "download" | "stage" | "preferences" | "approve" | "defer", input?: Partial<UpdatePreferences> | { acknowledgement: "saved-and-all-tasks-ended" }): Promise<SoftwareUpdateStatus> {
     const response = await fetch(`/local-app/updates/${operation}`, {

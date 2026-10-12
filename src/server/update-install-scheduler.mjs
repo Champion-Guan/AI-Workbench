@@ -1,11 +1,11 @@
 import { readPrivateFile } from './runtime-paths.mjs';
-import { browserProcessCensus } from './browser-process-census.mjs';
+import { workbenchPageCensus } from './workbench-page-census.mjs';
 
 // Lives in the independent manager, so it continues after the browser and old
 // Web service exit. There is no URL, path, command or unauthorised task clearing.
 // Every attempt needs a per-version operator grant AND durable/census checks.
 export class UpdateInstallScheduler {
-  constructor({ manager, authority, preferencesFile, census = browserProcessCensus, intervalMs = 5000, restoreCurrent }) {
+  constructor({ manager, authority, preferencesFile, census = workbenchPageCensus, intervalMs = 5000, restoreCurrent }) {
     if (!manager?.install || !authority?.read || typeof preferencesFile !== 'string' || !Number.isSafeInteger(intervalMs) || intervalMs < 100)
       throw Error('install_scheduler_invalid');
     Object.assign(this, { manager, authority, preferencesFile, census, intervalMs, restoreCurrent });
@@ -39,7 +39,7 @@ export class UpdateInstallScheduler {
       this.state = { state: 'confirmation-required', error: null }; return;
     }
     const census = await this.census();
-    if (census?.knownBrowsersExited !== true || !Array.isArray(census.blockers) || census.blockers.length) {
+    if (census?.workbenchPagesClosed !== true || !Array.isArray(census.blockers) || census.blockers.length) {
       this.state = { state: 'awaiting-browser-exit', error: null }; return;
     }
     if (this.closed || this.manager.busy) return;
