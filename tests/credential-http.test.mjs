@@ -28,11 +28,10 @@ test('prepare saves verified encrypted original and returns references only, pre
   assert.ok(!JSON.stringify(prepared).includes('fixture-private-value'));
   assert.equal(JSON.parse(await f.registry.recover(prepared.recoveryId)).configRecord, source);
 });
-test('unsupported custom scripts/Gemini/remote Agent/broken legacy records fail before any storage mutation', async t => {
-  for (const mutation of ['script', 'gemini', 'agent', 'broken', 'oversized-secret', 'invalid-username', 'newline-key']) {
+test('unsupported custom scripts/remote Agent/broken legacy records fail before any storage mutation', async t => {
+  for (const mutation of ['script', 'agent', 'broken', 'oversized-secret', 'invalid-username', 'newline-key']) {
     const f = await fixture(t), source = JSON.parse(record());
     if (mutation === 'script') source.state.config.channels[0].models[0].script = 'return apiKey;';
-    if (mutation === 'gemini') source.state.config.channels[0].apiFormat = 'gemini';
     if (mutation === 'oversized-secret') source.state.config.channels[0].apiKey = 'x'.repeat(16385);
     if (mutation === 'newline-key') source.state.config.channels[0].apiKey = 'fixture\ninvalid';
     if (mutation === 'invalid-username') source.state.webdav = { url: 'https://dav.example.com', username: 'invalid:user', password: 'fixture' };
@@ -40,6 +39,18 @@ test('unsupported custom scripts/Gemini/remote Agent/broken legacy records fail 
       ...(mutation === 'agent' ? { agent: { url: 'https://agent.example.com', token: 'fixture' } } : {}) }, 'http://127.0.0.1:5174'));
     assert.equal(f.keys.size, 0);
   }
+});
+test('Gemini channels migrate to the backend proxy without exposing their key', async t => {
+  const f = await fixture(t), source = JSON.parse(record('https://generativelanguage.googleapis.com/v1beta'));
+  source.state.config.apiKey = '';
+  source.state.config.channels[0].apiFormat = 'gemini';
+  source.state.config.channels[0].apiKey = 'gemini-fixture-key';
+  const prepared = await prepareCredentialMigration(f.registry, { configRecord: JSON.stringify(source) }, 'http://127.0.0.1:5174');
+  assert.equal(prepared.prepared, true);
+  assert.equal(prepared.changes.length, 1);
+  assert.equal(prepared.changes[0].path.join('.'), 'state.config.channels.0');
+  assert.ok(!JSON.stringify(prepared).includes('gemini-fixture-key'));
+  assert.equal((await f.registry.publicStatus()).profiles[0].kind, 'gemini');
 });
 test('actual HTTP routes enforce exact Origin, do not export secrets or authorize installation, and reject changed references', async t => {
   const f = await fixture(t), gate = new ActivityGate(); let handler;

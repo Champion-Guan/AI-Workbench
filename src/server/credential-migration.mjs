@@ -27,15 +27,14 @@ export async function prepareCredentialMigration(registry, { configRecord, agent
     const channel = config.channels[index];
     if (!channel || typeof channel.id !== 'string' || channelIds.has(channel.id) || !Array.isArray(channel.models)) throw new CredentialError('legacy_config_invalid');
     channelIds.add(channel.id);
-    if (channel.apiKey && (channel.apiFormat !== 'openai' || channel.models.some(model => model?.script?.trim()))) {
-      // Gemini authenticated media downloads and arbitrary model scripts need
-      // their own compatibility migration. Leave their legacy records intact.
-      throw new CredentialError('migration_not_supported');
-    }
-    add(['state', 'config', 'channels', index], 'openai', channel.baseUrl, channel.apiKey);
+    if (channel.models.some(model => model?.script?.trim())) throw new CredentialError('migration_not_supported');
+    const kind = channel.apiFormat === 'gemini' ? 'gemini' : channel.apiFormat === 'openai' ? 'openai' : null;
+    if (channel.apiKey && !kind) throw new CredentialError('migration_not_supported');
+    add(['state', 'config', 'channels', index], kind, channel.baseUrl, channel.apiKey);
   }
-  if (config.apiKey && config.apiFormat !== 'openai') throw new CredentialError('migration_not_supported');
-  add(['state', 'config'], 'openai', config.baseUrl, config.apiKey);
+  const configKind = config.apiFormat === 'gemini' ? 'gemini' : config.apiFormat === 'openai' ? 'openai' : null;
+  if (config.apiKey && !configKind) throw new CredentialError('migration_not_supported');
+  add(['state', 'config'], configKind, config.baseUrl, config.apiKey);
   add(['state', 'webdav'], 'webdav', record.state.webdav.url, record.state.webdav.password, record.state.webdav.username);
   if (agent) {
     if (typeof agent.url !== 'string' || typeof agent.token !== 'string') throw new CredentialError('legacy_config_invalid');
