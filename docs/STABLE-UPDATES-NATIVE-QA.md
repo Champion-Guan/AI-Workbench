@@ -16,7 +16,7 @@
 
 ## 发布保护外部条件
 
-普通源码 CI 已通过（a4d6c12 / 38068188063），不等于签名发布环境已保护。当前 environments 列表为空，collaborators 仅 MrGuAm；user API 未提供 plan 信息，但 rulesets API 返回 HTTP403，提示私有仓库需升级计划才能启用规则集。
+普通源码 CI 已通过（a4d6c12 / 38068188063），不等于签名发布环境已保护。当前 environments 列表为空，collaborators 仅 Champion-Guan；user API 未提供 plan 信息，但 rulesets API 返回 HTTP403，提示私有仓库需升级计划才能启用规则集。
 
 GitHub 官方文档当前说明，Free/Pro/Team 私有仓库不提供环境 required reviewers，私有环境/secret/部署分支可用性也受套餐影响。不能把空环境名称当作受保护环境，不能为了验收改为公开仓库、降低保护或偷偷把私钥放到 repo Secret。
 

@@ -25,10 +25,10 @@ async function fixture(t) {
 test('actual backend Unix bridge reads bounded durable status and stages only downloader identity', async t => {
   const f = await fixture(t);
   assert.deepEqual(await f.client.status(), { allowed: false, state: 'bootstrap-required', currentVersion: null, targetVersion: null, reason: 'update_bootstrap_required' });
-  assert.deepEqual(await f.client.stage({ downloadId: id, version: '1.0.5', repository: 'MrGuAm/guan-ai-workbench' }), { version: '1.0.5' });
+  assert.deepEqual(await f.client.stage({ downloadId: id, version: '1.0.5', repository: 'Champion-Guan/guan-ai-workbench' }), { version: '1.0.5' });
   assert.deepEqual(f.calls, [{ version: '1.0.5', directory: path.join(f.root, 'packages', id) }]);
-  for (const input of [{ downloadId: '../private', version: '1.0.5', repository: 'MrGuAm/guan-ai-workbench' },
-    { downloadId: id, version: '1.0.5', repository: 'other/repo' }, { downloadId: id, version: '1.0.5-beta', repository: 'MrGuAm/guan-ai-workbench' }])
+  for (const input of [{ downloadId: '../private', version: '1.0.5', repository: 'Champion-Guan/guan-ai-workbench' },
+    { downloadId: id, version: '1.0.5', repository: 'other/repo' }, { downloadId: id, version: '1.0.5-beta', repository: 'Champion-Guan/guan-ai-workbench' }])
     await assert.rejects(f.client.stage(input), /update_stage_invalid/);
   assert.equal(f.calls.length, 1);
 });
@@ -67,7 +67,7 @@ test('SoftwareUpdates exposes safe manager diagnostics, coalesces staging and pr
     downloader: { status: () => ({ state: 'verified', progress: 100 }), cancel() {},
       stageIdentity: repository => ({ repository, version: '1.0.5', downloadId: id }) },
     manager: { status: () => f.client.status(), stage: () => { attempts++; return new Promise(resolve => { complete = resolve; }); } } });
-  await updates.configure({ repository: 'MrGuAm/guan-ai-workbench' });
+  await updates.configure({ repository: 'Champion-Guan/guan-ai-workbench' });
   const [first, second] = await Promise.all([updates.stage(), updates.stage()]);
   assert.equal(first.install.staging, true); assert.equal(second.install.staging, true); assert.equal(attempts, 1);
   complete(); await updates.staging;

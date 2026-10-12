@@ -54,10 +54,10 @@ export function ConfigSoftwareUpdates() {
                 <div>当前版本：{status?.currentVersion || "读取中"}</div><div>最新稳定版本：{status?.latest?.version || "尚未获得"}</div>
                 <div>更新渠道：GitHub Private / Stable</div><div>上次检查：{status?.lastCheckedAt ? new Date(status.lastCheckedAt).toLocaleString() : "尚未检查"}</div>
             </div>
-            <div className="space-y-2"><label htmlFor="guan-updates-repository">私有仓库（OWNER/REPOSITORY）</label>
-                <div className="flex gap-2"><Input id="guan-updates-repository" aria-label="私有更新仓库" value={repository} maxLength={201} placeholder="OWNER/REPOSITORY" onChange={e => setRepository(e.target.value)} /><Button loading={saving} onClick={() => void save({ repository: repository.trim() })}>保存仓库</Button></div>
+            <div className="space-y-2"><label htmlFor="guan-updates-repository">私有仓库（所有者/仓库）</label>
+                <div className="flex gap-2"><Input id="guan-updates-repository" aria-label="私有更新仓库" value={repository} maxLength={201} placeholder="所有者/仓库" onChange={e => setRepository(e.target.value)} /><Button loading={saving} onClick={() => void save({ repository: repository.trim() })}>保存仓库</Button></div>
             </div>
-            <Alert type="info" showIcon message="每台 Mac 独立授权，Token 不进入浏览器" description={<div>指定仓库的 Fine-grained Token 仅需 Contents 只读权限。在本机项目终端运行 <code>node scripts/authorize-updates.mjs OWNER/REPOSITORY</code>，使用隐藏输入保存到 macOS Keychain。授权后点击检查；请勿在聊天、URL 或配置文件粘贴 Token。</div>} />
+            <Alert type="info" showIcon message="每台 Mac 独立授权，Token 不进入浏览器" description={<div>指定仓库的 Fine-grained Token 仅需 Contents 只读权限。在本机项目终端运行 <code>node scripts/authorize-updates.mjs 所有者/仓库</code>，使用隐藏输入保存到 macOS Keychain。授权后点击检查；请勿在聊天、URL 或配置文件粘贴 Token。</div>} />
             <div>授权状态：{status?.authorization === "configured-not-verified" ? "已有本机授权记录，检查时验证权限" : "需要本机授权"}</div>
             <div className="flex flex-wrap items-center gap-5">
                 <label className="flex items-center gap-2"><Switch aria-label="自动检查更新" checked={prefs?.autoCheck ?? true} disabled={!prefs || saving} onChange={autoCheck => void save({ autoCheck })} />自动检查（启动及每 6 小时）</label>

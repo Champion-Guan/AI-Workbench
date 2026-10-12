@@ -74,6 +74,11 @@ test('per-machine authorization writes references only, verifies Keychain readba
   assert.equal((await stat(f.directory)).mode & 0o777, 0o700);
   const g = await fixture(t); await assert.rejects(g.auth.token('owner/repo'), /authorization_required/); assert.equal(g.keys.size, 0);
 });
+test('renamed GitHub owner migrates the existing Keychain reference without re-entering the token', async t => {
+  const f = await fixture(t); await f.auth.authorize('MrGuAm/guan-ai-workbench', secret);
+  assert.equal(await f.auth.token('Champion-Guan/guan-ai-workbench'), secret);
+  assert.equal(JSON.parse(await readFile(f.auth.file, 'utf8')).repository, 'Champion-Guan/guan-ai-workbench');
+});
 test('bad auth/preference files and symlinks fail closed, preserve bytes and never overwrite configuration', async t => {
   const f = await fixture(t);
   await writeFile(f.auth.file, 'bad-auth'); await assert.rejects(f.auth.authorize('owner/repo', secret), /auth_storage_invalid/);

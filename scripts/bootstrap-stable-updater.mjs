@@ -28,7 +28,7 @@ async function main() {
       || !/^\d+\.\d+\.\d+$/.test(version || ''))) throw Error('update_bootstrap_arguments_invalid');
   const projectRoot = fileURLToPath(new URL('../', import.meta.url)), paths = runtimePaths({ projectRoot });
   const manager = new UpdateManager({ root: path.join(paths.root, 'installation'), dataRoot: paths.data, projectRoot,
-    repository: 'MrGuAm/guan-ai-workbench' });
+    repository: 'Champion-Guan/guan-ai-workbench' });
   const pointer = mode === '--upgrade-manager' ? await manager.readCurrent()
     : await manager.stage({ directory: path.join(paths.updates, 'packages', downloadId), version });
   if (!pointer) throw Error('update_bootstrap_required');

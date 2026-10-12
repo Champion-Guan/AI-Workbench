@@ -59,7 +59,7 @@
 - 原已发布v1.0.4 arm64签名包经新manager实际stage与目标复核，347文件、buildId`61fc653824dc4e84e1716ee8`，current仍null，未执行其payload，未安装。脱敏结果在`output/phase5/real-arm64-staging.json`。
 - 本轮未签名便携样包352文件、7个HTTP路由的隔离启动验证通过；直接从解压包启动独立daemon，独立临时私人根的Unix status正常且installAllowed=false，随后正常停止。该样包形成于最后文档加入前，不是新Stable；最终原生QA将从提交源码重新构建。
 - 已运行源码/历史扫描，原精确历史占位例外保留；发布前仍需独立扫描、暂存扫描和实际CI。规则扫描不是所有秘密绝不存在的保证。
-- 代码提交`8d9707bd9ddfa1b0f5083fff4471790dedac032a`已推送私有main。普通质量CI [38104370214](https://github.com/MrGuAm/guan-ai-workbench/actions/runs/38104370214)通过；arm64-only Build-QA [38104395187](https://github.com/MrGuAm/guan-ai-workbench/actions/runs/38104395187)的quality及唯一`build (macos-15, arm64)`均成功，包含实际内置Node/资源/更新状态启动验证。没有Intel任务、签名Secret或发布任务。旧Actions Node20强制Node24、Go缓存缺少go.sum及arm64队列提示仍在，不影响本次通过。
+- 代码提交`8d9707bd9ddfa1b0f5083fff4471790dedac032a`已推送私有main。普通质量CI [38104370214](https://github.com/Champion-Guan/guan-ai-workbench/actions/runs/38104370214)通过；arm64-only Build-QA [38104395187](https://github.com/Champion-Guan/guan-ai-workbench/actions/runs/38104395187)的quality及唯一`build (macos-15, arm64)`均成功，包含实际内置Node/资源/更新状态启动验证。没有Intel任务、签名Secret或发布任务。旧Actions Node20强制Node24、Go缓存缺少go.sum及arm64队列提示仍在，不影响本次通过。
 
 ## 下一批必须完成后才能验收阶段5
 

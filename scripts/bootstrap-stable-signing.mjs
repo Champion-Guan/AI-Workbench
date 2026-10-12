@@ -8,7 +8,7 @@ import { runtimePaths, writePrivateFile } from '../src/server/runtime-paths.mjs'
 import { MacKeychainVault } from '../src/server/keychain-vault.mjs';
 import { keyId, sha256 } from '../src/server/stable-manifest.mjs';
 
-const repository = 'MrGuAm/guan-ai-workbench', secretName = 'GUAN_STABLE_SIGNING_KEY';
+const repository = 'Champion-Guan/guan-ai-workbench', secretName = 'GUAN_STABLE_SIGNING_KEY';
 let stage = 'preflight', directory;
 try {
   const [confirmation, backupRoot] = process.argv.slice(2), root = fileURLToPath(new URL('../', import.meta.url));

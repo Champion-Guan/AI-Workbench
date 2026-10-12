@@ -18,7 +18,7 @@ async function main() {
   const projectRoot = fileURLToPath(new URL('../', import.meta.url));
   const paths = runtimePaths({ projectRoot });
   const manager = new UpdateManager({ root: path.join(paths.root, 'installation'), dataRoot: paths.data,
-    projectRoot, repository: 'MrGuAm/guan-ai-workbench' });
+    projectRoot, repository: 'Champion-Guan/guan-ai-workbench' });
   await manager.initialize();
   // Lazy connection: read-only diagnostics/staging remain available if the
   // separately installed owner is absent. No PID/port fallback is allowed.

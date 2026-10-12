@@ -14,7 +14,7 @@ permissions:
   contents: read
 jobs:
   verify-key:
-    if: github.repository == 'MrGuAm/guan-ai-workbench' && github.event.repository.private == true && github.repository_owner_id == '87700227' && github.actor_id == '87700227' && github.triggering_actor == 'MrGuAm' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch) && inputs.confirmation == 'VERIFY-SIGNING-KEY' && inputs.commit == github.sha
+    if: github.repository == 'Champion-Guan/guan-ai-workbench' && github.event.repository.private == true && github.repository_owner_id == '87700227' && github.actor_id == '87700227' && github.triggering_actor == 'Champion-Guan' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch) && inputs.confirmation == 'VERIFY-SIGNING-KEY' && inputs.commit == github.sha
     runs-on: macos-15
     timeout-minutes: 5
     steps:

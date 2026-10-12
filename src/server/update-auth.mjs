@@ -4,6 +4,8 @@ import { readPrivateFile, writePrivateJson } from './runtime-paths.mjs';
 import { CREDENTIAL_ACCOUNT } from './keychain-vault.mjs';
 import { validRepository } from './stable-version.mjs';
 
+const LEGACY_REPOSITORY = 'MrGuAm/guan-ai-workbench';
+
 export class UpdateError extends Error {
   constructor(code) { super(code); this.code = code; }
 }
@@ -21,10 +23,14 @@ export class UpdateAuth {
   }
   async token(repository) {
     const meta = await this.metadata();
-    if (!meta || meta.repository.toLowerCase() !== repository.toLowerCase()) throw new UpdateError('authorization_required');
+    const sameRepository = meta && meta.repository.toLowerCase() === repository.toLowerCase();
+    const renamedRepository = meta && meta.repository.toLowerCase() === LEGACY_REPOSITORY.toLowerCase()
+      && repository.toLowerCase() === 'champion-guan/guan-ai-workbench';
+    if (!sameRepository && !renamedRepository) throw new UpdateError('authorization_required');
     let value;
     try { value = await this.vault.read(meta.account); } catch { throw new UpdateError('keychain_unavailable'); }
     if (!value || !/^[A-Za-z0-9_]{20,255}$/.test(value)) throw new UpdateError('authorization_required');
+    if (renamedRepository) await writePrivateJson(this.file, { version: 1, repository, account: meta.account });
     return value;
   }
   // CLI only. No browser route accepts, exports or returns the Token.

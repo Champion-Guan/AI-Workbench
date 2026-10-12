@@ -4,9 +4,9 @@
 
 ## 已通过
 
-- 私有仓库：`MrGuAm/guan-ai-workbench`；Release ID409090166，v1.0.4为正式非Draft、非Prerelease且latest。发布时间本地2026-10-11 01:17:17。
+- 私有仓库：`Champion-Guan/guan-ai-workbench`；Release ID409090166，v1.0.4为正式非Draft、非Prerelease且latest。发布时间本地2026-10-11 01:17:17。
 - 固定源码/tag提交：`b27006fb8f49cd0e780cd525dd4088f16efc43b4`，不是个人迁移包。
-- [正式发布Actions38070685727](https://github.com/MrGuAm/guan-ai-workbench/actions/runs/38070685727)的质量、arm64、x64、签名发布四个job全部成功。两个架构各自执行包内Node，完成隔离启动/健康/资源核验。
+- [正式发布Actions38070685727](https://github.com/Champion-Guan/guan-ai-workbench/actions/runs/38070685727)的质量、arm64、x64、签名发布四个job全部成功。两个架构各自执行包内Node，完成隔离启动/健康/资源核验。
 - 395项本地回归、typecheck/build、Lint0错误（4条既有警告）、源码521/暂存8文件及历史扫描、独立Gitleaks通过；普通Push/tag CI38070669369/38070684493均成功。
 - Ed25519公钥固定于源码，keyId为`61d0312290a5ac3688099d26d595e619161fcf34bcc582262c5ab26f1c20be00`。先签名并验证两个包，再上传Draft、核对5项资产GitHub摘要，最后转正式版。
 - 使用真实readGitHubStable、StableDownload、readReleaseAsset与verifySignedStable从线上下载两包：私有API/CDN、签名、大小/hash、ZIP安全、精确347文件、版本/提交/架构、Node/helper全部通过。未执行下载代码。实际发布签名篡改、同版本更新、错误仓库测试均拒绝。

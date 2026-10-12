@@ -23,10 +23,10 @@ test('fixed signing-only proof accepts matching ephemeral key, rejects unknown k
     () => verifyStableSigningProof(raw, commit, { [id]: generateKeyPairSync('ed25519').publicKey.export({ type: 'spki', format: 'pem' }) })]) assert.throws(run);
 });
 test('signing-only approval cannot authorize release, rejects other actors and extra release tag', () => {
-  const context = { eventName: 'workflow_dispatch', repository: 'MrGuAm/guan-ai-workbench', ownerId: '87700227',
-    actorId: '87700227', triggeringActor: 'MrGuAm', ref: 'refs/heads/main', sha: 'a'.repeat(40),
-    event: { repository: { full_name: 'MrGuAm/guan-ai-workbench', private: true, default_branch: 'main', owner: { id: 87700227, login: 'MrGuAm' } },
-      sender: { id: 87700227, login: 'MrGuAm' }, inputs: { commit: 'a'.repeat(40), confirmation: 'VERIFY-SIGNING-KEY' } } };
+  const context = { eventName: 'workflow_dispatch', repository: 'Champion-Guan/guan-ai-workbench', ownerId: '87700227',
+    actorId: '87700227', triggeringActor: 'Champion-Guan', ref: 'refs/heads/main', sha: 'a'.repeat(40),
+    event: { repository: { full_name: 'Champion-Guan/guan-ai-workbench', private: true, default_branch: 'main', owner: { id: 87700227, login: 'Champion-Guan' } },
+      sender: { id: 87700227, login: 'Champion-Guan' }, inputs: { commit: 'a'.repeat(40), confirmation: 'VERIFY-SIGNING-KEY' } } };
   assert.equal(verifyStableSigningQaApproval(context).releaseAllowed, false);
   assert.throws(() => verifyStableOwnerApproval(context));
   assert.throws(() => verifyStableSigningQaApproval({ ...context, triggeringActor: 'friend' }));

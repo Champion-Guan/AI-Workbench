@@ -4,12 +4,12 @@ import { readFile } from 'node:fs/promises';
 import { spawnSync } from 'node:child_process';
 import { verifyStableOwnerApproval, verifyStableOwnerEnvironment } from '../scripts/lib/stable-owner-approval.mjs';
 
-const fixture = () => ({ eventName: 'workflow_dispatch', repository: 'MrGuAm/guan-ai-workbench',
-  ownerId: '87700227', actorId: '87700227', triggeringActor: 'MrGuAm', ref: 'refs/heads/main', sha: 'a'.repeat(40),
-  event: { repository: { full_name: 'MrGuAm/guan-ai-workbench', private: true, default_branch: 'main', owner: { id: 87700227, login: 'MrGuAm' } },
-    sender: { id: 87700227, login: 'MrGuAm' }, inputs: { commit: 'a'.repeat(40), tag: 'v1.0.4', confirmation: 'RELEASE-STABLE' } } });
+const fixture = () => ({ eventName: 'workflow_dispatch', repository: 'Champion-Guan/guan-ai-workbench',
+  ownerId: '87700227', actorId: '87700227', triggeringActor: 'Champion-Guan', ref: 'refs/heads/main', sha: 'a'.repeat(40),
+  event: { repository: { full_name: 'Champion-Guan/guan-ai-workbench', private: true, default_branch: 'main', owner: { id: 87700227, login: 'Champion-Guan' } },
+    sender: { id: 87700227, login: 'Champion-Guan' }, inputs: { commit: 'a'.repeat(40), tag: 'v1.0.4', confirmation: 'RELEASE-STABLE' } } });
 test('single owner explicitly approves exact private default-branch source', () => {
-  assert.deepEqual(verifyStableOwnerApproval(fixture()), { repository: 'MrGuAm/guan-ai-workbench', commit: 'a'.repeat(40), tag: 'v1.0.4', approvedBy: 'MrGuAm' });
+  assert.deepEqual(verifyStableOwnerApproval(fixture()), { repository: 'Champion-Guan/guan-ai-workbench', commit: 'a'.repeat(40), tag: 'v1.0.4', approvedBy: 'Champion-Guan' });
 });
 test('push, collaborator, foreign rerun, fork, changed owner, branch and unconfirmed source are rejected', () => {
   const mutations = [f => f.eventName = 'push', f => f.actorId = '1', f => f.triggeringActor = 'friend',

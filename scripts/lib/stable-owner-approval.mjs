@@ -4,15 +4,15 @@ import { readFile, lstat } from 'node:fs/promises';
 function verifyOwnerContext({ event, eventName, repository, ownerId, actorId,
   triggeringActor, ref, sha }) {
   const repo = event?.repository;
-  if (eventName !== 'workflow_dispatch' || repository !== 'MrGuAm/guan-ai-workbench'
+  if (eventName !== 'workflow_dispatch' || repository !== 'Champion-Guan/guan-ai-workbench'
     || repo?.full_name !== repository || repo.private !== true
-    || String(repo.owner?.id) !== '87700227' || repo.owner?.login !== 'MrGuAm'
-    || ownerId !== '87700227' || actorId !== '87700227' || triggeringActor !== 'MrGuAm'
-    || String(event.sender?.id) !== '87700227' || event.sender?.login !== 'MrGuAm'
+    || String(repo.owner?.id) !== '87700227' || repo.owner?.login !== 'Champion-Guan'
+    || ownerId !== '87700227' || actorId !== '87700227' || triggeringActor !== 'Champion-Guan'
+    || String(event.sender?.id) !== '87700227' || event.sender?.login !== 'Champion-Guan'
     || typeof repo.default_branch !== 'string' || !/^[A-Za-z0-9_./-]{1,128}$/.test(repo.default_branch)
     || repo.default_branch.includes('..') || ref !== `refs/heads/${repo.default_branch}`
     || !/^[a-f0-9]{40}$/.test(sha || '') || event.inputs?.commit !== sha) throw Error('Owner approval rejected');
-  return { repository, commit: sha, approvedBy: 'MrGuAm' };
+  return { repository, commit: sha, approvedBy: 'Champion-Guan' };
 }
 
 export function verifyStableOwnerApproval(context) {

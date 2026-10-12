@@ -4,7 +4,7 @@
 
 ## 固定验收身份
 
-- 仓库：私有 `MrGuAm/guan-ai-workbench`，所有者 ID `87700227`。
+- 仓库：私有 `Champion-Guan/guan-ai-workbench`，所有者 ID `87700227`。
 - 提交：`f81235a1c82670de312c9ea7cdac382b70338973`。
 - 标签：`v1.0.5`，固定到上述提交，未移动已有标签。
 - 本机集中报告：独立 QA worktree 的 `output/phase5/latest-verification.json`，UTC `2026-10-11T16:43:04.349Z`。
@@ -42,7 +42,7 @@
 
 ## 暂停 Actions（最新决定）
 
-用户明确要求先跳过 GitHub Actions。已使用仓库 Actions permissions 接口关闭 `MrGuAm/guan-ai-workbench` 的 Actions，并重新读取确认 `enabled=false`；查询最近运行无未完成任务。该仓库后续 Push 不运行 Actions，但 Git 源码、工作流文件及 GitHub Releases 保留。未删除历史运行或资产，也未改动其他仓库、支付设置、签名 Secret、私人配置或生产服务。
+用户明确要求先跳过 GitHub Actions。已使用仓库 Actions permissions 接口关闭 `Champion-Guan/guan-ai-workbench` 的 Actions，并重新读取确认 `enabled=false`；查询最近运行无未完成任务。该仓库后续 Push 不运行 Actions，但 Git 源码、工作流文件及 GitHub Releases 保留。未删除历史运行或资产，也未改动其他仓库、支付设置、签名 Secret、私人配置或生产服务。
 
 现有 `sign-stable-release.mjs` / `publish-stable-release.mjs` 使用 CI-only 所有者审批。不得设置假的 `GITHUB_ACTIONS` 或伪造事件绕过验证。建议替代为本机原生构建、完整质量/秘密扫描、所有者明确确认、复用既有可信密钥签名、Draft 资产核验后发布；GitHub 仅负责源码和 Release 托管。此前用户选择 Actions 签名，故在明确批准本机签名替代方案前，不解密本机签名备份、不生成或轮换密钥、不发布未签名 Stable。
 

@@ -4,7 +4,7 @@
 
 ## 当前准入
 
-- 仓库必须为私有 `MrGuAm/guan-ai-workbench`，所有者固定 GitHub ID `87700227`。
+- 仓库必须为私有 `Champion-Guan/guan-ai-workbench`，所有者固定 GitHub ID `87700227`。
 - 只有该所有者可手动触发及重跑，必须从默认分支输入已有版本标签、`RELEASE-STABLE` 和审核过的完整40位提交 SHA，SHA 必须等于本次 github.sha。
 - 发布工作流的 quality/publish 条件、build/publish 中的事件检查，以及签名/发布脚本自身都验证身份和批准提交。构建/签名固定 checkout github.sha；标签与根版本、产物提交、架构必须一致。
 - 普通 Push/PR 只运行质量 CI；BUILD-ONLY QA 不签名、不发布。所有正式发布仍需用户主动批准具体版本。
