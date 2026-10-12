@@ -3,7 +3,7 @@ import { frontendActivity } from "@/lib/update-activity";
 import { frontendTaskBarrier } from "@/services/task-admission";
 import { APP_VERSION } from "@/constant/env";
 
-const ORIGIN = "http://127.0.0.1:5174";
+const ORIGIN = "http://127.0.0.1:8888";
 const HANDSHAKE = "guan-managed-page-v1";
 const uuid = (v: unknown): v is string => typeof v === "string" && /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/.test(v);
 

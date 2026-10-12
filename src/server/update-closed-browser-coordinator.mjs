@@ -9,10 +9,10 @@ const idle = (v, background = true) => validBackendEvidence(v) && !v.backend.act
 // session/remote-task evidence and admission ownership across service restarts.
 // No default authority and no empty-ledger fallback are supplied here.
 export class ClosedBrowserCoordinator {
-  constructor({ service, ledger, authority, census = workbenchPageCensus }) {
+  constructor({ service, ledger, authority, pageOnly = false, census = workbenchPageCensus }) {
     if (!service?.backendControl || !service?.isStopped || !ledger?.snapshot || typeof census !== 'function')
       throw Error('install_coordination_invalid');
-    this.service = service; this.ledger = ledger; this.authority = authority; this.census = census;
+    this.service = service; this.ledger = ledger; this.authority = authority; this.census = census; this.pageOnly = pageOnly;
     this.held = null; this.busy = false;
   }
   async browsersClosed() {
@@ -38,6 +38,25 @@ export class ClosedBrowserCoordinator {
         || !controlUuid(authorityLease.epoch) || authorityLease.fullCoverage !== true)
         throw Error('install_closure_evidence_unavailable');
       await authorityLease.assertValid();
+      // Product policy: saved acknowledgement + closed workbench pages.
+      // Signature, process ownership, atomic switching and rollback remain mandatory.
+      if (this.pageOnly) {
+        const coordinator = this;
+        let released = false;
+        const lease = {
+          epoch: authorityLease.epoch,
+          async assertValid() {
+            if (released || coordinator.held !== lease) throw Error('install_permit_invalid');
+            await coordinator.browsersClosed(); await authorityLease.assertValid();
+          },
+          async release() {
+            await lease.assertValid(); await authorityLease.release();
+            released = true; coordinator.held = null;
+          },
+          matches(value) { return same(value, identities.next); },
+        };
+        this.held = lease; await lease.assertValid(); return lease;
+      }
       const durable = await this.ledger.snapshot();
       if (durable.pending || !Number.isSafeInteger(durable.revision)) throw Error('install_tasks_pending');
       if (await this.service.isStopped() !== true) {

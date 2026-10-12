@@ -41,7 +41,7 @@ async function durableTree(directory) {
 // A trusted coordinator and exact-owned-service adapter are mandatory to install.
 export class UpdateManager {
   constructor({ root, dataRoot, projectRoot, repository, trustedKeys, coordinator, service,
-    platform = process.platform, arch = process.arch, freeSpace, onStep = async () => {}, origin = 'http://127.0.0.1:5174' }) {
+    platform = process.platform, arch = process.arch, freeSpace, onStep = async () => {}, origin = 'http://127.0.0.1:8888' }) {
     if (!path.isAbsolute(root || '') || !path.isAbsolute(dataRoot || '') || !validRepository(repository)
       || platform !== 'darwin' || arch !== 'arm64') throw Error('update_platform_invalid');
     this.root = path.resolve(root); this.dataRoot = path.resolve(dataRoot); this.repository = repository;

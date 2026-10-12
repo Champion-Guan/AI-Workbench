@@ -18,7 +18,7 @@ async function main() {
   const projectRoot = fileURLToPath(new URL('../', import.meta.url));
   const paths = runtimePaths({ projectRoot });
   const manager = new UpdateManager({ root: path.join(paths.root, 'installation'), dataRoot: paths.data,
-    projectRoot, repository: 'Champion-Guan/guan-ai-workbench' });
+    projectRoot, repository: 'Champion-Guan/AI-Workbench' });
   await manager.initialize();
   // Lazy connection: read-only diagnostics/staging remain available if the
   // separately installed owner is absent. No PID/port fallback is allowed.
@@ -28,8 +28,8 @@ async function main() {
   // ledger is NOT silently seeded by an automatic daemon startup.
   const ledger = new UpdateTaskLedger({ file: path.join(paths.updates, 'task-ledger.json'), version: '1.0.5' });
   const authority = new OperatorUpdateAuthority({ file: path.join(paths.updates, 'operator-consent.json'), manager,
-    service: manager.service, ledger });
-  manager.coordinator = new ClosedBrowserCoordinator({ service: manager.service, ledger, authority });
+    service: manager.service, ledger, pageOnly: true });
+  manager.coordinator = new ClosedBrowserCoordinator({ service: manager.service, ledger, authority, pageOnly: true });
   manager.operator = authority;
   const scheduler = new UpdateInstallScheduler({ manager, authority, preferencesFile: path.join(paths.updates, 'preferences.json'),
     restoreCurrent: () => startSettledCurrent({ manager, authority, ledger }) });

@@ -77,7 +77,7 @@ test('dispose during a persistence flush waits for the actual write and never ac
 });
 test('actual app relay uses a bounded MessagePort, fixed Origin and exact handshake; no window install/commands', async t => {
   const f = fixture(), listeners = new Map();
-  const window = { location: { origin: 'http://127.0.0.1:5174' }, addEventListener: (name, fn) => listeners.set(name, fn), removeEventListener: name => listeners.delete(name), postMessage() {} };
+  const window = { location: { origin: 'http://127.0.0.1:8888' }, addEventListener: (name, fn) => listeners.set(name, fn), removeEventListener: name => listeners.delete(name), postMessage() {} };
   Object.assign(f.context, { window, frontendActivity: f.registry, frontendTaskBarrier: f.barrier, APP_VERSION: '1.0.4' });
   vm.runInContext(compile('(function () {\n' + source('src/canvas/services/managed-page-relay.ts') + '\nglobalThis.stopRelay = startManagedPageRelay();\n})();'), f.context);
   const channel = new MessageChannel(); t.after(() => { f.context.stopRelay(); channel.port1.close(); channel.port2.close(); f.barrier.dispose(); });

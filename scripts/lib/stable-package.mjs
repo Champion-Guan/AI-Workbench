@@ -28,7 +28,7 @@ export async function buildStablePackage({ root, portableDirectory, runtimeDirec
   for (const file of ['node', 'LICENSE', 'NODE-RUNTIME.json']) await cp(path.join(runtimeDirectory, file), path.join(stage, 'runtime', file));
   await cp(path.join(root, 'scripts/start-stable.command'), path.join(stage, 'scripts/start-stable.command'));
   await chmod(path.join(stage, 'scripts/start-stable.command'), 0o755);
-  await writePrivateFile(path.join(stage, 'START-HERE.txt'), 'macOS 稳定版：scripts/start-stable.command\n内置本机架构 Node；Origin 保持 http://127.0.0.1:5174。\n不包含个人配置、代理核心、画布或生成记录。\n首次接入先备份旧电脑数据，参考 docs/STABLE-UPDATES-PHASE4.md。\n');
+  await writePrivateFile(path.join(stage, 'START-HERE.txt'), 'macOS 稳定版：scripts/start-stable.command\n默认地址 http://localhost:8888，统一到 http://127.0.0.1:8888。\n不包含个人配置、代理核心、画布或生成记录。\n旧 5174 地址先备份并迁移浏览器数据，参考 docs/公开仓库与8888端口.md。\n');
   const files = {};
   async function inventory(directory) {
     for (const entry of (await readdir(directory)).sort()) {

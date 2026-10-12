@@ -3,8 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { readPrivateFile, writePrivateJson } from './runtime-paths.mjs';
 import { CREDENTIAL_ACCOUNT } from './keychain-vault.mjs';
 import { validRepository } from './stable-version.mjs';
-
-const LEGACY_REPOSITORY = 'MrGuAm/guan-ai-workbench';
+import { isPublicUpdateRepository, sameWorkbenchRepository } from './workbench-identity.mjs';
 
 export class UpdateError extends Error {
   constructor(code) { super(code); this.code = code; }
@@ -22,10 +21,11 @@ export class UpdateAuth {
     } catch { throw new UpdateError('auth_storage_invalid'); }
   }
   async token(repository) {
+    // Public updates never need or expose the owner's existing private Token.
+    if (isPublicUpdateRepository(repository)) return '';
     const meta = await this.metadata();
     const sameRepository = meta && meta.repository.toLowerCase() === repository.toLowerCase();
-    const renamedRepository = meta && meta.repository.toLowerCase() === LEGACY_REPOSITORY.toLowerCase()
-      && repository.toLowerCase() === 'champion-guan/guan-ai-workbench';
+    const renamedRepository = meta && sameWorkbenchRepository(meta.repository, repository);
     if (!sameRepository && !renamedRepository) throw new UpdateError('authorization_required');
     let value;
     try { value = await this.vault.read(meta.account); } catch { throw new UpdateError('keychain_unavailable'); }

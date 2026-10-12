@@ -28,7 +28,7 @@ async function main() {
       || !/^\d+\.\d+\.\d+$/.test(version || ''))) throw Error('update_bootstrap_arguments_invalid');
   const projectRoot = fileURLToPath(new URL('../', import.meta.url)), paths = runtimePaths({ projectRoot });
   const manager = new UpdateManager({ root: path.join(paths.root, 'installation'), dataRoot: paths.data, projectRoot,
-    repository: 'Champion-Guan/guan-ai-workbench' });
+    repository: 'Champion-Guan/AI-Workbench' });
   const pointer = mode === '--upgrade-manager' ? await manager.readCurrent()
     : await manager.stage({ directory: path.join(paths.updates, 'packages', downloadId), version });
   if (!pointer) throw Error('update_bootstrap_required');
@@ -122,7 +122,7 @@ async function main() {
   try {
     await authority.approveBootstrap(pointer, { acknowledgement: 'saved-and-all-tasks-ended', backupVerified: backup.verified });
     await manager.bootstrap(pointer);
-    console.log('Signed first handoff activated at http://127.0.0.1:5174; verified private/Chrome backup retained. No profile or configuration was reset.');
+    console.log('Signed first handoff activated at http://127.0.0.1:8888; verified private/Chrome backup retained. No profile or configuration was reset.');
   } finally { service.disconnect(); }
 }
 main().catch(error => {

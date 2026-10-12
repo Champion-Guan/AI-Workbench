@@ -25,6 +25,7 @@ import { UpdateManagerClient } from "./update-manager-client.mjs";
 import { UpdateTaskLedger } from "./update-task-ledger.mjs";
 import { createUpdateTaskHttpHandler } from "./update-task-http.mjs";
 import { createBackendControl } from "./update-backend-control.mjs";
+import { portMigrationPage } from "./port-migration-page.mjs";
 
 const projectRoot = fileURLToPath(new URL("../../", import.meta.url));
 
@@ -35,7 +36,7 @@ const pageFile = join(publicRoot, "index.html");
 const assetRoot = join(publicRoot, "assets");
 const infiniteCanvasRoot = join(publicRoot, "infinite-canvas");
 const builtInProxyConfigFile = privatePaths.proxyConfigFile;
-const port = Number(process.env.PORT || 5174);
+const port = Number(process.env.PORT || 8888);
 const applicationVersion = JSON.parse(readFileSync(join(projectRoot, "package.json"), "utf8")).version;
 const applicationBuildId = createHash("sha256").update(readFileSync(fileURLToPath(import.meta.url))).update(readFileSync(join(infiniteCanvasRoot, "index.html"))).digest("hex").slice(0, 24);
 const applicationInstanceId = randomUUID();
@@ -4068,7 +4069,18 @@ const backendControl = createBackendControl({ gate: activityGate, ledger: update
 const updateStartup = createUpdateStartup({ onActivate: () => softwareUpdates.start(), backendControl, instance: applicationInstanceId });
 const server = createServer(async (request, response) => {
   const method = request.method || "GET";
+  // One canonical Origin shares browser storage and Keychain proxy bindings.
+  if (request.headers.host === `localhost:${port}` && (method === "GET" || method === "HEAD")) {
+    const target = new URL(request.url || "/", `http://127.0.0.1:${port}`);
+    if (target.origin !== `http://127.0.0.1:${port}`) { response.writeHead(400); response.end(); return; }
+    response.writeHead(307, { location: target.href, "cache-control": "no-store" }); response.end(); return;
+  }
   const pathname = new URL(request.url || "/", "http://127.0.0.1").pathname.replace(/\/$/, "") || "/";
+  if (pathname === "/local-app/port-migration" && (method === "GET" || method === "HEAD")) {
+    response.writeHead(200, { "content-type": "text/html; charset=utf-8", "cache-control": "no-store",
+      "content-security-policy": "default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'" });
+    response.end(method === "HEAD" ? undefined : portMigrationPage); return;
+  }
   if (updateStartup.reject(request, response, pathname)) return;
   if (await updateTaskHttp(request, response)) return;
   if (await credentialHttp(request, response)) return;

@@ -48,8 +48,9 @@ function visit(value) {
   } else {
     var tabAddress = ObjC.unwrap(value.stringValue);
     if (typeof tabAddress !== 'string') throw Error('Unknown tab');
-    if (tabAddress === 'http://127.0.0.1:5174' || tabAddress.startsWith('http://127.0.0.1:5174/')
-      || tabAddress.startsWith('http://127.0.0.1:5174?') || tabAddress.startsWith('http://127.0.0.1:5174#')) workbenchCount++;
+    if (['http://127.0.0.1:8888', 'http://localhost:8888'].some(function(origin) {
+      return tabAddress === origin || ['/', '?', '#'].some(function(separator) { return tabAddress.startsWith(origin + separator); });
+    })) workbenchCount++;
   }
 }
 visit(reply.paramDescriptorForKeyword(code('----')));

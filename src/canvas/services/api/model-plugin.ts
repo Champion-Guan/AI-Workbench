@@ -2,6 +2,8 @@ import axios, { type AxiosRequestConfig } from "axios";
 
 import i18n from "@/i18n";
 import { buildApiUrl, withLocalProxy, type AiConfig, type ModelCapability } from "@/stores/use-config-store";
+import { secureCredential } from "@/services/secure-credentials";
+import { scopedPluginUrl, scopedPluginHeaders } from "./plugin-credential-scope";
 
 type RequestOptions = { signal?: AbortSignal };
 
@@ -40,6 +42,8 @@ function pluginHeaders(extra?: Record<string, string>, hasJsonBody = false): Rec
 }
 
 function pluginUrl(config: AiConfig, path: string) {
+    if (config.apiKey?.startsWith("guan-vault:")) return scopedPluginUrl(config.baseUrl,
+        /^https?:/i.test(path) || /^\/?v1(?:beta)?\//.test(path) ? path : `/v1/${path.replace(/^\/+/, "")}`, location.origin);
     if (/^https?:/i.test(path)) return withLocalProxy(path);
     return buildApiUrl(config.baseUrl, path.startsWith("/") ? path : `/${path}`);
 }
@@ -52,7 +56,9 @@ function createPluginHttp(config: AiConfig, options?: RequestOptions): PluginHtt
             url: pluginUrl(config, path),
             data: method === "post" ? body : undefined,
             params: opts?.params,
-            headers: pluginHeaders({ Authorization: `Bearer ${config.apiKey}`, ...opts?.headers }, method === "post" && !isForm && body !== undefined),
+            headers: pluginHeaders(config.apiKey?.startsWith("guan-vault:")
+                ? scopedPluginHeaders(config.apiKey, opts?.headers)
+                : { Authorization: `Bearer ${config.apiKey}`, ...opts?.headers }, method === "post" && !isForm && body !== undefined),
             responseType: opts?.responseType || "json",
             signal: options?.signal,
         });
@@ -68,7 +74,11 @@ function createPluginHttp(config: AiConfig, options?: RequestOptions): PluginHtt
 /** Raw request with no automatic auth header — the script controls method, url, headers, body entirely. */
 function createPluginRequest(config: AiConfig, options?: RequestOptions) {
     return async (requestConfig: AxiosRequestConfig & { url: string }) => {
-        const response = await axios.request({ ...requestConfig, url: pluginUrl(config, requestConfig.url), signal: options?.signal });
+        if (config.apiKey?.startsWith("guan-vault:") && (requestConfig.auth || requestConfig.adapter || requestConfig.transformRequest))
+            throw new Error("安全脚本请求不能覆盖鉴权或请求适配器");
+        const response = await axios.request({ ...requestConfig, baseURL: undefined,
+            ...(config.apiKey?.startsWith("guan-vault:") ? { headers: scopedPluginHeaders(config.apiKey, requestConfig.headers as Record<string, unknown>) } : {}),
+            url: pluginUrl(config, requestConfig.url), signal: options?.signal });
         return response.data;
     };
 }
@@ -111,7 +121,9 @@ function createPoll(signal?: AbortSignal) {
  * The script still runs as an async function body and must `return` the result.
  */
 export async function runModelPlugin<T = unknown>(args: RunPluginArgs): Promise<T> {
-    const { config } = args;
+    // Even legacy plaintext configuration is secured before entering arbitrary script code.
+    const binding = await secureCredential(args.config.apiFormat || "openai", args.config.baseUrl, args.config.apiKey);
+    const config = { ...args.config, baseUrl: binding.baseUrl, apiKey: binding.credentialRef };
     const http = createPluginHttp(config, { signal: args.signal });
     const request = createPluginRequest(config, { signal: args.signal });
     const poll = createPoll(args.signal);

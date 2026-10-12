@@ -30,6 +30,21 @@ async function fixture(t) {
   return { root, ledger, gate, writes, previous, next, service, manager, authority, calls: () => calls++,
     clock: value => { now = value; }, stopped: value => { stopped = value; }, current: value => { current = value; } };
 }
+test('page-only policy ignores remote ledgers but never installs with an open workbench page', async t => {
+  const f = await fixture(t); f.authority.pageOnly = true;
+  const task = await f.ledger.begin({ id: randomUUID(), pageId: randomUUID(), domain: 'agent', version: f.previous.version });
+  await f.authority.approve(f.next, 'saved-and-all-tasks-ended');
+  let closed = false;
+  const coordinator = new ClosedBrowserCoordinator({ service: f.service, ledger: f.ledger, authority: f.authority, pageOnly: true,
+    census: async () => ({ workbenchPagesClosed: closed, blockers: closed ? [] : ['Chrome'] }) });
+  await assert.rejects(coordinator.acquire({ previous: f.previous, next: f.next }), /browsers_running/);
+  closed = true; const lease = await coordinator.acquire({ previous: f.previous, next: f.next });
+  assert.equal((await f.ledger.snapshot()).pending, 1);
+  assert.equal(f.gate.backendSnapshot().frozen, false);
+  closed = false; await assert.rejects(lease.assertValid(), /browsers_running/);
+  closed = true; await lease.release();
+  await f.ledger.complete(task);
+});
 test('per-version confirmation persists, cannot authorise another target, expires, and never clears pending native tasks', async t => {
   const f = await fixture(t);
   await assert.rejects(f.authority.approve(f.next, 'yes'), /confirmation_required/);

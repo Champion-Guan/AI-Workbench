@@ -7,7 +7,7 @@ import { webcrypto } from 'node:crypto';
 import ts from '../src/canvas/node_modules/typescript/lib/typescript.js';
 import { createActivityFixture } from './helpers/frontend-activity.mjs';
 
-const ORIGIN = 'http://127.0.0.1:5174', extension = 'a'.repeat(32), documentId = 'B'.repeat(32);
+const ORIGIN = 'http://127.0.0.1:8888', extension = 'a'.repeat(32), documentId = 'B'.repeat(32);
 const code = file => readFileSync(new URL('../' + file, import.meta.url), 'utf8');
 const moduleCode = file => code(file).replace(/^import .*;$/gm, '').replace(/export /g, '');
 const compile = value => ts.transpileModule(value, { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText;

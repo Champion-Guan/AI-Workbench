@@ -1,6 +1,7 @@
 import { fetch, ProxyAgent } from 'undici';
 import { compareVersions, parseVersion, validRepository } from './stable-version.mjs';
 import { UpdateError } from './update-auth.mjs';
+import { isPublicUpdateRepository } from './workbench-identity.mjs';
 
 export const STABLE_ASSETS = ['guan-stable-manifest.json', 'guan-stable-manifest.sig'];
 // This marker identifies the channel, NOT trust. Phase 4 must verify the
@@ -36,14 +37,14 @@ async function boundedJson(response) {
 }
 export async function readGitHubStable({ repository, token, proxyUrl, signal, fetchImpl = fetch }) {
   if (!validRepository(repository)) throw new UpdateError('repository_required');
-  if (typeof token !== 'string' || !/^[A-Za-z0-9_]{20,255}$/.test(token)) throw new UpdateError('authorization_required');
+  if (!(isPublicUpdateRepository(repository) && !token) && (typeof token !== 'string' || !/^[A-Za-z0-9_]{20,255}$/.test(token))) throw new UpdateError('authorization_required');
   const dispatcher = proxyUrl ? new ProxyAgent(proxyUrl) : undefined;
   let latest = null;
   try {
     for (let page = 1; page <= 10; page++) {
       const response = await fetchImpl(`https://api.github.com/repos/${repository}/releases?per_page=100&page=${page}`, {
         method: 'GET', redirect: 'error', signal,
-        headers: { accept: 'application/vnd.github+json', authorization: `Bearer ${token}`, 'x-github-api-version': '2022-11-28', 'user-agent': 'GuanAIWorkbench-StableUpdater' },
+        headers: { accept: 'application/vnd.github+json', ...(token ? { authorization: `Bearer ${token}` } : {}), 'x-github-api-version': '2022-11-28', 'user-agent': 'GuanAIWorkbench-StableUpdater' },
         ...(dispatcher ? { dispatcher } : {}),
       });
       if (!response.ok) {

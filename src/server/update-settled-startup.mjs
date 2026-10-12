@@ -27,7 +27,7 @@ export async function startSettledCurrent({ manager, authority, ledger }) {
     // Pending tasks are retained, not reclassified as success. Their presence
     // blocks future installation but should not prevent opening the old app to
     // inspect/reconcile them after reboot. A missing/corrupt ledger still blocks.
-    await ledger.snapshot();
+    if (!authority.pageOnly) await ledger.snapshot();
     const verified = await manager.verifyInstalled(current);
     if (verified.startupProtocol !== 1 || await manager.service.isStopped() !== true) throw Error('service_ownership_lost');
     await manager.service.stop({ allowed: [current] }); // only an already dead owned handle; never a live listener

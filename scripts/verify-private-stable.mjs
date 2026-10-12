@@ -10,7 +10,7 @@ import { verifySignedStable } from './lib/signed-stable.mjs';
 try {
   const [version, commit] = process.argv.slice(2);
   if (process.argv.length !== 4 || !/^\d+\.\d+\.\d+$/.test(version || '') || !/^[a-f0-9]{40}$/.test(commit || '')) throw Error();
-  const repository = 'Champion-Guan/guan-ai-workbench', proxyUrl = 'http://127.0.0.1:7890';
+  const repository = 'Champion-Guan/AI-Workbench', proxyUrl = 'http://127.0.0.1:7890';
   const root = fileURLToPath(new URL('../', import.meta.url)), p = runtimePaths({ projectRoot: root });
   const auth = new UpdateAuth({ directory: p.updates, vault: new MacKeychainVault({ executable: path.join(p.runtime, 'guan-keychain') }) });
   const token = await auth.token(repository), release = await readGitHubStable({ repository, token, proxyUrl });

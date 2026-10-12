@@ -3,6 +3,7 @@ import path from 'node:path';
 import { lstat, realpath } from 'node:fs/promises';
 import { parseVersion } from './stable-version.mjs';
 import { UpdateError } from './update-auth.mjs';
+import { sameWorkbenchRepository } from './workbench-identity.mjs';
 
 const states = new Set(['idle', 'staged', 'prepared', 'stopping', 'switching', 'starting', 'committed',
   'rolling-back', 'rolled-back', 'blocked', 'recovery-required', 'activation-required', 'bootstrap-required', 'awaiting-browser-exit', 'confirmation-required', 'deferred']);
@@ -18,7 +19,7 @@ const stable = v => typeof v === 'string' && parseVersion(v) && !parseVersion(v)
 // Backend-only bridge. Fixed private socket; never accepts URLs, paths, tokens,
 // commands or installation/recovery operations from the browser.
 export class UpdateManagerClient {
-  constructor({ socketPath, repository = 'Champion-Guan/guan-ai-workbench', timeoutMs = 3000, stageTimeoutMs = 120000 }) {
+  constructor({ socketPath, repository = 'Champion-Guan/AI-Workbench', timeoutMs = 3000, stageTimeoutMs = 120000 }) {
     if (!path.isAbsolute(socketPath)) throw Error('update_socket_invalid');
     this.socketPath = socketPath; this.repository = repository;
     this.timeoutMs = timeoutMs; this.stageTimeoutMs = stageTimeoutMs;
@@ -72,7 +73,7 @@ export class UpdateManagerClient {
     }
   }
   async stage({ downloadId, version, repository }) {
-    if (repository !== this.repository || typeof downloadId !== 'string'
+    if (!sameWorkbenchRepository(repository, this.repository) || typeof downloadId !== 'string'
       || !/^verified-[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/.test(downloadId) || !stable(version)) throw new UpdateError('update_stage_invalid');
     const p = await this.request({ op: 'stage', downloadId, version }, this.stageTimeoutMs);
     if (!p || Object.keys(p).sort().join(',') !== 'buildId,commit,id,version' || p.version !== version
@@ -83,7 +84,7 @@ export class UpdateManagerClient {
     return { version: p.version }; // No filesystem identity/path enters HTTP.
   }
   async approve({ downloadId, version, repository }, acknowledgement) {
-    if (repository !== this.repository || typeof downloadId !== 'string'
+    if (!sameWorkbenchRepository(repository, this.repository) || typeof downloadId !== 'string'
       || !/^verified-[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/.test(downloadId) || !stable(version)
       || acknowledgement !== 'saved-and-all-tasks-ended') throw new UpdateError('install_operator_confirmation_required');
     const result = await this.request({ op: 'approve', downloadId, version, acknowledgement }, this.stageTimeoutMs);

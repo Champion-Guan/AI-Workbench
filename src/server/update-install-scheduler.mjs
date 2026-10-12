@@ -1,5 +1,6 @@
 import { readPrivateFile } from './runtime-paths.mjs';
 import { workbenchPageCensus } from './workbench-page-census.mjs';
+import { sameWorkbenchRepository } from './workbench-identity.mjs';
 
 // Lives in the independent manager, so it continues after the browser and old
 // Web service exit. There is no URL, path, command or unauthorised task clearing.
@@ -16,7 +17,7 @@ export class UpdateInstallScheduler {
     if (raw === null) return false;
     const value = JSON.parse(raw);
     if (!value || Object.keys(value).sort().join(',') !== 'autoCheck,autoDownload,autoInstall,network,repository,version'
-      || value.version !== 1 || value.repository !== this.manager.repository
+      || value.version !== 1 || !sameWorkbenchRepository(value.repository, this.manager.repository)
       || ['autoCheck', 'autoDownload', 'autoInstall'].some(key => typeof value[key] !== 'boolean')
       || !['auto', 'direct', 'proxy'].includes(value.network))
       throw Error('update_storage_invalid');

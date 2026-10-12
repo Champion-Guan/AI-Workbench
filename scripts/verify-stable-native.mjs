@@ -62,7 +62,7 @@ async function main() {
     }
     const response = await fetch(origin + '/local-app/updates/status', { headers: { origin } });
     const updates = await response.json();
-    if (!response.ok || updates.install.allowed || updates.preferences.autoInstall || updates.preferences.repository !== '') throw Error('Native update state unsafe');
+    if (!response.ok || updates.install.allowed || updates.preferences.autoInstall || updates.preferences.repository !== 'Champion-Guan/AI-Workbench') throw Error('Native update state unsafe');
     console.log(JSON.stringify({ ok: true, arch: process.arch, version: record.version, bundledRuntimeExecuted: true, privateDataIsolated: true,
       startupQuarantineVerified: true, inheritedActivationVerified: true, installAllowed: false }));
   } finally {

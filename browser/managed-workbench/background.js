@@ -2,7 +2,7 @@
 // exchanges only bounded control/status fields on the fixed workbench Origin.
 // Browser-level inventory is observational until the independent coordinator
 // additionally proves every profile, task root and persistence checkpoint.
-const ORIGIN = 'http://127.0.0.1:5174';
+const ORIGIN = 'http://127.0.0.1:8888';
 const HOST = 'com.guanaiworkbench.browser';
 let port = null, timer = null, scanning = false, dirty = true, revision = 0, sequence = 0;
 let session = crypto.randomUUID(), lastSnapshot = null;
@@ -93,7 +93,7 @@ chrome.tabs.onReplaced.addListener(changed);
 // Ignore event contents (including unrelated titles/URLs). Conservatively
 // invalidate topology without reading or forwarding other websites' data.
 chrome.tabs.onUpdated.addListener(changed);
-const navigationFilter = { url: [{ schemes: ['http'], hostEquals: '127.0.0.1', ports: [5174] }] };
+const navigationFilter = { url: [{ schemes: ['http'], hostEquals: '127.0.0.1', ports: [8888, 5174] }] };
 chrome.webNavigation.onCommitted.addListener(changed, navigationFilter);
 chrome.webNavigation.onHistoryStateUpdated.addListener(changed, navigationFilter);
 chrome.webNavigation.onErrorOccurred.addListener(changed, navigationFilter);

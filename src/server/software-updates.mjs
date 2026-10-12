@@ -3,9 +3,10 @@ import { readPrivateFile, writePrivateJson } from './runtime-paths.mjs';
 import { compareVersions, parseVersion, validRepository } from './stable-version.mjs';
 import { readGitHubStable } from './github-stable.mjs';
 import { UpdateError } from './update-auth.mjs';
+import { STABLE_REPOSITORY, isWorkbenchRepository, isPublicUpdateRepository, sameWorkbenchRepository } from './workbench-identity.mjs';
 
 export const UPDATE_INTERVAL_MS = 6 * 60 * 60 * 1000;
-const defaults = () => ({ version: 1, repository: '', autoCheck: true, autoDownload: true, autoInstall: false, network: 'auto' });
+const defaults = () => ({ version: 1, repository: STABLE_REPOSITORY, autoCheck: true, autoDownload: true, autoInstall: false, network: 'auto' });
 export class SoftwareUpdates {
   constructor({ directory, auth, currentVersion, downloader = null, manager = null, proxyUrl = () => null, readRelease = readGitHubStable, now = Date.now }) {
     this.downloader = downloader;
@@ -29,7 +30,7 @@ export class SoftwareUpdates {
           || e.version !== null && !parseVersion(e.version)
           || e.error !== null && (typeof e.error !== 'string' || !/^[a-z_]{1,80}$/.test(e.error))
           || Object.keys(e).some(k => !['at', 'state', 'version', 'error'].includes(k)))) throw Error();
-      return h.repository === repository ? h.entries : [];
+      return sameWorkbenchRepository(h.repository, repository) ? h.entries : [];
     } catch { throw new UpdateError('update_history_invalid'); }
   }
   async preferences() {
@@ -39,20 +40,20 @@ export class SoftwareUpdates {
       const p = JSON.parse(raw);
       if (p.version !== 1 || p.repository !== '' && !validRepository(p.repository) || ['autoCheck', 'autoDownload', 'autoInstall'].some(k => typeof p[k] !== 'boolean')
         || !['auto', 'direct', 'proxy'].includes(p.network) || Object.keys(p).some(k => !Object.hasOwn(defaults(), k))) throw Error();
-      return p;
+      return isWorkbenchRepository(p.repository) ? { ...p, repository: STABLE_REPOSITORY } : p;
     } catch { throw new UpdateError('update_storage_invalid'); }
   }
   async status() {
     try {
-      const p = await this.preferences(), meta = await this.auth.metadata(), history = await this.history(p.repository);
+      const p = await this.preferences(), meta = isPublicUpdateRepository(p.repository) ? null : await this.auth.metadata(), history = await this.history(p.repository);
       const bound = Boolean(meta && meta.repository.toLowerCase() === p.repository.toLowerCase());
       // Never show a previously checked repository's release after external config change.
       const result = this.result.repository === p.repository ? this.result : { state: p.repository ? 'unchecked' : 'unconfigured', latest: null, lastCheckedAt: null, error: null, history: [] };
       const download = this.downloader?.status(p.repository) || { state: 'not-implemented', progress: 0 };
       const latest = result.latest ? { version: result.latest.version, publishedAt: result.latest.publishedAt, notes: result.latest.notes,
         verification: download.state === 'verified' && download.version === result.latest.version ? 'verified' : result.latest.verification } : null;
-      return { ...result, latest, history, lastCheckedAt: result.lastCheckedAt || history.at(-1)?.at || null, currentVersion: this.currentVersion, preferences: p, channel: 'GitHub Private / Stable',
-        authorization: bound ? 'configured-not-verified' : 'required', checking: Boolean(this.inFlight),
+      return { ...result, latest, history, lastCheckedAt: result.lastCheckedAt || history.at(-1)?.at || null, currentVersion: this.currentVersion, preferences: p, channel: isPublicUpdateRepository(p.repository) ? 'GitHub Public / Stable' : 'GitHub Private / Stable',
+        authorization: isPublicUpdateRepository(p.repository) ? 'not-required' : bound ? 'configured-not-verified' : 'required', checking: Boolean(this.inFlight),
         hasNewVersion: Boolean(result.latest && compareVersions(result.latest.version, this.currentVersion) > 0),
         download, install: this.manager ? { ...(await this.manager.status()),
           staging: Boolean(this.staging), stageError: this.stageResult?.repository === p.repository ? this.stageResult.error : null }

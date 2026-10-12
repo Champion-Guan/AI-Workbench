@@ -54,11 +54,11 @@ test('actual signed runtime + user launchd + operator consent + independent sche
   files['src/server/update-manager.mjs'] = files['src/server/update-manager.mjs'].toString()
     .replace('} catch {\n        let current;', '} catch (error) { console.error(/^(install|update|service)_[a-z_]+$/.test(error.message) ? error.message : "QA bootstrap failure");\n        let current;');
   for (const entry of ['scripts/run-update-manager.mjs', 'scripts/run-update-supervisor.mjs']) {
-    files[entry] = files[entry].toString().replace("repository: 'Champion-Guan/guan-ai-workbench' });", "repository: 'Champion-Guan/guan-ai-workbench', origin: '" + origin + "' });");
+    files[entry] = files[entry].toString().replace("repository: 'Champion-Guan/AI-Workbench' });", "repository: 'Champion-Guan/AI-Workbench', origin: '" + origin + "' });");
   }
   files['scripts/run-update-supervisor.mjs'] = files['scripts/run-update-supervisor.mjs']
     .replace('privateRoot: paths.root, verify:', "privateRoot: paths.root, origin: '" + origin + "', disableProxy: true, startupTimeout: 30000, verify:");
-  const manager = new UpdateManager({ root: path.join(privateRoot, 'installation'), dataRoot, repository: 'Champion-Guan/guan-ai-workbench',
+  const manager = new UpdateManager({ root: path.join(privateRoot, 'installation'), dataRoot, repository: 'Champion-Guan/AI-Workbench',
     trustedKeys: signing.keys, origin, freeSpace: async () => 4e9 }); await manager.initialize();
   const executable = { runtime: (await localRuntime()).bytes, repository: manager.repository, files,
     backend: await readFile(new URL('../server.mjs', import.meta.url)), startup: '// actual startup in src/server' };

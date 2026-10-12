@@ -36,8 +36,8 @@ export function ConfigSoftwareUpdates() {
     const approve = () => {
         modal.confirm({
             title: `准备安装 ${status?.latest?.version || "此稳定版本"}？`,
-            content: "请确认所有画布已保存，生成、Agent 和 WebDAV 同步全部结束。确认后请勿继续编辑或启动任务，并关闭所有工作台页面；浏览器和其他网站可以继续使用。确认仅对此版本有效，30 分钟后失效；未决任务和坏记录仍会阻止安装。",
-            okText: "已保存且全部任务结束", cancelText: "稍后",
+            content: "安装会重启工作台。请先保存画布和正在编辑的信息，然后关闭所有工作台页面。其他网站、浏览器和应用无需退出。页面保持打开时不会安装；此次准备在 30 分钟后失效。",
+            okText: "已保存，关闭页面后安装", cancelText: "稍后",
             onOk: async () => {
                 await updateRequest("approve", { acknowledgement: "saved-and-all-tasks-ended" });
                 await refresh(); message.success("已记录本次确认，请关闭工作台页面；其他网站不受影响，安全检查通过后安装");
@@ -52,13 +52,13 @@ export function ConfigSoftwareUpdates() {
         <section data-guan-updates-panel className="space-y-4 text-sm text-stone-700 dark:text-stone-200">
             <div className="grid grid-cols-2 gap-3">
                 <div>当前版本：{status?.currentVersion || "读取中"}</div><div>最新稳定版本：{status?.latest?.version || "尚未获得"}</div>
-                <div>更新渠道：GitHub Private / Stable</div><div>上次检查：{status?.lastCheckedAt ? new Date(status.lastCheckedAt).toLocaleString() : "尚未检查"}</div>
+                <div>更新渠道：{status?.channel || "GitHub Public / Stable"}</div><div>上次检查：{status?.lastCheckedAt ? new Date(status.lastCheckedAt).toLocaleString() : "尚未检查"}</div>
             </div>
-            <div className="space-y-2"><label htmlFor="guan-updates-repository">私有仓库（所有者/仓库）</label>
-                <div className="flex gap-2"><Input id="guan-updates-repository" aria-label="私有更新仓库" value={repository} maxLength={201} placeholder="所有者/仓库" onChange={e => setRepository(e.target.value)} /><Button loading={saving} onClick={() => void save({ repository: repository.trim() })}>保存仓库</Button></div>
+            <div className="space-y-2"><label htmlFor="guan-updates-repository">更新仓库（所有者/仓库）</label>
+                <div className="flex gap-2"><Input id="guan-updates-repository" aria-label="更新仓库" value={repository} maxLength={201} placeholder="Champion-Guan/AI-Workbench" onChange={e => setRepository(e.target.value)} /><Button loading={saving} onClick={() => void save({ repository: repository.trim() })}>保存仓库</Button></div>
             </div>
-            <Alert type="info" showIcon message="每台 Mac 独立授权，Token 不进入浏览器" description={<div>指定仓库的 Fine-grained Token 仅需 Contents 只读权限。在本机项目终端运行 <code>node scripts/authorize-updates.mjs 所有者/仓库</code>，使用隐藏输入保存到 macOS Keychain。授权后点击检查；请勿在聊天、URL 或配置文件粘贴 Token。</div>} />
-            <div>授权状态：{status?.authorization === "configured-not-verified" ? "已有本机授权记录，检查时验证权限" : "需要本机授权"}</div>
+            <Alert type="info" showIcon message="公开 Stable 更新无需 GitHub Token" description="正式更新仍需通过内置 Ed25519 公钥验签和完整性校验。个人 API Key 与配置不会随更新包分发。选择其他私有仓库时，仍需本机 Keychain 授权。" />
+            <div>授权状态：{status?.authorization === "not-required" ? "公开渠道，无需授权" : status?.authorization === "configured-not-verified" ? "已有本机授权记录，检查时验证权限" : "需要本机授权"}</div>
             <div className="flex flex-wrap items-center gap-5">
                 <label className="flex items-center gap-2"><Switch aria-label="自动检查更新" checked={prefs?.autoCheck ?? true} disabled={!prefs || saving} onChange={autoCheck => void save({ autoCheck })} />自动检查（启动及每 6 小时）</label>
                 <label className="flex items-center gap-2"><Switch aria-label="自动下载更新" checked={prefs?.autoDownload ?? true} disabled={!prefs || saving} onChange={autoDownload => void save({ autoDownload })} />自动下载（仅可信签名包）</label>

@@ -2,7 +2,7 @@
 // The browser supplies document identity to the background port; the page
 // response is still NOT authority for global coverage or installation.
 (() => {
-  const ORIGIN = 'http://127.0.0.1:5174';
+  const ORIGIN = 'http://127.0.0.1:8888';
   if (location.origin !== ORIGIN) return;
   const session = crypto.randomUUID(), pending = new Set();
   let native = null, page = null, connected = false, stopped = false, attempts = 0, retry = null;

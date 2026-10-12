@@ -12,6 +12,7 @@ import { MacKeychainVault } from '../src/server/keychain-vault.mjs';
 import { runtimePaths } from '../src/server/runtime-paths.mjs';
 import { keyId, sha256 } from '../src/server/stable-manifest.mjs';
 import { STABLE_TRUSTED_KEYS } from '../src/server/stable-trust.mjs';
+import { sameWorkbenchRepository } from '../src/server/workbench-identity.mjs';
 
 let stage = 'approval';
 try {
@@ -30,8 +31,7 @@ try {
     const info = await lstat(backupDirectory);
     if (!info.isDirectory() || info.isSymbolicLink() || info.uid !== process.getuid() || info.mode & 0o077) throw Error();
     const record = JSON.parse(await bounded(path.join(backupDirectory, 'BOOTSTRAP.json'), 8192));
-    const signingRepositoryMatches = record.repository === approval.repository ||
-      record.repository === 'MrGuAm/guan-ai-workbench' && approval.repository === 'Champion-Guan/guan-ai-workbench';
+    const signingRepositoryMatches = sameWorkbenchRepository(record.repository, approval.repository);
     if (!signingRepositoryMatches || !record.backupVerified || record.keychainNamespace !== 'production'
       || record.encryptedPrivateFile !== 'signing-key.encrypted.pem' || !Object.hasOwn(STABLE_TRUSTED_KEYS, record.keyId)) throw Error();
     const encrypted = await bounded(path.join(backupDirectory, record.encryptedPrivateFile), 8192);

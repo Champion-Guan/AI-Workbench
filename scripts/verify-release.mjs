@@ -5,6 +5,8 @@ import path from 'node:path';
 import { execFileSync, spawn } from 'node:child_process';
 import { createServer } from 'node:net';
 import { validateZipArchive, verifyReleaseFiles } from './lib/release-validation.mjs';
+import { privateDirectory, writePrivateJson } from '../src/server/runtime-paths.mjs';
+import { STABLE_REPOSITORY } from '../src/server/workbench-identity.mjs';
 
 async function verify() {
 const archive = process.argv[2];
@@ -23,6 +25,9 @@ const port = reservation.address().port;
 await new Promise(resolve => reservation.close(resolve));
 const origin = `http://127.0.0.1:${port}`;
 const dataRoot = path.join(directory, 'isolated-private-runtime');
+await privateDirectory(path.join(dataRoot, 'updates'));
+await writePrivateJson(path.join(dataRoot, 'updates/preferences.json'), { version: 1, repository: STABLE_REPOSITORY,
+  autoCheck: false, autoDownload: false, autoInstall: false, network: 'direct' });
 // A fresh env AND private data root are mandatory. Never write real user data.
 const child = spawn(process.execPath, ['server.mjs'], {
   cwd: root, env: { PATH: process.env.PATH, PORT: String(port), GUAN_WORKBENCH_DATA_DIR: dataRoot,
@@ -43,7 +48,10 @@ try {
     await new Promise(resolve => setTimeout(resolve, 100));
   }
   if (!health || exited) throw new Error('Extracted release failed its own process/version/build/origin health check');
-  const urls = ['/', '/canvas/release-verification', '/canvas/excel-prompts-bridge.js', '/data-contract/index.js', ...assets];
+  const alias = await fetch(`http://localhost:${port}/local-app/health`, { redirect: 'manual', signal: AbortSignal.timeout(3000) });
+  if (alias.status !== 307 || alias.headers.get('location') !== origin + '/local-app/health') throw Error('Localhost alias failed');
+  const urls = ['/', '/canvas/release-verification', '/canvas/excel-prompts-bridge.js', '/data-contract/index.js',
+    '/local-app/port-migration', '/data-contract/port-migration.mjs', '/data-contract/browser-backup-codec.mjs', ...assets];
   for (const url of urls) {
     const reply = await fetch(origin + url, { signal: AbortSignal.timeout(3000) });
     if (!reply.ok || !(await reply.arrayBuffer()).byteLength) throw new Error('Release HTTP asset verification failed');
@@ -51,7 +59,7 @@ try {
   const updateReply = await fetch(origin + '/local-app/updates/status', { headers: { origin }, signal: AbortSignal.timeout(3000) });
   if (!updateReply.ok) throw new Error('Isolated update route unavailable');
   const updates = await updateReply.json();
-  if (updates.currentVersion !== manifest.version || updates.preferences.repository !== '' || updates.install.allowed !== false
+  if (updates.currentVersion !== manifest.version || updates.preferences.repository !== STABLE_REPOSITORY || updates.install.allowed !== false
     || updates.preferences.autoInstall !== false || updates.latest !== null) throw new Error('Isolated update state unsafe');
   console.log(JSON.stringify({ ok: true, files, routes: urls.length + 1, version: manifest.version, testDirectory: directory,
     isolatedData: true, signatureVerified: false, installAllowed: false }, null, 2));

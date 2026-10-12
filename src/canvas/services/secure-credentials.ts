@@ -18,9 +18,11 @@ export async function secureCredential(kind: CredentialKind, endpoint: string, s
     if (!secret) return { baseUrl: endpoint, credentialRef: "" };
     if (referencePattern.test(secret)) {
         const binding = await request("binding", { credentialRef: secret });
+        // Only this same profile's historical local URL may be rebound after a port migration.
+        const historical = endpoint.replace(/\/+$/, "") === `http://127.0.0.1:5174/local-secure-api/${secret.slice(11)}`;
         if (binding.credentialRef !== secret || binding.baseUrl !== `${location.origin}/local-secure-api/${secret.slice(11)}` ||
             binding.kind !== kind || binding.username !== username ||
-            endpoint.replace(/\/+$/, "") !== binding.baseUrl && endpoint.replace(/\/+$/, "") !== binding.endpoint) throw failure();
+            !historical && endpoint.replace(/\/+$/, "") !== binding.baseUrl && endpoint.replace(/\/+$/, "") !== binding.endpoint) throw failure();
         return binding;
     }
     if (secret.startsWith("guan-vault:") || /\/local-secure-api(?:\/|$)/.test(endpoint)) throw failure();
@@ -35,9 +37,6 @@ export async function credentialEndpoint(secret: string) {
 }
 
 export async function secureChannel(channel: ModelChannel): Promise<ModelChannel> {
-    if (channel.apiKey && channel.models.some(model => model.script?.trim())) {
-        throw new Error("自定义请求脚本尚未支持 Keychain 凭据，请先移除脚本再保存；原配置已保留。");
-    }
     const binding = await secureCredential(channel.apiFormat, channel.baseUrl, channel.apiKey);
     return { ...channel, baseUrl: binding.baseUrl, apiKey: binding.credentialRef };
 }

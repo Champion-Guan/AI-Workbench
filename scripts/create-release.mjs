@@ -21,7 +21,7 @@ const stage = path.join(out, name);
 await mkdir(out, { recursive: true, mode: 0o700 });
 await mkdir(stage, { mode: 0o700 });
 // Portable runtime allowlist. Never copy the whole source tree or test fixtures.
-const entries = ['server.mjs', 'package.json', 'package-lock.json', 'README.md', 'UI-PROTECTION.md', 'public', 'src/server', 'src/shared', 'scripts/start-portable.mjs', 'scripts/start.command', 'scripts/start.sh', 'scripts/start.bat', 'scripts/authorize-updates.mjs', 'docs/MIGRATION.md', 'docs/PROJECT-STRUCTURE.md', 'docs/PROJECT-GOAL.md', 'docs/PHASE2-ACCEPTANCE.md', 'docs/STABLE-UPDATES-PHASE3.md', 'docs/STABLE-UPDATES-PHASE4.md'];
+const entries = ['server.mjs', 'package.json', 'package-lock.json', 'README.md', 'LICENSE', 'UI-PROTECTION.md', 'public', 'src/server', 'src/shared', 'scripts/start-portable.mjs', 'scripts/start.command', 'scripts/start.sh', 'scripts/start.bat', 'scripts/authorize-updates.mjs', 'docs/MIGRATION.md', 'docs/PROJECT-STRUCTURE.md', 'docs/PROJECT-GOAL.md', 'docs/PHASE2-ACCEPTANCE.md', 'docs/STABLE-UPDATES-PHASE3.md', 'docs/STABLE-UPDATES-PHASE4.md'];
 const filter = file => {
   const relative = path.relative(root, file);
   if (useBuiltCanvas && relative.split(path.sep).slice(0, 2).join('/') === 'public/infinite-canvas') return false;
@@ -39,6 +39,7 @@ for (const entry of ['scripts/run-update-manager.mjs', 'scripts/run-update-super
 }
 await cp(path.join(root, 'browser/managed-workbench'), path.join(stage, 'browser/managed-workbench'), { recursive: true });
 await cp(path.join(root, 'docs/MANAGED-BROWSER.md'), path.join(stage, 'docs/MANAGED-BROWSER.md'));
+await cp(path.join(root, 'docs/公开仓库与8888端口.md'), path.join(stage, 'docs/公开仓库与8888端口.md'));
 // Ship the current approval boundaries and version-specific notes, not private QA records.
 for (const entry of ['docs/STABLE-UPDATES-SINGLE-OWNER.md', 'docs/STABLE-UPDATES-PHASE5.md', 'docs/PHASE5-ACCEPTANCE.md', 'docs/PHASE5-SAFE-INSTALL.md', 'docs/RELEASE-NOTES.md']) await cp(path.join(root, entry), path.join(stage, entry));
 const canvasBuild = useBuiltCanvas ? await copyVerifiedCanvasBuild(root, path.join(root, 'src/canvas/dist'), path.join(stage, 'public/infinite-canvas')) : null;

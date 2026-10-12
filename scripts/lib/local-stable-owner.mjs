@@ -1,9 +1,9 @@
 import { execFileSync } from 'node:child_process';
 
 export function validateLocalStableOwner({ repository, user, repo, confirmation, commit, tag, head, tagCommit, dirty, remote }) {
-  if (confirmation !== 'RELEASE-STABLE' || repository !== 'Champion-Guan/guan-ai-workbench'
+  if (confirmation !== 'RELEASE-STABLE' || repository !== 'Champion-Guan/AI-Workbench'
     || user?.login !== 'Champion-Guan' || user?.id !== 87700227 || repo?.full_name !== repository
-    || repo.private !== true || repo.owner?.id !== 87700227 || repo.permissions?.admin !== true
+    || repo.private !== false || repo.owner?.id !== 87700227 || repo.permissions?.admin !== true
     || !/^v\d+\.\d+\.\d+$/.test(tag || '') || !/^[a-f0-9]{40}$/.test(commit || '')
     || head !== commit || tagCommit !== commit || dirty
     || remote !== `https://github.com/${repository}` && remote !== `https://github.com/${repository}.git`)
@@ -12,7 +12,7 @@ export function validateLocalStableOwner({ repository, user, repo, confirmation,
 }
 
 export function localStableOwner({ root, commit, tag, confirmation }) {
-  const repository = 'Champion-Guan/guan-ai-workbench';
+  const repository = 'Champion-Guan/AI-Workbench';
   const env = { ...process.env, GH_DEBUG: '' };
   const run = (exe, args) => execFileSync(exe, args, { cwd: root, env, stdio: ['ignore', 'pipe', 'pipe'], timeout: 30000, maxBuffer: 2 * 1024 * 1024 }).toString().trim();
   return validateLocalStableOwner({ repository, commit, tag, confirmation,

@@ -5,7 +5,7 @@ import path from 'node:path';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 process.chdir(root);
-const port = Number(process.env.PORT || 5174);
+const port = Number(process.env.PORT || 8888);
 const url = `http://127.0.0.1:${port}/`;
 const [major, minor] = process.versions.node.split('.').map(Number);
 if (major < 18 || (major === 18 && minor < 17)) {

@@ -19,14 +19,15 @@ test('new channel credentials publish only verified references and never mutate 
   assert.equal(calls[0][0], '/local-app/credentials/save');
   assert.equal(calls[0][1].kind, 'openai');
 });
-test('failed native save, forged response, script and mismatched reference fail closed', async () => {
+test('failed native save and mismatched reference fail closed; script channels use opaque references', async () => {
   for (const response of [{ ok: false }, { ok: true, credentialRef: ref, baseUrl: 'https://foreign.test' }]) {
     const api = client(async () => ({ ok: true, json: async () => response }));
     await assert.rejects(api.secureCredential('openai', 'https://api.example.test', 'fixture-new-key'));
   }
   let calls = 0;
   const api = client(async () => { calls++; return { ok: true, json: async () => ({ ok: true, credentialRef: ref, baseUrl: route, endpoint: 'https://api.example.test', kind: 'openai', username: '' }) }; });
-  await assert.rejects(api.secureChannel({ apiKey: 'fixture', models: [{ script: 'return apiKey;' }] })); assert.equal(calls, 0);
+  const secured = await api.secureChannel({ apiFormat: 'openai', baseUrl: 'https://api.example.test', apiKey: 'fixture', models: [{ script: 'return apiKey;' }] });
+  assert.equal(secured.apiKey, ref); assert.equal(calls, 1);
   await assert.rejects(api.secureCredential('openai', 'https://different.test', ref));
   await assert.rejects(api.secureCredential('webdav', route, ref, 'different-user'));
   const binding = await api.secureCredential('openai', 'https://api.example.test', ref); assert.equal(binding.baseUrl, route);

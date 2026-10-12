@@ -2,6 +2,7 @@ import { createPublicKey, createHash, verify } from 'node:crypto';
 import { parseVersion, compareVersions, validRepository } from './stable-version.mjs';
 import { UpdateError } from './update-auth.mjs';
 import { STABLE_TRUSTED_KEYS } from './stable-trust.mjs';
+import { sameWorkbenchRepository } from './workbench-identity.mjs';
 
 export const MAX_STABLE_PACKAGE_BYTES = 256 * 1024 * 1024;
 export const sha256 = bytes => createHash('sha256').update(bytes).digest('hex');
@@ -46,7 +47,7 @@ export function verifyStableManifest(bytes, signature, { trustedKeys = STABLE_TR
   validateStableManifest(manifest);
   // Exact canonical roundtrip rejects duplicate keys and alternate encodings.
   if (!Buffer.from(JSON.stringify(manifest, null, 2) + '\n').equals(bytes)) throw new UpdateError('stable_manifest_invalid');
-  if (!validRepository(repository) || manifest.repository.toLowerCase() !== repository.toLowerCase()
+  if (!validRepository(repository) || !sameWorkbenchRepository(manifest.repository, repository)
     || manifest.version !== releaseVersion) throw new UpdateError('release_identity_mismatch');
   if (currentVersion && compareVersions(manifest.version, currentVersion) <= 0) throw new UpdateError('version_not_newer');
   const selected = manifest.packages.find(p => p.platform === platform && p.arch === arch);

@@ -52,7 +52,7 @@ function portFree(port, timeout = 500) {
 // PID after restart. Signed verification must be supplied by UpdateManager.
 // A manager crash/orphan therefore blocks recovery instead of guessing owner.
 export class OwnedUpdateService {
-  constructor({ versionsRoot, dataRoot, privateRoot, verify, origin = 'http://127.0.0.1:5174',
+  constructor({ versionsRoot, dataRoot, privateRoot, verify, origin = 'http://127.0.0.1:8888',
     startupTimeout = 15000, stopTimeout = 10000, activationTimeout = 3000,
     disableProxy = false }) {
     const url = new URL(origin);

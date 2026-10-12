@@ -18,11 +18,11 @@ const pointer = v => exact(v, ['id', 'version', 'commit', 'buildId']) && typeof 
 // user attests save/old-plugin/remote completion; durable unknown/native tasks
 // are independently checked and cannot be overridden by this confirmation.
 export class OperatorUpdateAuthority {
-  constructor({ file, manager, service, ledger, now = Date.now, lifetimeMs = 30 * 60 * 1000 }) {
+  constructor({ file, manager, service, ledger, pageOnly = false, now = Date.now, lifetimeMs = 30 * 60 * 1000 }) {
     if (!path.isAbsolute(file || '') || path.resolve(file) !== file || !manager?.verifyInstalled || !service?.inspectOwned
       || !ledger?.snapshot || !Number.isSafeInteger(lifetimeMs) || lifetimeMs < 1000 || lifetimeMs > 2 * 60 * 60 * 1000)
       throw Error('install_operator_invalid');
-    Object.assign(this, { file, manager, service, ledger, now, lifetimeMs }); this.queue = Promise.resolve();
+    Object.assign(this, { file, manager, service, ledger, pageOnly, now, lifetimeMs }); this.queue = Promise.resolve();
   }
   serial(operation) {
     const result = this.queue.then(operation); this.queue = result.catch(() => {}); return result;
@@ -68,6 +68,11 @@ export class OperatorUpdateAuthority {
       if (compareVersions(next.version, previous.version) <= 0) throw Error('version_not_newer');
       const owned = await this.service.inspectOwned();
       if (owned.stopped || !same(owned.pointer, previous) || owned.active !== true) throw Error('install_service_identity_invalid');
+      if (this.pageOnly) {
+        await this.save({ format: 1, state: 'approved', epoch: randomUUID(), previous, next,
+          instance: owned.instance, ledgerRevision: 0, writeRevision: 0, expiresAt: this.now() + this.lifetimeMs });
+        return { state: 'awaiting-browser-exit', targetVersion: next.version };
+      }
       const evidence = await this.service.backendControl({ action: 'snapshot', value: null });
       const ledger = await this.ledger.snapshot();
       if (!idle(evidence) || evidence.backgroundBusy || ledger.pending || ledger.revision !== evidence.ledger.revision
@@ -118,6 +123,12 @@ export class OperatorUpdateAuthority {
           if (!current || current.state !== 'claimed' || current.epoch !== epoch || authority.now() > current.expiresAt
             || authority.now() < current.expiresAt - authority.lifetimeMs
             || JSON.stringify(current) !== JSON.stringify(value)) throw Error('install_permit_invalid');
+          if (authority.pageOnly) {
+            const owned = await authority.service.inspectOwned();
+            if (!owned.stopped && ![value.previous, value.next].some(pointer => pointer && same(pointer, owned.pointer)))
+              throw Error('install_service_identity_invalid');
+            return;
+          }
           const ledger = await authority.ledger.snapshot();
           if (ledger.pending || ledger.revision !== value.ledgerRevision) throw Error('install_tasks_pending');
           const owned = await authority.service.inspectOwned();
@@ -140,7 +151,8 @@ export class OperatorUpdateAuthority {
           // Coordinator has already revalidated before releasing the backend.
           // Its explicit resume can legitimately restart update-check writes;
           // those writes must not turn a completed rollback into a stuck lease.
-          const current = await authority.read(), ledger = await authority.ledger.snapshot();
+          const current = await authority.read(), ledger = authority.pageOnly
+            ? { pending: 0, revision: value.ledgerRevision } : await authority.ledger.snapshot();
           if (!current || current.state !== 'claimed' || current.epoch !== epoch || JSON.stringify(current) !== JSON.stringify(value)
             || ledger.pending || ledger.revision !== value.ledgerRevision) throw Error('install_permit_invalid');
           current.state = 'completed'; await authority.save(current);

@@ -45,7 +45,8 @@ test('tab query enumerates every window and tab and returns only count without s
   const script = workbenchTabScript('com.google.Chrome', 42);
   assert.match(script, /spec\('cwin', 'indx'/); assert.match(script, /spec\('CrTb', 'indx'/);
   assert.match(script, /descriptorWithProcessIdentifier\(42\)/);
-  assert.ok(script.includes("tabAddress.startsWith('http://127.0.0.1:5174/')"));
+  assert.ok(script.includes("'http://127.0.0.1:8888'"));
+  assert.ok(script.includes("'http://localhost:8888'"));
   assert.match(script, /String\(workbenchCount\)/);
   assert.doesNotMatch(script, /execute javascript|close |quit|make new|title|contents/);
   assert.throws(() => workbenchTabScript('untrusted" app'), /unavailable/);
