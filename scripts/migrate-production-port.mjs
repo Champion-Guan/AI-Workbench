@@ -26,8 +26,8 @@ async function main() {
     throw Error('port_migration_backup_unverified');
   const manager = new UpdateManager({ root: path.join(paths.root, 'installation'), dataRoot: paths.data, projectRoot,
     repository: 'Champion-Guan/AI-Workbench', onStep: async phase => console.log(JSON.stringify({ phase })) });
-  const version = JSON.parse(await readFile(path.join(projectRoot, 'package.json'))).version;
   const manifest = JSON.parse(await readFile(path.join(artifacts, 'guan-stable-manifest.json')));
+  const version = manifest.version; // Install the signed asset version, not the developer checkout version.
   const archive = path.join(artifacts, 'package.zip');
   try { await lstat(archive); }
   catch (error) {

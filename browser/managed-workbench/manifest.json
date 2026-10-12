@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Guan 工作台受管理窗口",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "minimum_chrome_version": "128",
   "description": "仅管理本机 Guan 工作台窗口，不更换 Chrome 数据目录。",
   "permissions": ["nativeMessaging", "webNavigation"],
@@ -9,7 +9,7 @@
   "background": { "service_worker": "background.js" },
   "content_scripts": [{
     "matches": ["http://127.0.0.1:8888/*", "http://127.0.0.1:5174/*"],
-    "js": ["page-relay.js"],
+    "js": ["page-relay.js", "migration-relay.js"],
     "all_frames": true,
     "run_at": "document_start",
     "world": "ISOLATED"

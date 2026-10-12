@@ -169,3 +169,48 @@ chrome.action.onClicked.addListener(async () => {
 chrome.runtime.onStartup.addListener(connect);
 chrome.runtime.onInstalled.addListener(connect);
 connect();
+
+// One-click maintenance: only tabs this extension created are removed. Never
+// close a customer canvas or inspect/transmit other websites' contents.
+let migration = null, migrationBusy = false;
+async function closeMigrationTab(id, expectedUrl) {
+  const tab = await chrome.tabs.get(id);
+  if (tab.url !== expectedUrl) throw Error('migration_tab_changed');
+  await chrome.tabs.remove(id);
+}
+async function migrationTick() {
+  if (migrationBusy) return;
+  migrationBusy = true;
+  try {
+    const response = await fetch(ORIGIN + '/local-migration/session', { signal: AbortSignal.timeout(1500) });
+    if (!response.ok) return;
+    const info = await response.json(), url = new URL(info.migrationUrl);
+    if (info.protocol !== 1 || url.origin !== ORIGIN || !/^\/migration-[a-f0-9-]{36}$/.test(url.pathname)) return;
+    if (!migration || migration.url !== url.href) {
+      if (info.phase !== 'waiting-source') return;
+      const tabs = await chrome.tabs.query({ url: ['http://127.0.0.1:5174/*', ORIGIN + '/*'] });
+      if (tabs.length) return; // Existing workbench pages must be saved/closed by the user.
+      const session = crypto.randomUUID();
+      const claimed = await fetch(url.href + '/claim', { method: 'POST', body: JSON.stringify({ session }) });
+      if (!claimed.ok) return;
+      const source = await chrome.tabs.create({ url: 'http://127.0.0.1:5174/local-app/health', active: true });
+      migration = { url: url.href, source: source.id, target: null, exportSent: false };
+    }
+    if (info.phase === 'waiting-source' && !migration.exportSent) {
+      const tab = await chrome.tabs.get(migration.source);
+      if (tab.status === 'complete' && tab.url === 'http://127.0.0.1:5174/local-app/health') {
+        await chrome.tabs.sendMessage(migration.source, { op: 'guan-port-migration-export', url: migration.url + '/export.js' });
+        migration.exportSent = true;
+      }
+    }
+    if (info.phase === 'source-backed-up' && migration.target === null) {
+      await closeMigrationTab(migration.source, 'http://127.0.0.1:5174/local-app/health'); migration.source = null;
+      migration.target = (await chrome.tabs.create({ url: migration.url, active: true })).id;
+    }
+    if (info.phase === 'browser-verified' && migration.target !== null) {
+      await closeMigrationTab(migration.target, migration.url); migration.target = null;
+    }
+  } catch { /* Missing bridge, unknown tabs, or export failure never permits installation. */ }
+  finally { migrationBusy = false; }
+}
+setInterval(() => { void migrationTick(); }, 2000);
