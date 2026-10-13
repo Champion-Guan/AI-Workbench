@@ -186,10 +186,16 @@ async function migrationTick() {
     if (!response.ok) return;
     const info = await response.json(), url = new URL(info.migrationUrl);
     if (info.protocol !== 1 || url.origin !== ORIGIN || !/^\/migration-[a-f0-9-]{36}$/.test(url.pathname)) return;
+    const reportStatus = async state => {
+      await fetch(url.href + '/status', { method: 'POST', body: JSON.stringify({
+        version: chrome.runtime.getManifest?.().version || '1.0.2', state,
+      }), signal: AbortSignal.timeout(1500) });
+    };
+    await reportStatus('ready');
     if (!migration || migration.url !== url.href) {
       if (info.phase !== 'waiting-source') return;
       const tabs = await chrome.tabs.query({ url: ['http://127.0.0.1:5174/*', ORIGIN + '/*'] });
-      if (tabs.length) return; // Existing workbench pages must be saved/closed by the user.
+      if (tabs.length) { await reportStatus('pages-open'); return; }
       const session = crypto.randomUUID();
       const claimed = await fetch(url.href + '/claim', { method: 'POST', body: JSON.stringify({ session }) });
       if (!claimed.ok) return;
@@ -199,8 +205,10 @@ async function migrationTick() {
     if (info.phase === 'waiting-source' && !migration.exportSent) {
       const tab = await chrome.tabs.get(migration.source);
       if (tab.status === 'complete' && tab.url === 'http://127.0.0.1:5174/local-app/health') {
-        await chrome.tabs.sendMessage(migration.source, { op: 'guan-port-migration-export', url: migration.url + '/export.js' });
+        try { await chrome.tabs.sendMessage(migration.source, { op: 'guan-port-migration-export', url: migration.url + '/export.js' }); }
+        catch { await reportStatus('relay-unavailable'); return; }
         migration.exportSent = true;
+        await reportStatus('export-requested');
       }
     }
     if (info.phase === 'source-backed-up' && migration.target === null) {

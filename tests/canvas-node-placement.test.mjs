@@ -99,14 +99,16 @@ test('malformed and very distant nodes cannot cause unbounded placement loops', 
   assert.equal(nodesOverlap(original, placed), false);
 });
 
-test('canvas hydration and undo/redo bypass new-node placement, toolbar exposes organizer', () => {
+test('canvas hydration and undo/redo bypass new-node placement, canvas menu exposes organizer', () => {
   const project = readFileSync(new URL('../src/canvas/pages/canvas/project.tsx', import.meta.url), 'utf8');
   const toolbar = readFileSync(new URL('../src/canvas/components/canvas/canvas-toolbar.tsx', import.meta.url), 'utf8');
   assert.ok(project.includes('setRawNodes(restoredNodes)'));
   assert.ok(project.includes('setRawNodes(entry.nodes)'));
   assert.ok(project.includes('placeNewCanvasNodes(previous, typeof update'));
   assert.ok(project.includes('nodeTransactionRef.current = next'), 'reserve canonical positions synchronously before next batch creation');
-  assert.ok(toolbar.includes('onClick={onOrganizeOverlaps}'));
+  const menu = readFileSync(new URL('../src/canvas/components/canvas/canvas-top-bar.tsx', import.meta.url), 'utf8');
+  assert.ok(menu.includes('onOrganizeOverlaps'));
+  assert.ok(!toolbar.includes('onOrganizeOverlaps'));
 });
 
 test('canvas state bridge immediately publishes reserved positions for same-frame auto creation', () => {

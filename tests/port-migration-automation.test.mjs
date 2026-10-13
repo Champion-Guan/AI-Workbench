@@ -45,7 +45,15 @@ async function background(existing = []) {
   const url = 'http://127.0.0.1:8888/migration-12345678-1234-1234-1234-123456789abc';
   const context = vm.createContext({ URL, AbortSignal, crypto: { randomUUID: () => '12345678-1234-1234-1234-123456789abc' },
     setInterval() {}, clearInterval() {}, console,
-    fetch: async target => ({ ok: true, json: async () => { assert.equal(target, 'http://127.0.0.1:8888/local-migration/session'); return { protocol: 1, migrationUrl: url, phase }; } }),
+    fetch: async (target, options) => {
+      if (options?.method === 'POST' && target.endsWith('/status')) {
+        assert.equal(target, url + '/status');
+        const status = JSON.parse(options.body);
+        assert.equal(status.version, '1.0.2');
+        actions.push(['status', status.state]);
+      }
+      return { ok: true, json: async () => { assert.equal(target, 'http://127.0.0.1:8888/local-migration/session'); return { protocol: 1, migrationUrl: url, phase }; } };
+    },
     chrome: { runtime: { id: 'test', onConnect: events, onStartup: events, onInstalled: events,
       connectNative: () => ({ onMessage: events, onDisconnect: events, postMessage() {} }) },
     action: { onClicked: events, setBadgeText: async () => {}, setBadgeBackgroundColor: async () => {} },
@@ -62,15 +70,18 @@ async function background(existing = []) {
 }
 test('extension copies through temporary tabs and closes only tabs it created', async () => {
   const client = await background(); await client.tick();
-  assert.equal(client.actions[0][1], 'http://127.0.0.1:5174/local-app/health');
-  assert.equal(client.actions[1][0], 'export');
+  assert.equal(client.actions.find(x => x[0] === 'create')[1], 'http://127.0.0.1:5174/local-app/health');
+  assert.ok(client.actions.some(x => x[0] === 'status' && x[1] === 'export-requested'));
+  assert.ok(client.actions.some(x => x[0] === 'export'));
   await client.tick(); assert.equal(client.actions.filter(x => x[0] === 'export').length, 1);
   client.phase('source-backed-up'); await client.tick();
   assert.equal(client.owned.size, 1);
   client.phase('browser-verified'); await client.tick(); assert.equal(client.owned.size, 0);
 });
 test('open customer workbench pages prevent automatic export and tab closure', async () => {
-  const client = await background([{ id: 99 }]); await client.tick(); assert.deepEqual(client.actions, []);
+  const client = await background([{ id: 99 }]); await client.tick();
+  assert.deepEqual(client.actions.filter(x => x[0] !== 'status'), []);
+  assert.ok(client.actions.some(x => x[0] === 'status' && x[1] === 'pages-open'));
 });
 test('a temporary tab navigated into a customer canvas must not be closed', async () => {
   const client = await background(); await client.tick();

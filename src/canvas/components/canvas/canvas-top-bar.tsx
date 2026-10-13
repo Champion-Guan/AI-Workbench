@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Bot, Download, Keyboard, Menu, PanelLeftClose, PanelLeftOpen, Redo2, Settings2, Undo2, Upload } from "lucide-react";
+import { Bot, Download, Grid2x2, Keyboard, Menu, PanelLeftClose, PanelLeftOpen, Redo2, Settings2, Undo2, Upload } from "lucide-react";
 import { Button, Dropdown, Modal, Tooltip } from "antd";
 import { useTranslation } from "react-i18next";
 
@@ -19,7 +19,8 @@ export function CanvasTopBar({
     canUndo,
     canRedo,
     onExportProject,
-    onImportImage,
+    onImportContents,
+    onOrganizeOverlaps,
     onOpenPlugins,
     onUndo,
     onRedo,
@@ -37,7 +38,8 @@ export function CanvasTopBar({
     canUndo: boolean;
     canRedo: boolean;
     onExportProject: () => void;
-    onImportImage: () => void;
+    onImportContents: () => void;
+    onOrganizeOverlaps: () => void;
     onOpenPlugins: () => void;
     onUndo: () => void;
     onRedo: () => void;
@@ -82,8 +84,9 @@ export function CanvasTopBar({
                         trigger={["click"]}
                         menu={{
                             items: [
-                                { key: "import", icon: <Upload className="size-4" />, label: t("canvas.importAsset"), onClick: onImportImage },
+                                { key: "import", icon: <Upload className="size-4" />, label: "导入画布内容（ZIP）", onClick: onImportContents },
                                 { key: "export", icon: <Download className="size-4" />, label: t("canvas.exportCurrent"), onClick: onExportProject },
+                                { key: "organize", icon: <Grid2x2 className="size-4" />, label: "整理重叠卡片（可撤销）", onClick: onOrganizeOverlaps },
                                 { type: "divider" },
                                 { key: "undo", disabled: !canUndo, icon: <Undo2 className="size-4" />, label: <MenuLabel text={t("canvas.undo")} shortcut="⌘ Z" />, onClick: onUndo },
                                 { key: "redo", disabled: !canRedo, icon: <Redo2 className="size-4" />, label: <MenuLabel text={t("canvas.redo")} shortcut="⌘ ⇧ Z / ⌘ Y" />, onClick: onRedo },

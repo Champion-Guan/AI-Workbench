@@ -56,7 +56,7 @@ export async function publishStableRelease({ approval, directory, token, root, d
   const approvedNotes = stableReleaseNotes(await readFile(path.join(root, 'docs/RELEASE-NOTES.md'), 'utf8'), version);
   if (approvedNotes.includes(token)) throw Error('Unsafe release notes');
   const release = await request(api, 'POST', { tag_name: 'v' + version, target_commitish: checked.manifest.commit,
-    name: 'Guan AI Workbench ' + version, body: approvedNotes + '\n\n---\n\n' + notes.body, draft: true, prerelease: false });
+    name: 'AI-Workbench ' + version, body: approvedNotes + '\n\n---\n\n' + notes.body, draft: true, prerelease: false });
   if (!Number.isSafeInteger(release.id) || release.id < 1 || release.draft !== true) throw Error('Invalid draft identity');
   const assets = [...checked.manifest.packages.map(p => p.name), 'guan-stable-manifest.json', 'guan-stable-manifest.sig', 'SHA256SUMS.txt'];
   for (const name of assets) {

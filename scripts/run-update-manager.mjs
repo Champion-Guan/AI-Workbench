@@ -1,4 +1,6 @@
 import path from 'node:path';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
 import { fileURLToPath } from 'node:url';
 import { runtimePaths } from '../src/server/runtime-paths.mjs';
 import { UpdateManager } from '../src/server/update-manager.mjs';
@@ -32,6 +34,7 @@ async function main() {
   manager.coordinator = new ClosedBrowserCoordinator({ service: manager.service, ledger, authority, pageOnly: true });
   manager.operator = authority;
   const scheduler = new UpdateInstallScheduler({ manager, authority, preferencesFile: path.join(paths.updates, 'preferences.json'),
+    onInstalled: () => promisify(execFile)('/usr/bin/open', ['http://localhost:8888'], { timeout: 10000 }),
     restoreCurrent: () => startSettledCurrent({ manager, authority, ledger }) });
   manager.scheduler = scheduler;
   const ipc = await serveUpdateManager({ manager, socketPath: path.join(paths.updates, 'u.sock'), downloadsDirectory: path.join(paths.updates, 'packages') });

@@ -61,7 +61,7 @@ async function main() {
     bridge = spawn(process.execPath, [path.join(root, 'scripts/port-migration-bridge.mjs'), legacy ? '--automatic-portable' : '--automatic'], {
       cwd: root, stdio: ['ignore', 'pipe', 'pipe'], env: process.env,
     });
-    let sourceBackedUp = false, verified = false;
+    let sourceBackedUp = false, verified = false, extensionVersion = null, extensionState = null;
     exited = new Promise(resolve => {
       bridge.once('exit', () => { bridgeClosed = true; rejectReady(Error('migration_bridge_stopped')); resolve(); });
       bridge.once('error', () => { bridgeClosed = true; rejectReady(Error('migration_bridge_stopped')); resolve(); });
@@ -78,6 +78,7 @@ async function main() {
           if (value.migrationUrl && value.backupDirectory) ready(value);
           if (value.phase === 'source-backed-up') sourceBackedUp = true;
           if (value.phase === 'browser-verified' && value.verified === true) verified = true;
+          if (value.phase === 'extension-status') { extensionVersion = value.version; extensionState = value.state; }
         } catch { rejectReady(Error('migration_bridge_invalid')); }
       }
     });
@@ -90,9 +91,21 @@ async function main() {
     // Restored customer workbench tabs still veto export and installation.
     await execute('/usr/bin/open', ['-a', 'Google Chrome']);
     console.log('私人文件已备份，等待现有工作台扩展自动复制同一 Chrome 配置中的浏览器数据…');
-    const deadline = Date.now() + 5 * 60 * 1000;
+    const waitingSince = Date.now(), deadline = waitingSince + 10 * 60 * 1000;
+    let guideOpened = false;
     while (!verified) {
-      if (cancelled || bridgeClosed || Date.now() > deadline) throw Error('migration_browser_unverified');
+      if (cancelled || bridgeClosed) throw Error('migration_browser_unverified');
+      if (Date.now() > deadline) throw Error(extensionState === 'relay-unavailable' ? 'migration_relay_unavailable'
+        : extensionState === 'pages-open' ? 'migration_pages_open'
+        : extensionVersion ? 'migration_browser_unverified' : 'migration_extension_missing');
+      if (!guideOpened && !sourceBackedUp && Date.now() - waitingSince > 10000 && (!extensionVersion || extensionState === 'relay-unavailable')) {
+        guideOpened = true;
+        console.log('未收到可用的浏览器迁移通信，正在打开扩展加载入口。');
+        console.log(`请在原工作台使用的 Chrome 配置打开开发者模式，加载已解压的扩展程序：${path.join(root, 'browser/managed-workbench')}`);
+        console.log('已安装旧扩展时请更新加载本目录；首次加载需要 Chrome 授权。加载后本脚本自动继续，不需要重新下载。');
+        await execute('/usr/bin/open', ['-a', 'Google Chrome', 'chrome://extensions/']);
+        await execute('/usr/bin/open', [path.join(root, 'browser/managed-workbench')]);
+      }
       await new Promise(resolve => setTimeout(resolve, 500));
     }
     if (!sourceBackedUp) throw Error('migration_source_unverified');
@@ -132,7 +145,9 @@ main().catch(error => {
     migration_portable_version_unsupported: '首次接管目前支持解压运行的 v1.0.7，请先运行该版本。',
     migration_service_identity_unknown: '无法核实 5174 服务的进程和 v1.0.7 目录，旧服务没有停止。',
     migration_private_root_mismatch: '旧服务使用了不同的私人数据目录，已停止，避免迁移到错误位置。',
-    migration_browser_unverified: '浏览器迁移未通过：需要同一 Chrome 配置中已加载 1.0.1 版工作台扩展。',
+    migration_extension_missing: '未收到工作台扩展通信。请在原工作台所在的 Chrome 配置加载本工具的 browser/managed-workbench，再运行迁移。',
+    migration_relay_unavailable: '扩展已连接，但旧地址迁移页面通信失败。请更新加载本工具扩展，关闭临时迁移页面后重试。',
+    migration_browser_unverified: '扩展已发现，但浏览器备份或逐项校验未完成。请保留旧存储及备份，检查临时迁移页面提示后重试。',
     migration_download_failed: '正式安装包下载失败，请检查 GitHub 网络连接后重试。',
     github_network_failed: '无法连接 GitHub：直连和已发现的本机代理均未成功。',
     asset_download_failed: 'GitHub 安装包连接失败：请确认代理允许 github.com 和 release-assets.githubusercontent.com。',

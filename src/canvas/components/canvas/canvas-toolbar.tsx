@@ -24,7 +24,6 @@ export function CanvasToolbar({
     onAddPromptVariables,
     onAddGroup,
     onAddGenerationConfigs,
-    onOrganizeOverlaps,
     onGenerateAllConfigs,
     onCompleteAndGenerateAll,
     onAddExtensionNode,
@@ -51,7 +50,6 @@ export function CanvasToolbar({
     onAddPromptVariables: () => void;
     onAddGroup: () => void;
     onAddGenerationConfigs: () => void;
-    onOrganizeOverlaps: () => void;
     onGenerateAllConfigs: () => void;
     onCompleteAndGenerateAll: () => void;
     onAddExtensionNode: (type: string) => void;
@@ -104,7 +102,7 @@ export function CanvasToolbar({
 
     return (
         <div ref={rootRef} className="pointer-events-none absolute bottom-5 z-50 flex justify-center" style={{ left: 300, right: 16 }}>
-            {tip ? <DockTip label={tip} x={hovered === "tool-organize-overlaps" ? Math.max(80, Math.min(tipX, (wrapRef.current?.parentElement?.clientWidth || tipX + 80) - 80)) : tipX} theme={theme} /> : null}
+            {tip ? <DockTip label={tip} x={tipX} theme={theme} /> : null}
             <div ref={wrapRef} className="thin-scrollbar pointer-events-auto flex h-14 max-w-full items-center gap-1 overflow-x-auto rounded-xl border px-2 shadow-lg backdrop-blur [&>*]:shrink-0" style={dockStyle}>
                 <ToolbarButton id={`tool-${canvasTool}`} label={t(`canvas.toolbar.${canvasTool}`)} active hovered={hovered} activeStyle={activeStyle} hoverStyle={hoverStyle} wrapRef={wrapRef} onTipX={setTipX} onHover={setHovered} onClick={() => onCanvasToolChange(canvasTool === "select" ? "pan" : "select")}>
                     {canvasTool === "select" ? <MousePointer2 className="size-4.5" /> : <Hand className="size-4.5" />}
@@ -155,9 +153,6 @@ export function CanvasToolbar({
                 </Dropdown>
                 <ToolbarButton id="tool-group" label={t("canvas.toolbar.group")} hovered={hovered} hoverStyle={hoverStyle} wrapRef={wrapRef} onTipX={setTipX} onHover={setHovered} onClick={onAddGroup}>
                     <Group className="size-4.5" />
-                </ToolbarButton>
-                <ToolbarButton id="tool-organize-overlaps" label="整理重叠卡片（可撤销）" hovered={hovered} hoverStyle={hoverStyle} wrapRef={wrapRef} onTipX={setTipX} onHover={setHovered} onClick={onOrganizeOverlaps}>
-                    <Grid2x2 className="size-4.5" />
                 </ToolbarButton>
                 {extensionDefs.length ? (
                     <ToolbarButton
@@ -405,7 +400,6 @@ function toolLabel(id: string, t: (key: string) => string) {
     if (id === "tool-batch-actions") return "批量操作";
     if (id === "tool-prompt-variables") return t("canvas.toolbar.promptVariables");
     if (id === "tool-group") return t("canvas.toolbar.group");
-    if (id === "tool-organize-overlaps") return "整理重叠卡片 · 可撤销";
     if (id === "tool-extensions") return t("canvas.toolbar.extensions");
     if (id === "tool-upload") return t("canvas.toolbar.upload");
     if (id === "tool-style") return t("canvas.toolbar.appearance");

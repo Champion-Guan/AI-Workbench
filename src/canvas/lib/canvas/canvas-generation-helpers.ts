@@ -61,7 +61,7 @@ export async function hydrateCanvasImages(nodes: CanvasNodeData[]) {
             if (metadata.storageKey) {
                 void ensureImagePreview(metadata.storageKey);
                 const blob = await getImageBlob(metadata.storageKey);
-                if (!blob) return { ...node, metadata: { ...metadata, content: "", status: "error", errorDetails: "图片文件已失效", images } };
+                if (!blob) return { ...node, metadata: { ...metadata, content: "", status: "error" as const, errorDetails: "图片文件已失效", images } };
                 return { ...node, metadata: { ...metadata, content: await resolveImageUrl(metadata.storageKey, content), images, ...(hasInvalidImage ? { status: "error" as const, errorDetails: "图片文件已失效" } : {}) } };
             }
             if (!content) return { ...node, metadata: { ...metadata, images, ...(hasInvalidImage ? { status: "error" as const, errorDetails: "图片文件已失效" } : {}) } };

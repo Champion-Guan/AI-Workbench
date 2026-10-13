@@ -86,9 +86,10 @@ test('corrupt consent remains intact, native bootstrap needs explicit backup+mai
   const lease = await g.authority.acquire({ mode: 'bootstrap', next: g.next }); await lease.assertValid(); await lease.release();
 });
 test('independent scheduler coalesces ticks, respects disabled preference/browser veto and requires a fresh grant', async t => {
-  const f = await fixture(t), file = path.join(f.root, 'preferences.json'); let installs = 0, closed = false, finish;
+  const f = await fixture(t), file = path.join(f.root, 'preferences.json'); let installs = 0, opened = 0, closed = false, finish;
   f.manager.install = async () => { installs++; await new Promise(resolve => { finish = resolve; }); };
   const scheduler = new UpdateInstallScheduler({ manager: f.manager, authority: f.authority, preferencesFile: file,
+    onInstalled: async () => { opened++; throw Error('browser unavailable'); },
     census: async () => ({ workbenchPagesClosed: closed, blockers: closed ? [] : ['Chrome'] }) });
   await scheduler.tick(); assert.equal(scheduler.state.state, 'deferred');
   await writeFile(file, JSON.stringify({ version: 1, repository: 'owner/repo', autoCheck: false, autoDownload: false, autoInstall: true, network: 'direct' }), { mode: 0o600 });
@@ -97,5 +98,6 @@ test('independent scheduler coalesces ticks, respects disabled preference/browse
   assert.equal(scheduler.state.state, 'awaiting-browser-exit'); assert.equal(installs, 0);
   closed = true; const a = scheduler.tick(), b = scheduler.tick(); assert.equal(a, b);
   while (!finish) await new Promise(resolve => setImmediate(resolve)); finish(); await a; assert.equal(installs, 1);
+  assert.equal(opened, 1); assert.equal(scheduler.state.state, 'committed'); assert.equal(scheduler.state.openFailed, true);
   await scheduler.stop(); await scheduler.tick(); assert.equal(installs, 1);
 });

@@ -6,10 +6,10 @@ import { sameWorkbenchRepository } from './workbench-identity.mjs';
 // Web service exit. There is no URL, path, command or unauthorised task clearing.
 // Every attempt needs a per-version operator grant AND durable/census checks.
 export class UpdateInstallScheduler {
-  constructor({ manager, authority, preferencesFile, census = workbenchPageCensus, intervalMs = 5000, restoreCurrent }) {
+  constructor({ manager, authority, preferencesFile, census = workbenchPageCensus, intervalMs = 5000, restoreCurrent, onInstalled }) {
     if (!manager?.install || !authority?.read || typeof preferencesFile !== 'string' || !Number.isSafeInteger(intervalMs) || intervalMs < 100)
       throw Error('install_scheduler_invalid');
-    Object.assign(this, { manager, authority, preferencesFile, census, intervalMs, restoreCurrent });
+    Object.assign(this, { manager, authority, preferencesFile, census, intervalMs, restoreCurrent, onInstalled });
     this.timer = null; this.running = null; this.closed = false; this.state = { state: 'confirmation-required', error: null };
   }
   async enabled() {
@@ -62,6 +62,9 @@ export class UpdateInstallScheduler {
     if (grant.previous === null) await this.manager.bootstrap(grant.next);
     else await this.manager.install(grant.next);
     this.state = { state: 'committed', error: null };
+    // Opening the fixed workbench URL is optional presentation, never part of
+    // the installation transaction or a reason to roll back a healthy version.
+    try { await this.onInstalled?.(); } catch { this.state.openFailed = true; }
   }
   start() {
     if (this.timer) return;

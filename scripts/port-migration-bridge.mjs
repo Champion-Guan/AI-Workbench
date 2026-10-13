@@ -46,7 +46,7 @@ const modules = Object.fromEntries(await Promise.all(['port-migration.mjs', 'bro
 let snapshot = resume ? path.join(directory, 'browser-5174.json') : null;
 let report = resume ? JSON.parse(await readFile(path.join(directory, 'MIGRATION.json'))) : { phase: 'waiting-source', privateFiles: before.length };
 if (resume && hash(await readFile(snapshot)) !== report.sha256) throw Error('migration_backup_changed');
-let uploading = false, claimant = null;
+let uploading = false, claimant = null, browserStatus = null;
 const exportScript = `import {exportBrowserStorage} from '${target + prefix}/port-migration.mjs';try{const r=await fetch('${target + prefix}/backup',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(await exportBrowserStorage())});if(!r.ok)throw Error();document.body.textContent='旧数据已备份，正在迁移…';}catch{document.body.textContent='备份未完成，旧数据保留。';}`;
 const page = `<!doctype html><meta charset="utf-8"><title>工作台端口迁移</title><style>body{font:18px system-ui;margin:60px auto;max-width:760px;padding:24px}button{padding:12px}</style><h1>工作台迁移至 8888</h1><p>只复制并逐项校验，不覆盖或清空旧地址数据。旧地址备份已保存到本机私人备份目录。</p><button id="restore">复制旧地址数据并校验</button><pre id="status">等待旧地址备份完成</pre><script type="module">
 import {restoreBrowserStorage} from '${prefix}/port-migration.mjs';
@@ -66,14 +66,24 @@ const server = createServer(async (req, res) => {
     if (req.headers.host !== '127.0.0.1:8888') { res.writeHead(403); return res.end(); }
     const origin = req.headers.origin;
     const extensionControl = /^chrome-extension:\/\/[a-p]{32}$/.test(origin || '')
-      && [ '/local-migration/session', prefix + '/claim' ].includes(req.url);
+      && [ '/local-migration/session', prefix + '/claim', prefix + '/status' ].includes(req.url);
     if (origin && ![source, target].includes(origin) && !extensionControl) { res.writeHead(403); return res.end(); }
     if (origin === source) res.setHeader('Access-Control-Allow-Origin', source);
     res.setHeader('Cache-Control', 'no-store');
     res.setHeader('X-Content-Type-Options', 'nosniff');
     if (automatic && req.url === '/local-migration/session' && req.method === 'GET' && (!origin || extensionControl)) {
       res.writeHead(200, { 'Content-Type': 'application/json' });
-      return res.end(JSON.stringify({ protocol: 1, migrationUrl: target + prefix, phase: report.phase }));
+      return res.end(JSON.stringify({ protocol: 1, migrationUrl: target + prefix, phase: report.phase, browserStatus }));
+    }
+    if (automatic && req.url === prefix + '/status' && req.method === 'POST' && (!origin || extensionControl)) {
+      let raw = ''; for await (const chunk of req) { raw += chunk; if (raw.length > 512) throw Error(); }
+      const value = JSON.parse(raw);
+      if (Object.keys(value).sort().join(',') !== 'state,version'
+        || !/^\d+\.\d+\.\d+$/.test(value.version || '')
+        || !['ready', 'pages-open', 'export-requested', 'relay-unavailable', 'tab-changed'].includes(value.state)) throw Error();
+      browserStatus = { ...value, receivedAt: Date.now() };
+      console.log(JSON.stringify({ phase: 'extension-status', ...value }));
+      res.writeHead(200); return res.end('ok');
     }
     if (automatic && req.url === prefix + '/claim' && req.method === 'POST' && (!origin || extensionControl)) {
       let raw = ''; for await (const chunk of req) { raw += chunk; if (raw.length > 128) throw Error(); }

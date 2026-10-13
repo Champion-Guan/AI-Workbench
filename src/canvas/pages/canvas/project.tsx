@@ -7,7 +7,11 @@ import { saveAs } from "file-saver";
 import { useTranslation } from "react-i18next";
 import { canvasTaskSummary } from "@/lib/canvas/task-summary.js";
 import { frontendActivity, observeActivity } from "@/lib/update-activity";
-import { runTaskActivity } from "@/services/task-admission";
+import { runTaskActivity, assertTaskAdmission } from "@/services/task-admission";
+import { readZip } from "@/lib/zip";
+import { prepareCanvasContentImport } from "@/lib/canvas/canvas-content-import";
+import { setImageBlob } from "@/services/image-storage";
+import { setMediaBlob } from "@/services/file-storage";
 import type { RootScope } from "@/lib/page-drain-barrier";
 import { settleActivityGroup } from "@/lib/settle-activity-group";
 import { arrangeOverlappingCanvasNodes, placeCanvasNode, placeNewCanvasNodes } from "@/lib/canvas/canvas-node-placement";
@@ -357,6 +361,8 @@ function InfiniteCanvasPage() {
     const openAgentPanel = useAgentStore((state) => state.openPanel);
     const containerRef = useRef<HTMLDivElement>(null);
     const imageInputRef = useRef<HTMLInputElement>(null);
+    const contentInputRef = useRef<HTMLInputElement>(null);
+    const contentImportBusyRef = useRef(false);
     const uploadTargetRef = useRef<{ nodeId?: string; position?: Position } | null>(null);
     const clipboardRef = useRef<CanvasClipboard | null>(null);
     const historyRef = useRef<{ past: CanvasHistoryEntry[]; future: CanvasHistoryEntry[] }>({ past: [], future: [] });
@@ -1938,6 +1944,40 @@ function InfiniteCanvasPage() {
             hide();
         }
     }, [message, projectId, t]);
+
+    const importCurrentContents = useCallback(async (file?: File) => {
+        if (!file || contentImportBusyRef.current) return;
+        contentImportBusyRef.current = true;
+        const hide = message.loading("正在导入画布内容…", 0);
+        try {
+            await runTaskActivity("storage", async () => {
+                if (file.size > 256 * 1024 * 1024) throw Error("ZIP 文件不能超过 256 MB");
+                const zip = await readZip(file);
+                const manifest = zip.get("projects.json");
+                if (!manifest) throw Error("请选择导出当前画布生成的 ZIP 文件");
+                const prepared = prepareCanvasContentImport(JSON.parse(await manifest.text()), zip, nodesRef.current);
+                await settleActivityGroup(prepared.media.map(async ({ key, blob }) => {
+                    await (key.startsWith("image:") ? setImageBlob(key, blob) : setMediaBlob(key, blob));
+                }));
+                const importedNodes = await hydrateCanvasImages(prepared.nodes);
+                if (restoredProjectIdRef.current !== projectId || isRecycledCanvas(projectId)) throw Error("当前画布已切换，导入已停止");
+                const before = createHistoryEntry();
+                historyRef.current.past = [...historyRef.current.past.slice(-49), before];
+                historyRef.current.future = [];
+                const merged = placeNewCanvasNodes(before.nodes, [...before.nodes, ...importedNodes]);
+                applyHistory({ ...before, nodes: merged, connections: [...before.connections, ...prepared.connections] });
+                setSelectedNodeIds(new Set(prepared.nodes.map(node => node.id)));
+                message.success(`已导入 ${prepared.nodes.length} 张卡片、${prepared.connections.length} 条连线，可撤销；未新建产品或画布`);
+            });
+        } catch (error) {
+            const reason = error instanceof Error && /^(请选择|画布|卡片|连线|ZIP|当前画布)/.test(error.message) ? error.message : "导入失败，当前画布内容未被替换";
+            message.error(reason);
+        } finally {
+            contentImportBusyRef.current = false;
+            if (contentInputRef.current) contentInputRef.current.value = "";
+            hide();
+        }
+    }, [applyHistory, createHistoryEntry, message, projectId]);
 
     const handleCanvasMouseDown = useCallback(
         (event: ReactPointerEvent<HTMLDivElement>) => {
@@ -4186,7 +4226,11 @@ function InfiniteCanvasPage() {
                     canUndo={historyState.canUndo}
                     canRedo={historyState.canRedo}
                     onExportProject={exportCurrentProject}
-                    onImportImage={() => handleUploadRequest()}
+                    onImportContents={() => {
+                        try { assertTaskAdmission(); contentInputRef.current?.click(); }
+                        catch { message.error("工作台正在进行安全维护，请稍后重试"); }
+                    }}
+                    onOrganizeOverlaps={organizeOverlappingNodes}
                     onOpenPlugins={() => setPluginManagerOpen(true)}
                     onUndo={undoCanvas}
                     onRedo={redoCanvas}
@@ -4372,7 +4416,6 @@ function InfiniteCanvasPage() {
                     onAddText={() => createNode(CanvasNodeType.Text)}
                     onAddConfig={() => createNode(CanvasNodeType.Config)}
                     onAddGenerationConfigs={addGenerationConfigsForPromptNodes}
-                    onOrganizeOverlaps={organizeOverlappingNodes}
                     onGenerateAllConfigs={() => void generateAllConfigNodes()}
                     onCompleteAndGenerateAll={() => void completeAndGenerateAll()}
                     onAddPromptVariables={() => createNode(PROMPT_VARIABLES_NODE_TYPE)}
@@ -4422,6 +4465,7 @@ function InfiniteCanvasPage() {
                 ) : null}
 
                 <input ref={imageInputRef} type="file" multiple accept="image/*,video/*,audio/mpeg,audio/wav,audio/x-wav,.mp3,.wav" className="hidden" onChange={handleImageInputChange} />
+                <input ref={contentInputRef} type="file" accept=".zip,application/zip" aria-label="导入画布内容 ZIP" className="hidden" onChange={(event) => void importCurrentContents(event.target.files?.[0])} />
 
                 <CanvasNodeInfoModal node={infoNode} open={Boolean(infoNode)} onClose={() => setInfoNodeId(null)} />
                 <CanvasPluginManagerModal open={pluginManagerOpen} onClose={() => setPluginManagerOpen(false)} />
