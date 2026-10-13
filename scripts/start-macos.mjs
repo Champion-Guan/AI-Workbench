@@ -12,6 +12,15 @@ async function main() {
   if (process.platform !== 'darwin' || process.arch !== 'arm64' || process.argv.length !== 2) throw Error('macos_launcher_arguments_invalid');
   const root = await realpath(fileURLToPath(new URL('../', import.meta.url))), paths = runtimePaths({ projectRoot: root });
   const node = await realpath(process.execPath);
+  const development = await readPrivateFile(path.join(paths.root, 'development/source.json'), { maxBytes: 4096 });
+  if (development !== null) {
+    const record = JSON.parse(development);
+    if (record.version !== 1 || record.root !== root || record.node !== node) throw Error('development_source_mismatch');
+    await run(node, [path.join(root, 'scripts/start-source-workbench.mjs'), '--open'], { timeout: 90000, maxBuffer: 65536 });
+    try { await desktopShortcut({ desktop: path.join(homedir(), 'Desktop'), node, root }); }
+    catch { console.log('桌面入口未创建，源码工作台仍正常运行。'); }
+    return;
+  }
   const agents = path.join(homedir(), 'Library/LaunchAgents'), logs = path.join(paths.root, 'logs/launcher');
   const current = await readPrivateFile(path.join(paths.root, 'installation/current.json'), { maxBytes: 4096 });
   if (current !== null) {

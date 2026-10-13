@@ -1790,7 +1790,13 @@ function renderHeaderControls(root) {
       if (canvasAction) {
         event.preventDefault();
         if (canvasAction.dataset.canvasAction === 'trash') { openProductTrash(); return; }
-        if (canvasAction.dataset.canvasAction === "new") window.__guanCanvas?.postAction({ type: "guan-canvas-create-project", productSetId: activeWorkbookId(readState()) }).catch(error => alert(error.message));
+        if (canvasAction.dataset.canvasAction === "new") {
+          const highest = api.getCanvasProducts().reduce((max, product) => {
+            const number = Number(String(product.title || '').match(/^未命名产品(\d+)$/)?.[1] || 0);
+            return Number.isSafeInteger(number) ? Math.max(max, number) : max;
+          }, 0);
+          window.__guanCanvas?.postAction({ type: "guan-canvas-create-project", productSetId: activeWorkbookId(readState()), title: `未命名产品${highest + 1}` }).catch(error => alert(error.message));
+        }
         else {
           controls.dataset.canvasImportProductSetId = activeWorkbookId(readState()) || '';
           controls.querySelector(".guan-dc-header-canvas-input")?.click();

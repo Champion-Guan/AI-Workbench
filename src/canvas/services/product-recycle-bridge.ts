@@ -3,7 +3,6 @@ import { localForageStorage } from '@/lib/localforage-storage';
 import { checkpointLocalStorageWrite, checkpointLocalStorageRemove } from '@/lib/checkpoint-local-storage';
 import { canvasTaskSummary } from '@/lib/canvas/task-summary.js';
 import { recycleMarkerKey, filterRecycledProjects } from '@/lib/canvas/product-recycle-markers.js';
-import i18n from '@/i18n';
 import { readZip } from '@/lib/zip';
 import { setImageBlob } from '@/services/image-storage';
 import { setMediaBlob } from '@/services/file-storage';
@@ -34,7 +33,13 @@ export function initProductRecycleBridge() {
                 return;
             }
             if (data.type === 'guan-canvas-create-project') {
-                const id = useCanvasStore.getState().createProject(i18n.t('canvas.defaultTitle', { count: useCanvasStore.getState().projects.length + 1 }));
+                const projects = useCanvasStore.getState().projects;
+                const highest = projects.reduce((max, project) => {
+                    const number = project.title.match(/^未命名产品(\d+)$/)?.[1];
+                    return number && Number.isSafeInteger(Number(number)) ? Math.max(max, Number(number)) : max;
+                }, 0);
+                const title = typeof data.title === 'string' && /^未命名产品\d{1,15}$/.test(data.title) ? data.title : `未命名产品${highest + 1}`;
+                const id = useCanvasStore.getState().createProject(title);
                 const project = useCanvasStore.getState().openProject(id)!;
                 window.parent.postMessage({ type: 'guan-canvas-project-created', projectId: id, title: project.title, productSetId: data.productSetId }, location.origin);
                 return;

@@ -37,6 +37,7 @@ const assetRoot = join(publicRoot, "assets");
 const infiniteCanvasRoot = join(publicRoot, "infinite-canvas");
 const builtInProxyConfigFile = privatePaths.proxyConfigFile;
 const port = Number(process.env.PORT || 8888);
+const sourceDevelopment = process.env.GUAN_WORKBENCH_SOURCE_DEV === '1';
 const applicationVersion = JSON.parse(readFileSync(join(projectRoot, "package.json"), "utf8")).version;
 const applicationBuildId = createHash("sha256").update(readFileSync(fileURLToPath(import.meta.url))).update(readFileSync(join(infiniteCanvasRoot, "index.html"))).digest("hex").slice(0, 24);
 const applicationInstanceId = randomUUID();
@@ -54,7 +55,7 @@ const credentialRegistry = new CredentialRegistry({ directory: join(privatePaths
 const credentialHttp = createCredentialHttpHandler({ registry: credentialRegistry, origin: `http://127.0.0.1:${port}`, activityGate,
   dispatcherForProfile: profile => profile.kind === "agent" ? undefined : (getImageRelayProxyUrl() ? getImageRelayProxyAgent(getImageRelayProxyUrl()) : undefined) });
 const softwareUpdates = new SoftwareUpdates({ directory: privatePaths.updates, currentVersion: applicationVersion,
-  manager: new UpdateManagerClient({ socketPath: join(privatePaths.updates, "u.sock") }),
+  manager: sourceDevelopment ? null : new UpdateManagerClient({ socketPath: join(privatePaths.updates, "u.sock") }),
   downloader: new StableDownload({ directory: join(privatePaths.updates, "packages") }),
   auth: new UpdateAuth({ directory: privatePaths.updates, vault: new MacKeychainVault({ executable: join(privatePaths.runtime, "guan-keychain") }) }),
   proxyUrl: () => getImageRelayProxyUrl() });
@@ -154,7 +155,6 @@ const localDocumentTitleScript = `<script id="local-document-title">
 const localRootNavigationScript = `<script id="local-root-navigation">
   (() => {
     let proxySetupOpen = false;
-    let uploadHintDismissed = false;
     const isExcelUploaded = () => {
       const picker = document.querySelector('[role="dialog"] button[aria-label="选择已上传的 Excel 文件"]');
       return Boolean(picker && picker.textContent && !/暂无已上传 Excel|暂无已上传Excel/i.test(picker.textContent));
@@ -164,44 +164,12 @@ const localRootNavigationScript = `<script id="local-root-navigation">
       const dialog = document.querySelector('[role="dialog"]');
       if (!dialog) return false;
       const hasExcel = isExcelUploaded();
-      const picker = dialog.querySelector('[role="dialog"] button[aria-label="选择已上传的 Excel 文件"]');
       const toggle = dialog.querySelector('.local-settings-toggle');
       if (toggle) toggle.hidden = !hasExcel;
       for (const button of document.querySelectorAll('button')) {
         if (button.textContent?.trim() === '数据') button.hidden = true;
       }
-      let hint = dialog.querySelector('.local-upload-step-hint');
-      if (!hasExcel && !proxySetupOpen && !uploadHintDismissed) {
-        if (!hint) {
-          hint = document.createElement('div');
-          hint.className = 'local-upload-step-hint';
-          hint.setAttribute('role', 'status');
-          hint.textContent = '第一步：先上传你的 Excel 文件';
-          dialog.append(hint);
-        }
-        hint.hidden = false;
-        if (picker && picker.dataset.uploadHintBound !== 'true') {
-          picker.dataset.uploadHintBound = 'true';
-          picker.addEventListener('click', () => {
-            uploadHintDismissed = true;
-            hint.hidden = true;
-          });
-        }
-        const positionHint = () => {
-          if (!picker || !hint || hint.hidden) return;
-          const rect = picker.getBoundingClientRect();
-          hint.style.top = String(Math.round(rect.bottom + 54)) + 'px';
-          hint.style.left = String(Math.round(Math.max(12, Math.min(window.innerWidth - hint.offsetWidth - 12, rect.left + rect.width / 2 - hint.offsetWidth / 2)))) + 'px';
-          hint.style.right = 'auto';
-        };
-        positionHint();
-        if (!dialog.dataset.uploadHintResizeBound) {
-          dialog.dataset.uploadHintResizeBound = 'true';
-          window.addEventListener('resize', positionHint, { passive: true });
-        }
-      } else if (hint) {
-        hint.hidden = true;
-      }
+      dialog.querySelector('.local-upload-step-hint')?.remove();
       return true;
     };
 
@@ -4119,7 +4087,7 @@ const server = createServer(async (request, response) => {
     if (method !== "GET" || !isLocalAppRequest(request)) { response.writeHead(403); response.end(); return; }
     response.writeHead(200, { "content-type": "application/json", "cache-control": "no-store" });
     response.end(JSON.stringify({ app: "guan-ai-workbench", version: applicationVersion, buildId: applicationBuildId,
-      instanceId: applicationInstanceId, pid: process.pid, ready: !shutdownStarted, maintenance: updateStartup.quarantined(), origin: `http://127.0.0.1:${port}`, dataLayout: 1,
+      instanceId: applicationInstanceId, pid: process.pid, ready: !shutdownStarted, maintenance: updateStartup.quarantined(), origin: `http://127.0.0.1:${port}`, dataLayout: 1, sourceDevelopment,
       taskEvidenceProtocol: updateTaskLedgerReady ? 1 : 0,
       backendControlProtocol: 1,
       proxy: { running: Boolean(builtInImageProxy), stateReadable: !proxyStateReadFailed } }));

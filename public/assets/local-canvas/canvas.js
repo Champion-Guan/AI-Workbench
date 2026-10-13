@@ -1063,7 +1063,7 @@
     }
 
     const heading = Array.from(document.querySelectorAll("h1, h2, h3"))
-      .find((candidate) => candidate.textContent?.trim() === "A+ 详情页");
+      .find((candidate) => candidate.textContent?.trim() === "A+ 详情页" && !candidate.closest('.guan-product-landing-preview'));
     const intro = heading?.parentElement || null;
     if (intro && state.canvasIntro !== intro) {
       state.canvasIntro?.classList.remove("guan-canvas-intro");
@@ -1072,6 +1072,8 @@
     }
 
     const carouselNav = document.querySelector('[aria-label="轮播图导航"]');
+    const landingPreview = state.root.querySelector('.guan-product-landing-preview');
+    if (carouselNav && landingPreview && carouselNav.parentElement !== landingPreview) landingPreview.append(carouselNav);
     if (carouselNav && state.carouselNav !== carouselNav) {
       state.carouselNav?.classList.remove("guan-canvas-carousel-nav");
       state.carouselNav = carouselNav;
@@ -1194,16 +1196,20 @@
     if (root.querySelector('.guan-product-empty')) return;
     const empty = document.createElement('div');
     empty.className = 'guan-product-empty';
-    empty.innerHTML = '<h2>暂无产品</h2><p>新建、导入产品，或从产品回收站恢复，开始使用画布。</p><div><button type="button" data-empty-action="new">新建产品</button><button type="button" data-empty-action="import">导入产品</button><button type="button" data-empty-action="trash">产品回收站</button></div>';
+    empty.innerHTML = '<section class="guan-product-landing-actions" aria-label="开始使用工作台"><h2>暂无产品</h2><p>新建、导入产品，或从产品回收站恢复，开始使用画布。</p><div class="guan-product-landing-buttons"><button type="button" data-empty-action="new">新建产品</button><button type="button" data-empty-action="import">导入产品</button><button type="button" data-empty-action="trash">产品回收站</button></div></section>';
     empty.addEventListener('click', event => {
       const action = event.target.closest('[data-empty-action]')?.dataset.emptyAction;
       if (action) document.querySelector(`[data-canvas-action="${action}"]`)?.click();
     });
     const landing = document.createElement('div');
     landing.className = 'guan-product-landing-preview';
-    const heading = Array.from(document.querySelectorAll('h1,h2,h3')).find(element => element.textContent.trim() === 'A+ 详情页');
-    if (heading?.parentElement) landing.append(heading.parentElement.cloneNode(true));
+    const introduction = document.createElement('div');
+    introduction.className = 'guan-product-landing-introduction';
+    introduction.innerHTML = '<h1>A+ 详情页</h1><p>上传商品图，AI 即刻生成符合多电商平台规范的高转化率商品图。</p>';
+    landing.append(introduction);
     if (state.originalPreview) landing.append(state.originalPreview);
+    const carouselNav = document.querySelector('[aria-label="轮播图导航"]');
+    if (carouselNav) landing.append(carouselNav);
     empty.prepend(landing);
     root.classList.add('guan-product-landing');
     root.append(empty);
