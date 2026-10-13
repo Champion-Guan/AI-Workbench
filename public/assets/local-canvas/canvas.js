@@ -1050,8 +1050,7 @@
     removeLegacyGenerationPanel();
     document.body.classList.add("guan-canvas-mode");
     const dialog = document.querySelector('[role="dialog"]');
-    const appShell = dialog?.children?.[2];
-    const header = appShell?.children?.[0] || null;
+    const header = dialog?.querySelector(':scope > .flex.size-full > aside') || null;
     const headerRect = header?.getBoundingClientRect?.();
     const top = Math.max(0, Math.round(headerRect?.bottom || 84));
     const currentTop = document.documentElement.style.getPropertyValue("--guan-canvas-top");
@@ -1102,6 +1101,16 @@
   const refreshMode = () => {
     const activeProduct = getActiveProduct() || { id: '' };
 
+    // The archived React shell can replace its preview wrapper when a task
+    // completes. Reattach our existing surface, never recreate running frames.
+    if (state.root && !state.root.isConnected) {
+      const dialog = document.querySelector('[role="dialog"]');
+      if (dialog && state.canvasLayoutHost && state.canvasHost) {
+        if (state.root.parentElement !== state.canvasHost) state.canvasHost.append(state.root);
+        if (!state.canvasLayoutHost.isConnected) dialog.append(state.canvasLayoutHost);
+      }
+    }
+
     const existingCanvas = document.querySelector('[data-local-canvas-v1="true"]');
     if (existingCanvas && state.root !== existingCanvas) state.root = existingCanvas;
     if (!state.root || !document.contains(state.root)) {
@@ -1121,9 +1130,18 @@
       if (!activeProduct.id) showEmptyProducts(root);
       preview.replaceWith(root);
       state.canvasSidePanel = canvasRow()?.children?.[1] || state.canvasSidePanel;
+      // Use our own direct dialog child, not the React-owned carousel wrapper.
+      // Status rerenders can replace that wrapper but cannot delete our host.
       const dialog = document.querySelector('[role="dialog"]');
-      if (state.canvasLayoutHost && dialog && state.canvasLayoutHost.parentElement !== dialog) {
-        dialog.appendChild(state.canvasLayoutHost);
+      if (dialog) {
+        state.canvasHost.classList.remove('guan-canvas-host');
+        state.canvasLayoutHost?.classList.remove('guan-canvas-layout-host');
+        const stableHost = document.createElement('div');
+        stableHost.className = 'guan-canvas-layout-host';
+        stableHost.append(root);
+        dialog.append(stableHost);
+        state.canvasHost = stableHost;
+        state.canvasLayoutHost = stableHost;
       }
       syncCanvasChrome();
       syncFiles();
@@ -1142,6 +1160,7 @@
         if (previousFrame) { previousFrame.style.display = "none"; previousFrame.dataset.active = "false"; }
         state.productId = activeProduct.id;
         state.root.querySelector('.guan-product-empty')?.remove();
+        state.root.classList.remove('guan-product-landing');
         if (!activeProduct.id) { state.nativeFrame = null; showEmptyProducts(state.root); syncCanvasChrome(); return true; }
         const nextFrame = createNativeFrame(activeProduct);
         // Cached canvases must resume with their settings panel closed.
@@ -1180,6 +1199,13 @@
       const action = event.target.closest('[data-empty-action]')?.dataset.emptyAction;
       if (action) document.querySelector(`[data-canvas-action="${action}"]`)?.click();
     });
+    const landing = document.createElement('div');
+    landing.className = 'guan-product-landing-preview';
+    const heading = Array.from(document.querySelectorAll('h1,h2,h3')).find(element => element.textContent.trim() === 'A+ 详情页');
+    if (heading?.parentElement) landing.append(heading.parentElement.cloneNode(true));
+    if (state.originalPreview) landing.append(state.originalPreview);
+    empty.prepend(landing);
+    root.classList.add('guan-product-landing');
     root.append(empty);
   };
 
@@ -1218,9 +1244,13 @@
     });
   };
 
-  const observer = new MutationObserver(() => {
-    refreshMode();
-  });
+  let refreshScheduled = false;
+  const scheduleRefresh = () => {
+    if (refreshScheduled) return;
+    refreshScheduled = true;
+    window.requestAnimationFrame(() => { refreshScheduled = false; refreshMode(); });
+  };
+  const observer = new MutationObserver(scheduleRefresh);
   observer.observe(document.documentElement, { childList: true, subtree: true });
   window.setInterval(() => {
     if (!state.nativeFrame || !state.productId) return;

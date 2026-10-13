@@ -86,6 +86,14 @@
         "quality proof": "品质验证", "durability test": "耐用性测试", "safety features": "安全设计",
         "care instructions": "保养说明", "storage solution": "收纳方案", "installation guide": "安装指南",
         "assembly guide": "组装指南", "compatibility guide": "兼容性指南", "selection guide": "选购指南",
+        "dimension display": "尺寸展示", "measurement guide": "尺寸测量指南", "size chart": "尺寸表",
+        "isometric view": "等轴测视图", "perspective view": "透视角度", "low angle": "低机位视角",
+        "high angle": "高机位视角", "eye level": "平视角度", "bird eye view": "鸟瞰视图",
+        "hero shot": "产品主视觉", "detail shot": "细节特写", "macro view": "微距展示",
+        "color options": "颜色选择", "color variants": "颜色款式", "product comparison": "产品对比",
+        "space saving": "节省空间", "ergonomic design": "人体工学设计", "water resistance": "防水展示",
+        "load capacity": "承重能力", "weight capacity": "承重能力", "use scenario": "使用场景",
+        "dimension overview": "尺寸全貌", "dimensions and weight": "尺寸与重量",
     };
     const words = {
         installation: "安装", assembly: "组装", sequence: "流程", steps: "步骤", checklist: "清单",
@@ -101,6 +109,10 @@
         performance: "性能", comparison: "对比", benefit: "优势", benefits: "优势", safety: "安全",
         cleaning: "清洁", maintenance: "维护", portable: "便携", portability: "便携性",
         folding: "折叠", folded: "折叠状态", unfolded: "展开状态", adjustment: "调节",
+        size: "尺寸", measurement: "测量", measurements: "测量", width: "宽度", height: "高度",
+        length: "长度", depth: "深度", diameter: "直径", weight: "重量", capacity: "容量",
+        view: "视图", angle: "角度", shot: "拍摄", display: "展示", ergonomic: "人体工学",
+        color: "颜色", options: "选择", variants: "款式", design: "设计", resistance: "防护能力",
         "/": "与", "+": "与", "&": "与", and: "与", visual: "展示", scene: "场景",
     };
     const normalized = normalize(theme);

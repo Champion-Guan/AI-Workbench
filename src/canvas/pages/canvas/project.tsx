@@ -462,6 +462,7 @@ function InfiniteCanvasPage() {
     const [clearConfirmOpen, setClearConfirmOpen] = useState(false);
     const [assetPickerOpen, setAssetPickerOpen] = useState(false);
     const [projectLoaded, setProjectLoaded] = useState(false);
+    const [projectLoadFailed, setProjectLoadFailed] = useState(false);
     const restoredProjectIdRef = useRef<string | null>(null);
     const [toolbarNodeId, setToolbarNodeId] = useState<string | null>(null);
     const [nodeImageSettingsOpen, setNodeImageSettingsOpen] = useState(false);
@@ -659,7 +660,11 @@ function InfiniteCanvasPage() {
 
     useEffect(() => {
         if (!hydrated || isRecycledCanvas(projectId) || searchParams.get('productService') === '1') return;
+        // Other cached canvases can change the shared title lookup while a
+        // generation is running. A restored route must not hydrate again.
+        if (restoredProjectIdRef.current === projectId) return;
         setProjectLoaded(false);
+        setProjectLoadFailed(false);
         restoredProjectIdRef.current = null;
         const project = openProject(projectId);
         if (!project) {
@@ -688,11 +693,13 @@ function InfiniteCanvasPage() {
             return;
         }
 
+        let cancelled = false;
         const restore = async () => {
         const restoredNodes = (await hydrateCanvasImages(resetInterruptedGeneration(project.nodes))).filter((node): node is CanvasNodeData => Boolean(node?.id));
         const restoredNodeIds = new Set(restoredNodes.map((node) => node.id));
         const restoredConnections = (project.connections || []).filter((connection) => connection && connection.id && restoredNodeIds.has(connection.fromNodeId) && restoredNodeIds.has(connection.toNodeId));
         const restoredSessions = await hydrateAssistantImages(project.chatSessions || []);
+        if (cancelled) return;
         // Loading saved canvases must never rearrange the customer's layout.
         setRawNodes(restoredNodes);
             setConnections(restoredConnections);
@@ -718,7 +725,12 @@ function InfiniteCanvasPage() {
             restoredProjectIdRef.current = project.id;
             setProjectLoaded(true);
         };
-        void restore();
+        void restore().catch(() => {
+            if (cancelled) return;
+            setProjectLoadFailed(true);
+            message.error("画布资源读取失败，已保留原数据。请刷新后重试。");
+        });
+        return () => { cancelled = true; };
     }, [createProject, existingProjectIdByTitle, hydrated, navigate, openProject, productTitle, projectId]);
 
     useEffect(() => {
@@ -837,9 +849,9 @@ function InfiniteCanvasPage() {
     }, [nodes, connections, projectId, projectLoaded]);
 
     useEffect(() => {
-        if (!projectLoaded || historyPausedRef.current) return;
+        if (!projectLoaded || historyPausedRef.current || isNodeDragging || isNodeResizing) return;
         updateProject(projectId, { nodes, connections, chatSessions, activeChatId, backgroundMode, showImageInfo });
-    }, [activeChatId, backgroundMode, chatSessions, connections, nodes, projectId, projectLoaded, showImageInfo, updateProject]);
+    }, [activeChatId, backgroundMode, chatSessions, connections, nodes, projectId, projectLoaded, showImageInfo, updateProject, isNodeDragging, isNodeResizing]);
 
     const updateFlushSnapshot = useMemo(() => ({ projectId, nodes, connections, chatSessions, activeChatId, backgroundMode, showImageInfo, viewport }),
         [projectId, nodes, connections, chatSessions, activeChatId, backgroundMode, showImageInfo, viewport]);
@@ -4209,6 +4221,21 @@ function InfiniteCanvasPage() {
         [configInputsById, confirmStopGeneration, handleConfigNodeChange, handleGenerateNode, runningNodeId],
     );
 
+    const selectConnection = useCallback((id: string) => {
+        setSelectedConnectionId(id);
+        setSelectedNodeIds(new Set());
+        setContextMenu(null);
+    }, []);
+    const openConnectionMenu = useCallback((event: ReactMouseEvent<SVGPathElement>, id: string) => {
+        setSelectedConnectionId(id);
+        setSelectedNodeIds(new Set());
+        setContextMenu({ type: "connection", x: event.clientX, y: event.clientY, connectionId: id });
+    }, []);
+
+    if (projectLoadFailed) return <main role="alert" className="flex h-full flex-col items-center justify-center gap-4 p-6" style={{ background: theme.canvas.background, color: theme.node.text }}>
+        <p>画布资源读取失败，原数据已保留。</p>
+        <Button onClick={() => window.location.reload()}>重新加载当前画布</Button>
+    </main>;
     if (!projectLoaded) return <CanvasRefreshShell />;
 
     return (
@@ -4263,25 +4290,15 @@ function InfiniteCanvasPage() {
                     <svg className="absolute left-0 top-0 h-[10000px] w-[10000px] overflow-visible" style={{ pointerEvents: "none", zIndex: 0 }}>
                         {visibleConnections.map(({ connection, from, to }) => (
                             <ConnectionPath
-                                // Include endpoint geometry in the key. Chromium can retain a
-                                // composited SVG path's old paint during a large node drag when
-                                // only the `d` attribute changes; remounting the path prevents
-                                // detached fan-shaped remnants from being left on the canvas.
+                                // Keep the Chromium SVG repaint workaround for moved endpoints;
+                                // memoized unchanged edges still avoid redundant rendering.
                                 key={`${connection.id}:${from.position.x}:${from.position.y}:${to.position.x}:${to.position.y}`}
                                 connection={connection}
                                 from={from}
                                 to={to}
                                 active={selectedConnectionId === connection.id || relatedHighlight.connectionIds.has(connection.id)}
-                                onSelect={() => {
-                                    setSelectedConnectionId(connection.id);
-                                    setSelectedNodeIds(new Set());
-                                    setContextMenu(null);
-                                }}
-                                onContextMenu={(event) => {
-                                    setSelectedConnectionId(connection.id);
-                                    setSelectedNodeIds(new Set());
-                                    setContextMenu({ type: "connection", x: event.clientX, y: event.clientY, connectionId: connection.id });
-                                }}
+                                onSelect={selectConnection}
+                                onContextMenu={openConnectionMenu}
                             />
                         ))}
                         {connectingParams ? <ActiveConnectionPath node={nodeById.get(connectingParams.nodeId)} handle={connectingParams} mouseWorld={mouseWorld} target={connectionTargetNodeId ? nodeById.get(connectionTargetNodeId) : undefined} /> : null}

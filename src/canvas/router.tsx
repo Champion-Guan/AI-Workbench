@@ -12,6 +12,14 @@ import NotFound from "@/pages/not-found";
 import PromptsPage from "@/pages/prompts";
 import VideoPage from "@/pages/video";
 
+function CanvasLoadError() {
+    return <main className="flex h-full flex-col items-center justify-center gap-4 bg-white p-6 text-stone-900 dark:bg-stone-950 dark:text-white" role="alert">
+        <h2>画布加载遇到问题</h2>
+        <p>原画布和生成文件已保留。请先切回原产品查看任务状态，再刷新页面。</p>
+        <button type="button" className="rounded-lg border px-4 py-2" onClick={() => window.location.reload()}>重新加载当前画布</button>
+    </main>;
+}
+
 export const router = createBrowserRouter([
     {
         element: (
@@ -27,7 +35,7 @@ export const router = createBrowserRouter([
             { path: "/assets", element: <AssetsPage /> },
             { path: "/prompts", element: <PromptsPage /> },
             { path: "/canvas", element: <CanvasPage /> },
-            { path: "/canvas/:id", element: <CanvasProjectPage /> },
+            { path: "/canvas/:id", element: <CanvasProjectPage />, errorElement: <CanvasLoadError /> },
             { path: "/config", element: <ConfigPage /> },
         ],
     },

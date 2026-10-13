@@ -86,8 +86,8 @@ export function CanvasTopBar({
                             items: [
                                 { key: "import", icon: <Upload className="size-4" />, label: "导入画布内容（ZIP）", onClick: onImportContents },
                                 { key: "export", icon: <Download className="size-4" />, label: t("canvas.exportCurrent"), onClick: onExportProject },
-                                { key: "organize", icon: <Grid2x2 className="size-4" />, label: "整理重叠卡片（可撤销）", onClick: onOrganizeOverlaps },
                                 { type: "divider" },
+                                { key: "organize", icon: <Grid2x2 className="size-4" />, label: "整理重叠卡片（可撤销）", onClick: onOrganizeOverlaps },
                                 { key: "undo", disabled: !canUndo, icon: <Undo2 className="size-4" />, label: <MenuLabel text={t("canvas.undo")} shortcut="⌘ Z" />, onClick: onUndo },
                                 { key: "redo", disabled: !canRedo, icon: <Redo2 className="size-4" />, label: <MenuLabel text={t("canvas.redo")} shortcut="⌘ ⇧ Z / ⌘ Y" />, onClick: onRedo },
                             ],

@@ -356,6 +356,8 @@ const localCanvasSettingsEntryBootstrapScript = `<script id="local-canvas-settin
 const localThemeToggleScript = `<script id="local-theme-toggle">
 (() => {
   const storageKey = "guan-workbench-theme";
+  const systemTheme = window.matchMedia?.('(prefers-color-scheme: dark)');
+  const themeFrames = new WeakSet();
   const icons = {
     light: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42"></path></svg>',
     dark: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.9 13.2A8.5 8.5 0 0 1 10.8 3.1 8.5 8.5 0 1 0 20.9 13.2Z"></path></svg>',
@@ -365,7 +367,7 @@ const localThemeToggleScript = `<script id="local-theme-toggle">
       const saved = localStorage.getItem(storageKey);
       if (saved === "dark" || saved === "light") return saved;
     } catch {}
-    return document.documentElement.dataset.workbenchTheme === "dark" ? "dark" : "light";
+    return systemTheme?.matches ? "dark" : "light";
   };
   const applyTheme = (theme) => {
     document.documentElement.dataset.workbenchTheme = theme;
@@ -373,12 +375,13 @@ const localThemeToggleScript = `<script id="local-theme-toggle">
     document.body?.classList.toggle("dark", theme === "dark");
     try { localStorage.setItem(storageKey, theme); } catch {}
     const button = document.querySelector(".local-workbench-theme-button");
-    if (!button) return;
+    if (button) {
     const icon = theme === "dark" ? icons.light : icons.dark;
     if (button.innerHTML !== icon) button.innerHTML = icon;
     button.setAttribute("aria-pressed", String(theme === "dark"));
     button.setAttribute("aria-label", theme === "dark" ? "切换浅色主题" : "切换深色主题");
     button.title = theme === "dark" ? "切换浅色主题" : "切换深色主题";
+    }
     // Keep the embedded infinite canvas on the same theme as the global
     // workbench control. The canvas owns its own persisted theme store, so
     // sync both the store and any already-mounted canvas iframe.
@@ -386,7 +389,7 @@ const localThemeToggleScript = `<script id="local-theme-toggle">
       const key = "infinite-canvas:theme_store";
       const current = JSON.parse(localStorage.getItem(key) || "{}");
       const next = JSON.stringify({ ...current, state: { ...(current.state || {}), theme } });
-      localStorage.setItem(key, next);
+      if (localStorage.getItem(key) !== next) localStorage.setItem(key, next);
       document.querySelectorAll("iframe").forEach((frame) => {
         try {
           // Commit same-origin React canvases before the whole-window snapshot.
@@ -394,9 +397,12 @@ const localThemeToggleScript = `<script id="local-theme-toggle">
             frame.contentWindow.dispatchEvent(new frame.contentWindow.CustomEvent("guan-theme-apply", { detail: { theme } }));
           }
           frame.contentWindow?.postMessage({ type: "guan-theme-sync", theme }, location.origin);
-          frame.addEventListener("load", () => {
-            try { frame.contentWindow?.postMessage({ type: "guan-theme-sync", theme }, location.origin); } catch {}
-          }, { once: true });
+          if (!themeFrames.has(frame)) {
+            themeFrames.add(frame);
+            frame.addEventListener("load", () => {
+              try { frame.contentWindow?.postMessage({ type: "guan-theme-sync", theme: getTheme() }, location.origin); } catch {}
+            });
+          }
         } catch {}
       });
     } catch {}
@@ -431,6 +437,7 @@ const localThemeToggleScript = `<script id="local-theme-toggle">
   // independent view transitions for one visible workbench.
   window.__guanAnimateTheme = animateTheme;
   applyTheme(getTheme());
+  systemTheme?.addEventListener('change', event => applyTheme(event.matches ? 'dark' : 'light'));
 
   window.addEventListener("message", (event) => {
     if (event.origin !== location.origin || event.data?.type !== "guan-theme-change") return;
@@ -455,7 +462,10 @@ const localThemeToggleScript = `<script id="local-theme-toggle">
       if (settingsButton) header.insertBefore(button, settingsButton);
       else header.append(button);
     }
-    applyTheme(getTheme());
+    if (button.dataset.theme !== getTheme()) {
+      applyTheme(getTheme());
+      button.dataset.theme = getTheme();
+    }
     return true;
   };
   const observer = new MutationObserver(setup);

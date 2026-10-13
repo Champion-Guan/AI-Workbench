@@ -1,10 +1,11 @@
 import type { MouseEvent as ReactMouseEvent } from "react";
+import { memo } from "react";
 
 import { canvasThemes } from "@/lib/canvas-theme";
 import { useThemeStore } from "@/stores/use-theme-store";
 import type { CanvasConnection, CanvasNodeData, ConnectionHandle, Position } from "@/types/canvas";
 
-export function ConnectionPath({
+export const ConnectionPath = memo(function ConnectionPath({
     connection,
     from,
     to,
@@ -16,8 +17,8 @@ export function ConnectionPath({
     from: CanvasNodeData;
     to: CanvasNodeData;
     active: boolean;
-    onSelect: () => void;
-    onContextMenu?: (event: ReactMouseEvent<SVGPathElement>) => void;
+    onSelect: (id: string) => void;
+    onContextMenu?: (event: ReactMouseEvent<SVGPathElement>, id: string) => void;
 }) {
     const theme = canvasThemes[useThemeStore((state) => state.theme)];
     const startX = from.position.x + from.width;
@@ -39,12 +40,12 @@ export function ConnectionPath({
                 style={{ cursor: "pointer", pointerEvents: "stroke" }}
                 onClick={(event) => {
                     event.stopPropagation();
-                    onSelect();
+                    onSelect(connection.id);
                 }}
                 onContextMenu={(event) => {
                     event.preventDefault();
                     event.stopPropagation();
-                    onContextMenu?.(event);
+                    onContextMenu?.(event, connection.id);
                 }}
             />
             <path
@@ -57,7 +58,7 @@ export function ConnectionPath({
             />
         </g>
     );
-}
+});
 
 export function ActiveConnectionPath({ node, handle, mouseWorld, target }: { node?: CanvasNodeData; handle: ConnectionHandle; mouseWorld: Position; target?: CanvasNodeData }) {
     const theme = canvasThemes[useThemeStore((state) => state.theme)];
