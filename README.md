@@ -18,7 +18,11 @@ npm run dev
 保留原作者版权信息、MIT 许可文本和前端页面的原项目 GitHub 标识。
 详见 [LICENSE](LICENSE)。
 
-本仓库地址为 https://github.com/Champion-Guan/AI-Workbench。
+当前源码仓库为 https://github.com/Champion-Guan/infinite-canvas，属于原作者仓库的 fork。
+原工作台历史与完整上游历史均保留。旧仓库 https://github.com/Champion-Guan/AI-Workbench
+保留既有签名 Stable Release，现有软件更新渠道暂时继续使用旧仓库，避免迁移源码后客户检查更新失败。
+本次仅迁移源码仓库，不重新签名或搬动已有 Release；切换正式更新渠道需另行验证签名中的仓库身份。
+详见 [仓库迁入说明](docs/迁入Fork仓库-20261013.md)。
 私人配置和运行数据保存在各自电脑，不能提交或包含在公开发布包中。
 从旧 5174 地址升级时需要先备份并迁移浏览器存储，不能把新地址的空画布当作原数据被删除。
 已有独立更新器和新版受管理 Chrome 扩展的电脑，可保存并关闭工作台页面后，
