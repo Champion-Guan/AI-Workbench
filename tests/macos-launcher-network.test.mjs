@@ -67,7 +67,7 @@ test('production repository is locked in backend even when an old custom prefere
   const bytes = JSON.stringify({ version: 1, repository: 'other/repo', autoCheck: true, autoDownload: true, autoInstall: false, network: 'auto' });
   await writeFile(path.join(directory, 'preferences.json'), bytes);
   const updates = new SoftwareUpdates({ directory, auth: { metadata: async () => { throw Error('must not read auth'); } }, currentVersion: '1.0.9' });
-  assert.equal((await updates.status()).preferences.repository, 'Champion-Guan/AI-Workbench');
+  assert.equal((await updates.status()).preferences.repository, 'Champion-Guan/infinite-canvas');
   await assert.rejects(updates.configure({ repository: 'other/repo' }), /locked/);
   assert.equal(await readFile(path.join(directory, 'preferences.json'), 'utf8'), bytes);
 });

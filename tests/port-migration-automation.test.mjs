@@ -28,7 +28,7 @@ test('automatic package retrieval is public, rejects old releases and rechecks s
     status() { return { state: 'verified' }; }
   }
   const options = { updates: '/fixture/updates', currentVersion: '1.0.7', Downloader,
-    readRelease: async options => { assert.equal(options.repository, 'Champion-Guan/AI-Workbench'); assert.equal(options.token, undefined); return { version: '1.0.8' }; },
+    readRelease: async options => { assert.equal(options.repository, 'Champion-Guan/infinite-canvas'); assert.equal(options.token, undefined); return { version: '1.0.8' }; },
     verify: async options => { assert.equal(options.archiveName, 'package.zip'); assert.equal(options.currentVersion, '1.0.7'); return { startupProtocol: 1 }; } };
   assert.deepEqual(await migrationPackage(options), { directory: '/fixture/verified', version: '1.0.8' });
   assert.equal(calls[0].token, undefined);

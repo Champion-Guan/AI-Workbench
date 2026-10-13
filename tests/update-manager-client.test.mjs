@@ -67,7 +67,7 @@ test('SoftwareUpdates exposes safe manager diagnostics, coalesces staging and pr
     downloader: { status: () => ({ state: 'verified', progress: 100 }), cancel() {},
       stageIdentity: repository => ({ repository, version: '1.0.5', downloadId: id }) },
     manager: { status: () => f.client.status(), stage: () => { attempts++; return new Promise(resolve => { complete = resolve; }); } } });
-  await updates.configure({ repository: 'Champion-Guan/AI-Workbench' });
+  await updates.configure({ repository: 'Champion-Guan/infinite-canvas' });
   const [first, second] = await Promise.all([updates.stage(), updates.stage()]);
   assert.equal(first.install.staging, true); assert.equal(second.install.staging, true); assert.equal(attempts, 1);
   complete(); await updates.staging;

@@ -15,7 +15,7 @@ async function main() {
   const projectRoot = fileURLToPath(new URL('../', import.meta.url));
   const paths = runtimePaths({ projectRoot });
   const manager = new UpdateManager({ root: path.join(paths.root, 'installation'), dataRoot: paths.data, projectRoot,
-    repository: 'Champion-Guan/AI-Workbench' });
+    repository: 'Champion-Guan/infinite-canvas' });
   const runtime = new SignedUpdaterRuntime({ directory: path.join(paths.root, 'updater-runtime'), manager });
   const deployment = new UpdaterDeployment({ runtime, directory: path.join(paths.root, 'updater-deployment'),
     agents: path.join(homedir(), 'Library/LaunchAgents'), privateRoot: paths.root,

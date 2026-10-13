@@ -9,12 +9,12 @@ import { readReleaseAsset } from '../src/server/github-assets.mjs';
 import { UpdateAuth } from '../src/server/update-auth.mjs';
 import { planSecureProviderRequest } from '../src/server/secure-provider-proxy.mjs';
 import { workbenchTabScript } from '../src/server/workbench-page-census.mjs';
-const repository = 'Champion-Guan/AI-Workbench';
+const repository = 'Champion-Guan/infinite-canvas';
 test('public updates never access Keychain or send an authorization header', async () => {
   const auth = new UpdateAuth({ directory: '/unused', vault: { read() { throw Error('must not read'); } } });
   assert.equal(await auth.token(repository), '');
   const fetchImpl = async (url, options) => {
-    assert.ok(url.includes('/Champion-Guan/AI-Workbench/'));
+    assert.ok(url.includes('/Champion-Guan/infinite-canvas/'));
     assert.equal(options.headers.authorization, undefined);
     return new Response('[]');
   };

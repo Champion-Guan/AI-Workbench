@@ -19,7 +19,7 @@ const stable = v => typeof v === 'string' && parseVersion(v) && !parseVersion(v)
 // Backend-only bridge. Fixed private socket; never accepts URLs, paths, tokens,
 // commands or installation/recovery operations from the browser.
 export class UpdateManagerClient {
-  constructor({ socketPath, repository = 'Champion-Guan/AI-Workbench', timeoutMs = 3000, stageTimeoutMs = 120000 }) {
+  constructor({ socketPath, repository = 'Champion-Guan/infinite-canvas', timeoutMs = 3000, stageTimeoutMs = 120000 }) {
     if (!path.isAbsolute(socketPath)) throw Error('update_socket_invalid');
     this.socketPath = socketPath; this.repository = repository;
     this.timeoutMs = timeoutMs; this.stageTimeoutMs = stageTimeoutMs;

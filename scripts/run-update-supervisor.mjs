@@ -13,7 +13,7 @@ async function main() {
   const projectRoot = fileURLToPath(new URL('../', import.meta.url));
   const paths = runtimePaths({ projectRoot });
   const verifier = new UpdateManager({ root: path.join(paths.root, 'installation'), dataRoot: paths.data,
-    projectRoot, repository: 'Champion-Guan/AI-Workbench' });
+    projectRoot, repository: 'Champion-Guan/infinite-canvas' });
   await verifier.initialize();
   const service = new OwnedUpdateService({ versionsRoot: path.join(verifier.root, 'versions'),
     dataRoot: paths.data, privateRoot: paths.root, verify: pointer => verifier.verifyInstalled(pointer) });

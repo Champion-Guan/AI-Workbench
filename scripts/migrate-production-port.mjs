@@ -25,7 +25,7 @@ async function main() {
   if (createHash('sha256').update(await readFile(path.join(backup, 'browser-5174.json'))).digest('hex') !== receipt.sha256)
     throw Error('port_migration_backup_unverified');
   const manager = new UpdateManager({ root: path.join(paths.root, 'installation'), dataRoot: paths.data, projectRoot,
-    repository: 'Champion-Guan/AI-Workbench', onStep: async phase => console.log(JSON.stringify({ phase })) });
+    repository: 'Champion-Guan/infinite-canvas', onStep: async phase => console.log(JSON.stringify({ phase })) });
   const manifest = JSON.parse(await readFile(path.join(artifacts, 'guan-stable-manifest.json')));
   const version = manifest.version; // Install the signed asset version, not the developer checkout version.
   const archive = path.join(artifacts, 'package.zip');

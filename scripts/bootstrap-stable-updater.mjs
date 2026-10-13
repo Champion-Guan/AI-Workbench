@@ -51,7 +51,7 @@ async function main() {
     }
   }
   const manager = new UpdateManager({ root: path.join(paths.root, 'installation'), dataRoot: paths.data, projectRoot,
-    repository: 'Champion-Guan/AI-Workbench' });
+    repository: 'Champion-Guan/infinite-canvas' });
   const pointer = mode === '--upgrade-manager' ? await manager.readCurrent()
     : await manager.stage({ directory: migration ? downloadId : path.join(paths.updates, 'packages', downloadId), version });
   if (!pointer) throw Error('update_bootstrap_required');
